@@ -16,7 +16,7 @@
     <!-- ================================= -->
     <!-- A time/date based rolling appender -->
     <appender name="FILE" class="org.apache.log4j.RollingFileAppender">
-        <param name="File" value="./logs/pisachios.log"/>
+        <param name="File" value="../logs/pisachios.log"/>
         <param name="Append" value="true"/>
         <param name="MaxFileSize" value="1024MB"/>
         <param name="MaxBackupIndex" value="30"/>
@@ -45,24 +45,13 @@
             <param name="ConversionPattern" value="%d{ABSOLUTE} %-5p [%c{1}] %m%n"/>
         </layout>
     </appender>
-    <category name="org.apache">
-        <priority value="INFO"/>
-    </category>
-    <!-- Limit the org.tomcat.serial (tomcat-serialization) to INFO as its DEBUG is verbose -->
-    <category name="org.tomcat.serial">
-        <priority value="INFO"/>
-    </category>
     <!-- Limit the JSR77 categories -->
     <category name="org.apache.zookeeper">
-        <priority value="DEBUG"/>
-    </category>
-    <category name="org.tomcat.management">
-        <priority value="INFO"/>
+        <priority value="ERROR"/>
     </category>
     <root>
         <priority value="DEBUG"/>
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE"/>
-        <appender-ref ref="MAIL"/>
     </root>
 </log4j:configuration>

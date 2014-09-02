@@ -1,2 +1,3 @@
 #! /bin/bash
- java -cp ./Pistachios.jar:./lib/*:~/ -Djava.library.path=./native -Dlog4j.configuration=./conf/log4j.xml com.yahoo.ads.pb.mttf.PistachiosMTTFTest
+base_dir=$(dirname $0)
+ java -cp $base_dir/../lib/*:$base_dir/../config/ -Djava.library.path=$base_dir/../lib -Dlog4j.configuration=$base_dir/../config/log4j.xml com.yahoo.ads.pb.mttf.PistachiosMTTFTest

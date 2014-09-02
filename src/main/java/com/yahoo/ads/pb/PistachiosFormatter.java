@@ -73,8 +73,8 @@ public class PistachiosFormatter{
 
 
   public static void main(String [] args) {
-	  String usage = "Usage: xxxx [zk string] [comma seperated cluster] [num partition] [num replica]";
-	  if (args.length !=4) {
+	  String usage = "Usage: xxxx [zk string] [comma seperated cluster] [num partition] [num replica] (kafka zk path, optional)";
+	  if (args.length <4) {
 		  System.out.println("invalid number of parameters");
 		  System.out.println(usage);
 		  return;
@@ -83,11 +83,14 @@ public class PistachiosFormatter{
 	  int numPartitions = -1;
 	  int numReplicas = -1;
 	  String[] hostList = null;
+	  String kafkaZKPath = null;
 
 	  try {
 		  numPartitions = Integer.parseInt(args[2]);
 		  numReplicas = Integer.parseInt(args[3]);
 		  hostList = args[1].split(",");
+		  if (args.length >=5)
+			  kafkaZKPath = args[4];
 	  } catch(Exception e) {
 	  }
 
@@ -171,8 +174,8 @@ public class PistachiosFormatter{
 		logger.info("rebalancing");
 		admin.rebalance("PistachiosCluster", "PistachiosResource", numReplicas);
 
-		logger.info("adding topic");
-		ZkClient zkClient = new ZkClient(args[0]+ "/kafka8", 30000, 30000, ZKStringSerializer$.MODULE$);
+		logger.info("adding topic to zk path: {}", kafkaZKPath);
+		ZkClient zkClient = new ZkClient(args[0]+ (kafkaZKPath != null ? "/" + kafkaZKPath : ""), 30000, 30000, ZKStringSerializer$.MODULE$);
 
 		for (int i =0; i<numPartitions; i++) {
 			CreateTopicCommand.createTopic(zkClient , "PistachiosPartition." + i, 1, 1, "");

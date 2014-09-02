@@ -30,10 +30,8 @@ import org.slf4j.LoggerFactory;
 
 public class PistachiosClient {
 	private static Logger logger = LoggerFactory.getLogger(PistachiosClient.class);
-	String ZOOKEEPER_SERVER = "ZooKeeper.Server";
-	String PROFILE_HELIX_CLUSTER_NAME = "Profile.Helix.ClusterName";
+	String ZOOKEEPER_SERVER = "Pistachio.ZooKeeper.Server";
 	String PROFILE_HELIX_INSTANCE_ID = "Profile.Helix.InstanceId";
-	String HELIX_RESOURCE = "Profile.Helix.Resource";
 	Configuration conf = ConfigurationManager.getConfiguration();
 
 	HelixPartitionSpectator helixPartitionSpectator;
@@ -44,7 +42,7 @@ public class PistachiosClient {
 		try {
 			helixPartitionSpectator = new HelixPartitionSpectator(
 								conf.getString(ZOOKEEPER_SERVER), // zkAddr
-								conf.getString(PROFILE_HELIX_CLUSTER_NAME), // clusterName
+								"PistachiosCluster",
 								InetAddress.getLocalHost().getHostName() //conf.getString(PROFILE_HELIX_INSTANCE_ID) // instanceName
 								);
 
@@ -63,7 +61,7 @@ public class PistachiosClient {
 		  while (ip == null && count++ < 1) {
 		  int shard = (int)id % 256;
 		  shard = shard < 0 ? shard + 256: shard;
-		ip = helixPartitionSpectator.getOneInstanceForPartition(conf.getString("Profile.Helix.ResourceName"), shard, "MASTER");
+		ip = helixPartitionSpectator.getOneInstanceForPartition("PistachiosResource", shard, "MASTER");
 			logger.info("partition found {}", ip);
 
 		  }

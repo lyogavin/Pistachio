@@ -34,7 +34,7 @@ import com.yahoo.ads.pb.util.ConfigurationManager;
 
 public class HelixPartitionSpectator {
 	
-	private static Logger logger = LoggerFactory.getLogger(HelixPartitionManager.class);
+	private static Logger logger = LoggerFactory.getLogger(HelixPartitionSpectator.class);
 	
 	private HelixManager manager = null;
 	private RoutingTableProvider routingTableProvider = null;

@@ -48,6 +48,7 @@ import org.apache.helix.controller.GenericHelixController;
 //import com.yahoo.ads.pb.platform.perf.IncrementCounter;
 //import com.yahoo.ads.pb.platform.perf.InflightCounter;
 import com.yahoo.ads.pb.util.ConfigurationManager;
+import com.yahoo.ads.pb.util.NativeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.configuration.Configuration;
@@ -62,13 +63,21 @@ import java.util.Properties;
 
 
 public class PistachiosServer {
+	static {	 
+		try {	 
+			NativeUtils.loadLibraryFromJar("/libkyotocabinet.so");	 
+		} catch (Exception e) {	 
+			e.printStackTrace(); // This is probably not the best way to handle exception :-)	 
+		}	 
+	}
+
+
 	private static Logger logger = LoggerFactory.getLogger(PistachiosServer.class);
 
 	static final String PROFILE_BASE_DIR = "Profile.Base";
 	static final String PROFILE_NUM_STORE = "Profile.NumStore";
 	static final String PROFILE_RECORDS_PER_SERVER = "Profile.RecordsPerServer";
-	static final String ZOOKEEPER_SERVER = "ZooKeeper.Server";
-	static final String PROFILE_HELIX_CLUSTER_NAME = "Profile.Helix.ClusterName";
+	static final String ZOOKEEPER_SERVER = "Pistachio.ZooKeeper.Server";
 	static final String PROFILE_HELIX_INSTANCE_ID = "Profile.Helix.InstanceId";
 
 	private HelixPartitionManager<BootstrapOnlineOfflineStateModel> manager; // for partition management
@@ -183,7 +192,7 @@ public class PistachiosServer {
     try {
 	  // embed helix controller
 		Configuration conf = ConfigurationManager.getConfiguration();
-		helixManager = HelixManagerFactory.getZKHelixManager(conf.getString(PROFILE_HELIX_CLUSTER_NAME),
+		helixManager = HelixManagerFactory.getZKHelixManager("PistachiosCluster",
 				InetAddress.getLocalHost().getHostName(), //conf.getString(PROFILE_HELIX_INSTANCE_ID),
 				InstanceType.CONTROLLER,
 				conf.getString(ZOOKEEPER_SERVER));
@@ -336,16 +345,16 @@ public class PistachiosServer {
 //			if (enableStorePartition) {
 				
 		logger.info("creating helix partition sepctator {} {} {}", conf.getString(ZOOKEEPER_SERVER, "EMPTY"),
-			conf.getString(PROFILE_HELIX_CLUSTER_NAME, "EMPTY"), conf.getString(PROFILE_HELIX_INSTANCE_ID, "EMPTY"));
+			"PistachiosCluster", "EMPTY"), conf.getString(PROFILE_HELIX_INSTANCE_ID, "EMPTY"));
 				helixPartitionSpectator = new HelixPartitionSpectator(
 				        conf.getString(ZOOKEEPER_SERVER), // zkAddr
-				        conf.getString(PROFILE_HELIX_CLUSTER_NAME), // clusterName
+				        "PistachiosCluster",
 				        InetAddress.getLocalHost().getHostName() //conf.getString(PROFILE_HELIX_INSTANCE_ID) // instanceName
 				);
 				// Partition Manager for line spending
 				manager = new HelixPartitionManager<>(
 				        conf.getString(ZOOKEEPER_SERVER), // zkAddr
-				        conf.getString(PROFILE_HELIX_CLUSTER_NAME), // clusterName
+				        "PistachiosCluster",
 				        InetAddress.getLocalHost().getHostName() //conf.getString(PROFILE_HELIX_INSTANCE_ID) // instanceName
 				);
 				//manager.start("BootstrapOnlineOffline", new BootstrapOnlineOfflineStateModelFactory(new StorePartitionHandlerFactory()));
