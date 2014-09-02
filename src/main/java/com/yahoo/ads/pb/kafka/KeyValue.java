@@ -11,6 +11,7 @@
 
 package com.yahoo.ads.pb.kafka;
 
+import java.util.Arrays;
 
 
 public class KeyValue {
@@ -18,4 +19,13 @@ public class KeyValue {
 	public long key;
 	public long seqId;
 	public byte[] value;
+
+	public boolean equals(Object obj) {
+		if (this == obj) return true;
+		if (! (obj instanceof KeyValue)) return false;
+
+		KeyValue that = (KeyValue)obj;
+
+		return (key == that.key) && (seqId == that.seqId) && Arrays.equals(value, that.value);
+	}
 }

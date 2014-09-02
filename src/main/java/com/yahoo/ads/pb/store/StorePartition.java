@@ -58,7 +58,10 @@ public class StorePartition implements BootstrapPartitionHandler, StoreChangable
 
 	private AtomicLong seqId = new AtomicLong(0);
 	private AtomicLong nextSeqId = new AtomicLong(-1);
+	ConcurrentHashMap<Long, KeyValue> writeCache = new ConcurrentHashMap<Long, KeyValue>();
 
+
+	public ConcurrentHashMap<Long, KeyValue> getWriteCache() { return writeCache; }
 	public void setSeqId(long id) {
 		seqId.set(id);
 	}
@@ -208,6 +211,10 @@ public class StorePartition implements BootstrapPartitionHandler, StoreChangable
 					}
 					if (keyValue.seqId <= readOffset)
 						setSeqId(keyValue.seqId);
+
+					writeCache.remove(keyValue.key, keyValue);
+
+
 					saveTime = 0;
 
 					logger.debug("Reading    offset {}.", readOffset);

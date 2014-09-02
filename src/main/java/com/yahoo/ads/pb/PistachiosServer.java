@@ -129,7 +129,13 @@ public class PistachiosServer {
 
     public ByteBuffer lookup(long id) throws org.apache.thrift.TException
 	{
+			int partitionId = (int)(id % 256);
+			partitionId = partitionId >= 0 ? partitionId : partitionId + 256;
 		//return ByteBuffer.wrap(storage.getBytes());
+		KeyValue toRetrun = PistachiosServer.storePartitionMap.get(partitionId).getWriteCache().get(id);
+		if (toRetrun != null)
+			return ByteBuffer.wrap(toRetrun.value);
+
 		if (null != PistachiosServer.getInstance().getProfileStore().get(id))
 			return ByteBuffer.wrap(PistachiosServer.getInstance().getProfileStore().get(id));
 
@@ -157,10 +163,12 @@ public class PistachiosServer {
 
 			logger.info("sent msg {} {} {}, partition current seqid {}", kv.key, kv.value, kv.seqId, PistachiosServer.storePartitionMap.get(partitionId).getSeqId());
 
-				logger.info("waiting for change to propergate {} {}", PistachiosServer.storePartitionMap.get(partitionId).getSeqId() , kv.seqId);
-			while(PistachiosServer.storePartitionMap.get(partitionId).getSeqId() < kv.seqId) {
-				logger.info("waiting for change to propergate {} {}", PistachiosServer.storePartitionMap.get(partitionId).getSeqId() , kv.seqId);
-				Thread.sleep(100);
+			PistachiosServer.storePartitionMap.get(partitionId).getWriteCache().put(id, kv);
+
+				logger.info("waiting for change to catch up {} {} within gap 200", PistachiosServer.storePartitionMap.get(partitionId).getSeqId() , kv.seqId);
+			while(kv.seqId - PistachiosServer.storePartitionMap.get(partitionId).getSeqId() > 200) {
+				logger.info("waiting for change to catch up {} {} within gap 200", PistachiosServer.storePartitionMap.get(partitionId).getSeqId() , kv.seqId);
+				Thread.sleep(30);
 			}
 
 			//PistachiosServer.getInstance().getProfileStore().store(id, value.array());
@@ -345,7 +353,7 @@ public class PistachiosServer {
 //			if (enableStorePartition) {
 				
 		logger.info("creating helix partition sepctator {} {} {}", conf.getString(ZOOKEEPER_SERVER, "EMPTY"),
-			"PistachiosCluster", "EMPTY"), conf.getString(PROFILE_HELIX_INSTANCE_ID, "EMPTY"));
+			"PistachiosCluster", conf.getString(PROFILE_HELIX_INSTANCE_ID, "EMPTY"));
 				helixPartitionSpectator = new HelixPartitionSpectator(
 				        conf.getString(ZOOKEEPER_SERVER), // zkAddr
 				        "PistachiosCluster",
