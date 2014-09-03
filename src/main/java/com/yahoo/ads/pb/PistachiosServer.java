@@ -25,6 +25,7 @@ import kafka.producer.KeyedMessage;
 import kafka.producer.ProducerConfig;
 
 import com.yahoo.ads.pb.store.StorePartition;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ConcurrentHashMap;
 import com.yahoo.ads.pb.store.TKStoreFactory;
 
@@ -236,7 +237,13 @@ public class PistachiosServer {
       //TServer server = new TSimpleServer(new Args(serverTransport).processor(processor));
 
       // Use this for a multithreaded server
-       TServer server = new TThreadPoolServer(new TThreadPoolServer.Args(serverTransport).processor(processor));
+	   TThreadPoolServer.Args args = new TThreadPoolServer.Args(serverTransport);
+	   args.processor(processor);
+	   args.minWorkerThreads = 50;
+	   args.maxWorkerThreads = 200;
+	   args.stopTimeoutUnit = TimeUnit.SECONDS;
+	   args.stopTimeoutVal = 60;
+       TServer server = new TThreadPoolServer(args);
 
       System.out.println("Starting the simple server...");
       server.serve();

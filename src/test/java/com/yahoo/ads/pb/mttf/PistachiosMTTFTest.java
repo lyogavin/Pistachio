@@ -49,7 +49,8 @@ public class PistachiosMTTFTest{
 		  client.store(id, value.getBytes());
 		  for (int i =0; i<30; i++) {
 			  byte[] clientValue = client.lookup(id);
-			  if (Arrays.equals(value.getBytes(), clientValue)) {
+			  String remoteValue = new String(clientValue);
+			  if (Arrays.equals(value.getBytes(), clientValue) || !remoteValue.contains(InetAddress.getLocalHost().getHostName())) {
 				  logger.debug("succeeded checking id {} value {}", id, value);
 			  } else {
 				  logger.error("failed checking id {} value {} != {}", id, value, new String(clientValue));

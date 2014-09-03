@@ -76,7 +76,7 @@ public class PistachiosClient {
 
 			try {
 				TTransport transport;
-				transport = new TSocket(ip, 9090);
+				transport = new TSocket(ip, 9090, 1000);
 				transport.open();
 
 				TProtocol protocol = new  TBinaryProtocol(transport);
