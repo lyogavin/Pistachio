@@ -27,9 +27,26 @@ import java.util.HashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.Timer;
+import com.codahale.metrics.JmxReporter;
 
 public class PistachiosClient {
 	private static Logger logger = LoggerFactory.getLogger(PistachiosClient.class);
+	final static MetricRegistry metrics = new MetricRegistry();
+	final static JmxReporter reporter = JmxReporter.forRegistry(metrics).build();
+
+	private final static Meter lookupFailureRequests = metrics.meter(MetricRegistry.name(PistachiosServer.class, "lookupFailureRequests"));
+	private final static Meter storeFailureRequests = metrics.meter(MetricRegistry.name(PistachiosServer.class, "storeFailureRequests"));
+
+	private final static Timer lookupTimer = metrics.timer(MetricRegistry.name(PistachiosServer.class, "lookupTimer"));
+	private final static Timer storeTimer = metrics.timer(MetricRegistry.name(PistachiosServer.class, "storeTimer"));
+
+
+	static {
+		reporter.start();
+	}
 	String ZOOKEEPER_SERVER = "Pistachio.ZooKeeper.Server";
 	String PROFILE_HELIX_INSTANCE_ID = "Profile.Helix.InstanceId";
 	Configuration conf = ConfigurationManager.getConfiguration();
@@ -97,84 +114,105 @@ public class PistachiosClient {
 
 	public byte[] lookup(long id) {
 
+		final Timer.Context context = lookupTimer.time();
 		boolean succeeded = false;
 		Pistachios.Client client = null;
 		int retry = 100;
 		byte[] ret =  null;
 		boolean reconnect = false;
 
-		while (!succeeded && retry-- > 0) {
-			logger.info("retry {} getting client", retry);
-			client = getClient(id, reconnect);
-			if (client == null) {
-				try{
-				Thread.sleep(1000);
-				}catch(Exception e) {
+		try {
+			while (!succeeded && retry-- > 0) {
+				logger.info("retry {} getting client", retry);
+				client = getClient(id, reconnect);
+				if (client == null) {
+					try{
+					Thread.sleep(1000);
+					}catch(Exception e) {
+					}
+					continue;
 				}
-				continue;
-			}
-			int actionRetry = 5;
-			while (actionRetry-- > 0) {
-				try {
-					ret = client.lookup(id).array();
-					logger.info("retry {} client.lookup(" + id + ")" + new String(ret), actionRetry);
-					succeeded = true;
-					break;
-				} catch (TException x) {
-					logger.info("error: retry {}", actionRetry, x);
-					reconnect = true;
-				} 
+				int actionRetry = 5;
+				while (actionRetry-- > 0) {
+					try {
+						ret = client.lookup(id).array();
+						logger.info("retry {} client.lookup(" + id + ")" + new String(ret), actionRetry);
+						succeeded = true;
+						break;
+					} catch (TException x) {
+						logger.info("error: retry {}", actionRetry, x);
+						reconnect = true;
+					} 
+				}
+
+				if (!succeeded) {
+					//closeClient(id);
+					try {
+					Thread.sleep(1000);
+					} catch(Exception e) {
+					}
+				}
 			}
 
-			if (!succeeded) {
-				//closeClient(id);
-				try {
-				Thread.sleep(1000);
-				} catch(Exception e) {
-				}
-			}
-		}
 
 		//perform(store, client);
+
+		} catch (Exception e) {
+			logger.info("exception lookup {}", id, e);
+		} finally {
+			if (!succeeded)
+				lookupFailureRequests.mark();
+			context.stop();
+		}
 		return ret;
 	}
 
 	public void store(long id, byte[] value) {
+		final Timer.Context context = storeTimer.time();
 		boolean succeeded = false;
 		Pistachios.Client client = null;
 		int retry = 100;
 		byte[] ret =  null;
 		boolean reconnect = false;
 
-		while (!succeeded && retry-- > 0) {
-			client = getClient(id, reconnect);
-			if (client == null) {
-				try{
-				Thread.sleep(1000);
-				}catch(Exception e) {
+		try {
+			while (!succeeded && retry-- > 0) {
+				client = getClient(id, reconnect);
+				if (client == null) {
+					try{
+					Thread.sleep(1000);
+					}catch(Exception e) {
+					}
+					continue;
 				}
-				continue;
-			}
-			int actionRetry = 5;
-			while (actionRetry-- > 0) {
-				try {
-					client.store(id, ByteBuffer.wrap(value));
-					logger.info("client.store(" + id + ","+ value+")" );
-					succeeded = true;
-					break;
-				} catch (TException x) {
-					logger.info("error: ", x);
-					reconnect = true;
-				} 
+				int actionRetry = 5;
+				while (actionRetry-- > 0) {
+					try {
+						client.store(id, ByteBuffer.wrap(value));
+						logger.info("client.store(" + id + ","+ value+")" );
+						succeeded = true;
+						break;
+					} catch (TException x) {
+						logger.info("error: ", x);
+						reconnect = true;
+					} 
+				}
+
+				if (!succeeded) {
+					//closeClient(id);
+					try{
+					Thread.sleep(1000);
+					}catch(Exception e) {
+					}
+				}
 			}
 
-			if (!succeeded) {
-				//closeClient(id);
-				try{
-				Thread.sleep(1000);
-				}catch(Exception e) {
-				}
-			}
+		} catch (Exception e) {
+			logger.info("exception store {} {}", id, value, e);
+		} finally {
+			if (!succeeded)
+				storeFailureRequests.mark();
+			context.stop();
 		}
 	}
 

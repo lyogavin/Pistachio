@@ -28,6 +28,10 @@ import com.yahoo.ads.pb.store.StorePartition;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ConcurrentHashMap;
 import com.yahoo.ads.pb.store.TKStoreFactory;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.Timer;
+import com.codahale.metrics.JmxReporter;
 
 
 import java.net.InetAddress;
@@ -74,6 +78,16 @@ public class PistachiosServer {
 
 
 	private static Logger logger = LoggerFactory.getLogger(PistachiosServer.class);
+	final static MetricRegistry metrics = new MetricRegistry();
+	final static JmxReporter reporter = JmxReporter.forRegistry(metrics).build();
+
+	private final static Meter lookupRequests = metrics.meter(MetricRegistry.name(PistachiosServer.class, "lookupRequests"));
+	private final static Meter lookupFailureRequests = metrics.meter(MetricRegistry.name(PistachiosServer.class, "lookupFailureRequests"));
+	private final static Meter storeRequests = metrics.meter(MetricRegistry.name(PistachiosServer.class, "storeRequests"));
+	private final static Meter storeFailureRequests = metrics.meter(MetricRegistry.name(PistachiosServer.class, "storeFailureRequests"));
+
+	private final static Timer lookupTimer = metrics.timer(MetricRegistry.name(PistachiosServer.class, "lookupTimer"));
+	private final static Timer storeTimer = metrics.timer(MetricRegistry.name(PistachiosServer.class, "storeTimer"));
 
 	static final String PROFILE_BASE_DIR = "Profile.Base";
 	static final String PROFILE_NUM_STORE = "Profile.NumStore";
@@ -130,27 +144,42 @@ public class PistachiosServer {
 
     public ByteBuffer lookup(long id) throws org.apache.thrift.TException
 	{
+		lookupRequests.mark();
+		final Timer.Context context = lookupTimer.time();
+
+		try {
 			int partitionId = (int)(id % 256);
 			partitionId = partitionId >= 0 ? partitionId : partitionId + 256;
-		//return ByteBuffer.wrap(storage.getBytes());
-		KeyValue toRetrun = PistachiosServer.storePartitionMap.get(partitionId).getWriteCache().get(id);
-		if (toRetrun != null)
-			return ByteBuffer.wrap(toRetrun.value);
+			//return ByteBuffer.wrap(storage.getBytes());
+			KeyValue toRetrun = PistachiosServer.storePartitionMap.get(partitionId).getWriteCache().get(id);
+			if (toRetrun != null)
+				return ByteBuffer.wrap(toRetrun.value);
 
-		if (null != PistachiosServer.getInstance().getProfileStore().get(id))
-			return ByteBuffer.wrap(PistachiosServer.getInstance().getProfileStore().get(id));
+			if (null != PistachiosServer.getInstance().getProfileStore().get(id))
+				return ByteBuffer.wrap(PistachiosServer.getInstance().getProfileStore().get(id));
 
-		return ByteBuffer.wrap("".getBytes());
+			return ByteBuffer.wrap("".getBytes());
+		} catch (Exception e) {
+			logger.info("Exception lookup {}", id, e);
+			lookupFailureRequests.mark();
+			return ByteBuffer.wrap("".getBytes());
+		} finally {
+			context.stop();
+		}
 	}
 
     public boolean store(long id, ByteBuffer value) throws org.apache.thrift.TException
 	{
+		storeRequests.mark();
+		final Timer.Context context = storeTimer.time();
+
 		try {
 			int partitionId = (int)(id % 256);
 			partitionId = partitionId >= 0 ? partitionId : partitionId + 256;
 			long nextSeqId = -1;
-			if ((nextSeqId = PistachiosServer.storePartitionMap.get(partitionId).getNextSeqId()) == -1)
+			if ((nextSeqId = PistachiosServer.storePartitionMap.get(partitionId).getNextSeqId()) == -1) {
 				return false;
+			}
 
 		  int shard = (int)(id % 256);
 		  shard = shard < 0 ? shard + 256: shard;
@@ -171,12 +200,16 @@ public class PistachiosServer {
 				logger.info("waiting for change to catch up {} {} within gap 200", PistachiosServer.storePartitionMap.get(partitionId).getSeqId() , kv.seqId);
 				Thread.sleep(30);
 			}
+			return true;
 
 			//PistachiosServer.getInstance().getProfileStore().store(id, value.array());
 		} catch (Exception e) {
-			logger.info("error storing ", e);
+			logger.info("error storing {} {}", id, value, e);
+			storeFailureRequests.mark();
+			return false;
+		} finally {
+			context.stop();
 		}
-		return true;
 	}
   }
 
@@ -199,6 +232,8 @@ public class PistachiosServer {
 
   public static void main(String [] args) {
     try {
+		reporter.start();
+
 	  // embed helix controller
 		Configuration conf = ConfigurationManager.getConfiguration();
 		helixManager = HelixManagerFactory.getZKHelixManager("PistachiosCluster",

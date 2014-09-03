@@ -9,7 +9,7 @@ while true; do
 	echo 'sleeping '$a
 	sleep $a
 	
-	echo 'stopping server...'
+	echo 'starting server...'
 	./start_server.sh
 
 	a=$(( $RANDOM%180 ))
