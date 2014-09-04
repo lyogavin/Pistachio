@@ -26,7 +26,6 @@
         <param name="BufferedIO" value="false"/>
         <param name="BufferSize" value="8096"/>
         <param name="immediateFlush" value="true"/>
-        <param name="Threshold" value="OFF"/>
         <!-- Rollover at midnight each day by default -->
         <!--    <param name="DatePattern" value="'.'yyyy-MM-dd"/>-->
         <layout class="org.apache.log4j.PatternLayout">
@@ -51,7 +50,6 @@
     </category>
     <root>
         <priority value="DEBUG"/>
-        <appender-ref ref="CONSOLE"/>
         <appender-ref ref="FILE"/>
     </root>
 </log4j:configuration>
