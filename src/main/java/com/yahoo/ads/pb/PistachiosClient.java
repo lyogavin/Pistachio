@@ -23,14 +23,17 @@ import com.yahoo.ads.pb.helix.HelixPartitionSpectator;
 import com.yahoo.ads.pb.util.ConfigurationManager;
 import org.apache.commons.configuration.Configuration;
 import java.net.InetAddress;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.google.api.client.util.ExponentialBackOff;
 
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.Timer;
 import com.codahale.metrics.JmxReporter;
+import com.google.api.client.util.ExponentialBackOff;
+import com.google.api.client.util.BackOff;
 
 public class PistachiosClient {
 	private static Logger logger = LoggerFactory.getLogger(PistachiosClient.class);
@@ -44,18 +47,22 @@ public class PistachiosClient {
 	private final static Timer storeTimer = metrics.timer(MetricRegistry.name(PistachiosServer.class, "storeTimer"));
 
 
+
 	static {
 		reporter.start();
 	}
 	String ZOOKEEPER_SERVER = "Pistachio.ZooKeeper.Server";
 	String PROFILE_HELIX_INSTANCE_ID = "Profile.Helix.InstanceId";
 	Configuration conf = ConfigurationManager.getConfiguration();
+	private int initialIntervalMillis = conf.getInt("Pistachio.BackOff.InitialIntervalMillis", 100);
+	private int maxElapsedTimeMillis = conf.getInt("Pistachio.BackOff.MaxElapsedTimeMillis", 100 * 1000);
+	private int maxIntervalMillis = conf.getInt("Pistachio.BackOff.MaxIntervalMillis", 5000);
 
 	HelixPartitionSpectator helixPartitionSpectator;
 
-	HashMap<String, Pistachios.Client> ipToClientMap = new HashMap<String, Pistachios.Client>();
+	ConcurrentHashMap<String, Pistachios.Client> ipToClientMap = new ConcurrentHashMap<String, Pistachios.Client>();
 
-	public PistachiosClient() {
+	public PistachiosClient() throws Exception {
 		try {
 			helixPartitionSpectator = new HelixPartitionSpectator(
 								conf.getString(ZOOKEEPER_SERVER), // zkAddr
@@ -64,7 +71,8 @@ public class PistachiosClient {
 								);
 
 		} catch(Exception e) {
-			return;
+			logger.error("Error init HelixPartitionSpectator, are zookeeper and helix installed and configured correctly?", e);
+			throw e;
 		}
 	}
 
@@ -117,21 +125,29 @@ public class PistachiosClient {
 		final Timer.Context context = lookupTimer.time();
 		boolean succeeded = false;
 		Pistachios.Client client = null;
-		int retry = 100;
 		byte[] ret =  null;
 		boolean reconnect = false;
+		BackOff backoff;
+
+		backoff = (new ExponentialBackOff.Builder()).setInitialIntervalMillis(initialIntervalMillis)
+											  .setMaxElapsedTimeMillis(maxElapsedTimeMillis)
+											  .setMaxIntervalMillis(maxIntervalMillis)
+											  .build();
 
 		try {
-			while (!succeeded && retry-- > 0) {
-				logger.info("retry {} getting client", retry);
+			long backOffMillis = backoff.nextBackOffMillis();
+			while (!succeeded && (backOffMillis != BackOff.STOP)) {
 				client = getClient(id, reconnect);
 				if (client == null) {
+					logger.info("failed get client, retry in {} getting client", backOffMillis);
 					try{
-					Thread.sleep(1000);
+						Thread.sleep(backOffMillis);
 					}catch(Exception e) {
 					}
+					backOffMillis = backoff.nextBackOffMillis();
 					continue;
 				}
+
 				int actionRetry = 5;
 				while (actionRetry-- > 0) {
 					try {
@@ -148,10 +164,12 @@ public class PistachiosClient {
 				if (!succeeded) {
 					//closeClient(id);
 					try {
-					Thread.sleep(1000);
+						logger.debug("failed lookup, retry in {}", backOffMillis);
+					Thread.sleep(backOffMillis);
 					} catch(Exception e) {
 					}
 				}
+				backOffMillis = backoff.nextBackOffMillis();
 			}
 
 
@@ -171,18 +189,28 @@ public class PistachiosClient {
 		final Timer.Context context = storeTimer.time();
 		boolean succeeded = false;
 		Pistachios.Client client = null;
-		int retry = 100;
 		byte[] ret =  null;
 		boolean reconnect = false;
 
+		BackOff backoff;
+
+		backoff = (new ExponentialBackOff.Builder()).setInitialIntervalMillis(initialIntervalMillis)
+											  .setMaxElapsedTimeMillis(maxElapsedTimeMillis)
+											  .setMaxIntervalMillis(maxIntervalMillis)
+											  .build();
+
+
 		try {
-			while (!succeeded && retry-- > 0) {
+			long backOffMillis = backoff.nextBackOffMillis();
+			while (!succeeded && (backOffMillis != BackOff.STOP)) {
 				client = getClient(id, reconnect);
 				if (client == null) {
+					logger.info("failed get client, retry in {} getting client", backOffMillis);
 					try{
-					Thread.sleep(1000);
+					Thread.sleep(backOffMillis);
 					}catch(Exception e) {
 					}
+					backOffMillis = backoff.nextBackOffMillis();
 					continue;
 				}
 				int actionRetry = 5;
@@ -199,12 +227,14 @@ public class PistachiosClient {
 				}
 
 				if (!succeeded) {
+					logger.info("failed store, retry in {}", backOffMillis);
 					//closeClient(id);
 					try{
-					Thread.sleep(1000);
+					Thread.sleep(backOffMillis);
 					}catch(Exception e) {
 					}
 				}
+				backOffMillis = backoff.nextBackOffMillis();
 			}
 
 		} catch (Exception e) {
@@ -217,7 +247,13 @@ public class PistachiosClient {
 	}
 
   public static void main(String [] args) {
-	  PistachiosClient client = new PistachiosClient();
+	  PistachiosClient client;
+	  try {
+	  client = new PistachiosClient();
+	  }catch (Exception e) {
+		  logger.info("error creating clietn", e);
+		  return;
+	  }
 
 		  long id = 0;
 		  boolean store = false;
@@ -225,10 +261,9 @@ public class PistachiosClient {
 	  if (args.length ==2 && args[0].equals("lookup") ) {
 		  try {
 		  id = Long.parseLong(args[1]);
-		  client.lookup(id);
+			System.out.println("client.lookup(" + id + ")" + new String(client.lookup(id)));
 		  } catch (Exception e) {
 		  }
-			//System.out.println("client.lookup(" + id + ")" + new String(client.lookup(id).array()));
 	  } else if (args.length == 3 && args[0].equals("store") ) {
 		  try {
 		  id = Long.parseLong(args[1]);

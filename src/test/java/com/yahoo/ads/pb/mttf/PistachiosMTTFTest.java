@@ -39,7 +39,13 @@ public class PistachiosMTTFTest{
 
 
   public static void main(String [] args) {
-	  PistachiosClient client = new PistachiosClient();
+	  PistachiosClient client;
+	  try {
+	  client = new PistachiosClient();
+	  }catch (Exception e) {
+		  logger.info("error creating client", e);
+		  return;
+	  }
 	  Random rand = new Random();
 
 	  while(true) {

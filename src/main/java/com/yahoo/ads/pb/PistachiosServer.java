@@ -79,7 +79,7 @@ public class PistachiosServer {
 
 	private static Logger logger = LoggerFactory.getLogger(PistachiosServer.class);
 	final static MetricRegistry metrics = new MetricRegistry();
-	final static JmxReporter reporter = JmxReporter.forRegistry(metrics).build();
+	final static JmxReporter reporter = JmxReporter.forRegistry(metrics).inDomain("pistachio.metrics").build();
 
 	private final static Meter lookupRequests = metrics.meter(MetricRegistry.name(PistachiosServer.class, "lookupRequests"));
 	private final static Meter lookupFailureRequests = metrics.meter(MetricRegistry.name(PistachiosServer.class, "lookupFailureRequests"));
