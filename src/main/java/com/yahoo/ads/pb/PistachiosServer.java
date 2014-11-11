@@ -236,6 +236,7 @@ public class PistachiosServer {
 
 	  // embed helix controller
 		Configuration conf = ConfigurationManager.getConfiguration();
+		logger.info("zk conn str {}", conf.getString(ZOOKEEPER_SERVER));
 		helixManager = HelixManagerFactory.getZKHelixManager("PistachiosCluster",
 				InetAddress.getLocalHost().getHostName(), //conf.getString(PROFILE_HELIX_INSTANCE_ID),
 				InstanceType.CONTROLLER,

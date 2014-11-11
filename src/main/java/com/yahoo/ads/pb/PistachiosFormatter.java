@@ -44,6 +44,7 @@ import org.apache.helix.InstanceType;
 import org.apache.helix.controller.GenericHelixController;
 import org.apache.helix.HelixAdmin;
 import org.apache.helix.manager.zk.ZKHelixAdmin;
+import org.apache.helix.HelixException;
 import kafka.utils.ZKStringSerializer$;
 
 
@@ -56,55 +57,69 @@ import org.apache.commons.configuration.Configuration;
 import com.google.common.base.Joiner;
 
 import kafka.admin.CreateTopicCommand;
+import kafka.admin.DeleteTopicCommand;
+import kafka.utils.ZkUtils;
+
 import org.I0Itec.zkclient.ZkClient;
 import org.apache.helix.model.InstanceConfig;
 import 	org.apache.helix.HelixDefinedState;
+import org.apache.helix.model.IdealState;
 
 
 
 // Generated code
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Properties;
 
 
 public class PistachiosFormatter{
+
+	public static class PistachioClusterInfo{
+		List<String> hostList;
+		int numPartitions;
+		int numReplicas;
+	}
+
 	private static Logger logger = LoggerFactory.getLogger(PistachiosServer.class);
 
-
-  public static void main(String [] args) {
-	  String usage = "Usage: xxxx [zk string] [comma seperated cluster] [num partition] [num replica] (kafka zk path, optional)";
-	  if (args.length <4) {
-		  System.out.println("invalid number of parameters");
-		  System.out.println(usage);
-		  return;
-	  }
-
-	  int numPartitions = -1;
-	  int numReplicas = -1;
-	  String[] hostList = null;
-	  String kafkaZKPath = null;
-
+  public static PistachioClusterInfo getClusterInfo() {
 	  try {
-		  numPartitions = Integer.parseInt(args[2]);
-		  numReplicas = Integer.parseInt(args[3]);
-		  hostList = args[1].split(",");
-		  if (args.length >=5)
-			  kafkaZKPath = args[4];
-	  } catch(Exception e) {
+		  String zookeeperConnStr = ConfigurationManager.getConfiguration().getString("Pistachio.ZooKeeper.Server");
+		  ZKHelixAdmin admin = new ZKHelixAdmin(zookeeperConnStr);
+		  IdealState idealState = admin.getResourceIdealState("PistachiosCluster", "PistachiosResource");
+		  PistachioClusterInfo info = new PistachioClusterInfo();
+		  info.numPartitions = idealState.getNumPartitions();
+		  info.numReplicas = Integer.parseInt(idealState.getReplicas());
+		  info.hostList = admin.getInstancesInCluster("PistachiosCluster");
+
+		  logger.info("num partitions: {}, num Replicas: {}, hostList: {}.", info.numPartitions,
+		  	info.numReplicas, Joiner.on(",").join(info.hostList.toArray()));
+
+		  return info;
+	  } catch (Exception e) {
+		  logger.info("error getting cluster info", e);
+		  return null;
 	  }
+  }
 
-	  if (numPartitions == -1 || numReplicas == -1|| hostList == null || hostList.length == 0) {
-		  System.out.println("invalid parameters");
-		  System.out.println(usage);
-		  return;
-	  }
-
-	  
-
-
+  private static void format(ZKHelixAdmin admin, ZkClient zkClient, String[] hostList, int numPartitions, int numReplicas, String kafkaTopicPrefix, String kafkaZKPath) {
     try {
-		ZKHelixAdmin admin = new ZKHelixAdmin(args[0]);
+		for (int i =0; i<numPartitions; i++) {
+			try {
+				//CreateTopicCommand.createTopic(zkClient , "PistachiosPartition." + i, 1, 1, "");
+				CreateTopicCommand.createTopic(zkClient , kafkaTopicPrefix + i, 1, 1, "");
+			} catch (kafka.common.TopicExistsException tee) {
+				logger.info("topic exists, continue", tee);
+			} catch (Exception e) {
+				logger.info("creating kafka topic error, roll back", e);
+				cleanup(admin, zkClient, hostList, numPartitions, numReplicas, kafkaTopicPrefix, kafkaZKPath);
+			}
+		}
+		zkClient.close();
+
+		//ZKHelixAdmin admin = new ZKHelixAdmin(args[1]);
 		admin.addCluster("PistachiosCluster");
 
 		// define model
@@ -145,16 +160,34 @@ public class PistachiosFormatter{
 		// Use the isValid() function to make sure the StateModelDefinition will work without issues
 		// Assert.assertTrue(stateModel.isValid());
 		try {
-		admin.addStateModelDef("PistachiosCluster", "MasterSlave", stateModel);
+			admin.addStateModelDef("PistachiosCluster", "MasterSlave", stateModel);
+		} catch (HelixException he) {
+			if (he.getMessage().contains("already exists")) {
+				logger.info("state model def already exists, continue.", he);
+			}
+			else {
+				logger.info("adding state model def error, roll back and exit", he);
+				cleanup(admin, zkClient, hostList, numPartitions, numReplicas, kafkaTopicPrefix, kafkaZKPath);
+			}
 		} catch(Exception e) {
-			logger.info("error:", e);
+				logger.info("adding state model def error, roll back and exit", e);
+				cleanup(admin, zkClient, hostList, numPartitions, numReplicas, kafkaTopicPrefix, kafkaZKPath);
 		}
 
 		logger.info("adding resource");
 		try {
-		admin.addResource("PistachiosCluster", "PistachiosResource", numPartitions, "MasterSlave", "SEMI_AUTO");
+			admin.addResource("PistachiosCluster", "PistachiosResource", numPartitions, "MasterSlave", "SEMI_AUTO");
+		} catch (HelixException he) {
+			if (he.getMessage().contains("already exists")) {
+				logger.info("resourece already exists, continue.", he);
+			}
+			else {
+				logger.info("adding resource error, roll back and exit", he);
+				cleanup(admin, zkClient, hostList, numPartitions, numReplicas, kafkaTopicPrefix, kafkaZKPath);
+			}
 		} catch(Exception e) {
-			logger.info("error:", e);
+			logger.info("adding resource error, roll back and exit", e);
+			cleanup(admin, zkClient, hostList, numPartitions, numReplicas, kafkaTopicPrefix, kafkaZKPath);
 		}
 		logger.info("adding host");
 		for (String host : hostList) {
@@ -166,20 +199,113 @@ public class PistachiosFormatter{
 			//Add additional system specific configuration if needed. These can be accessed during the node start up.
 			//instanceConfig.getRecord().setSimpleField("key", "value");
 			try {
-			admin.addInstance("PistachiosCluster", instanceConfig);
+				admin.addInstance("PistachiosCluster", instanceConfig);
+			} catch (HelixException he) {
+				if (he.getMessage().contains("already exists")) {
+					logger.info("instance already exists, continue.", he);
+				}
+				else {
+					logger.info("adding instance error, roll back and exit", he);
+					cleanup(admin, zkClient, hostList, numPartitions, numReplicas, kafkaTopicPrefix, kafkaZKPath);
+				}
 			} catch(Exception e) {
-				logger.info("error:", e);
+					logger.info("adding instance error, roll back and exit", e);
+					cleanup(admin, zkClient, hostList, numPartitions, numReplicas, kafkaTopicPrefix, kafkaZKPath);
 			}
 		}
 		logger.info("rebalancing");
+		try {
 		admin.rebalance("PistachiosCluster", "PistachiosResource", numReplicas);
+		} catch(Exception e) {
+			logger.info("rebalancing error, roll back and exit", e);
+			cleanup(admin, zkClient, hostList, numPartitions, numReplicas, kafkaTopicPrefix, kafkaZKPath);
+		}
 
 		logger.info("adding topic to zk path: {}", kafkaZKPath);
-		ZkClient zkClient = new ZkClient(args[0]+ (kafkaZKPath != null ? "/" + kafkaZKPath : ""), 30000, 30000, ZKStringSerializer$.MODULE$);
+		//ZkClient zkClient = new ZkClient(args[1]+ (kafkaZKPath != null ? "/" + kafkaZKPath : ""), 30000, 30000, ZKStringSerializer$.MODULE$);
 
+		//Thread.sleep(120000);
+		//
+		logger.info("format finished succeessfully");
+	  } catch(Exception e) {
+		  logger.info("error:", e);
+	  }
+  }
+
+  private static void cleanup(ZKHelixAdmin admin, ZkClient zkClient, String[] hostList, int numPartitions, int numReplicas, String kafkaTopicPrefix, String kafkaZKPath) {
+    try {
+		// TODO, delete not supported until 0.8.1, we'll enable it later
 		for (int i =0; i<numPartitions; i++) {
-			CreateTopicCommand.createTopic(zkClient , "PistachiosPartition." + i, 1, 1, "");
+			//zkClient = new ZkClient(zkConnect, 30000, 30000, ZKStringSerializer);
+			zkClient.deleteRecursive(ZkUtils.getTopicPath(kafkaTopicPrefix + i));
 		}
+		zkClient.close();
+		//ZKHelixAdmin admin = new ZKHelixAdmin(args[1]);
+		admin.dropCluster("PistachiosCluster");
+	  } catch(Exception e) {
+		  logger.info("error:", e);
+	  }
+		logger.info("cleanup finished succeessfully");
+  }
+
+  public static void main(String [] args) {
+	  String usage = "Usage: xxxx [format/cleanup/info] [comma seperated cluster] [num partition] [num replica] (kafka zk path, optional)";
+
+	  if (args.length > 0 && "info".equals(args[0])) {
+		  getClusterInfo();
+		  return;
+	  }
+
+	  if (args.length <4) {
+		  System.out.println("invalid number of parameters");
+		  System.out.println(usage);
+		  return;
+	  }
+
+	  int numPartitions = -1;
+	  int numReplicas = -1;
+	  String[] hostList = null;
+	  String kafkaZKPath = null;
+	  String kafkaTopicPrefix = null;
+
+	  boolean cleanup = false;
+
+	  try {
+		  numPartitions = Integer.parseInt(args[2]);
+		  numReplicas = Integer.parseInt(args[3]);
+		  if ("cleanup".equals(args[0])) {
+			  cleanup = true;
+		  }
+		  hostList = args[1].split(",");
+		  if (args.length >=5)
+			  kafkaZKPath = args[4];
+
+	  } catch(Exception e) {
+	  }
+
+	  if (numPartitions == -1 || numReplicas == -1|| hostList == null || hostList.length == 0 || kafkaTopicPrefix == null) {
+		  System.out.println("invalid parameters");
+		  System.out.println(usage);
+		  return;
+	  }
+
+	  String zookeeperConnStr = ConfigurationManager.getConfiguration().getString("Pistachio.ZooKeeper.Server");
+	  kafkaTopicPrefix = ConfigurationManager.getConfiguration().getString("Profile.Kafka.TopicPrefix");
+
+	  
+
+
+    try {
+		ZKHelixAdmin admin = new ZKHelixAdmin(zookeeperConnStr);
+
+		ZkClient zkClient = new ZkClient(zookeeperConnStr + (kafkaZKPath != null ? "/" + kafkaZKPath : ""), 30000, 30000, ZKStringSerializer$.MODULE$);
+
+		if (cleanup) {
+			cleanup(admin, zkClient, hostList, numPartitions, numReplicas, kafkaTopicPrefix, kafkaZKPath);
+		} else {
+			format(admin, zkClient, hostList, numPartitions, numReplicas, kafkaTopicPrefix, kafkaZKPath);
+		}
+
 		zkClient.close();
 		//Thread.sleep(120000);
 	  } catch(Exception e) {
