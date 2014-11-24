@@ -71,6 +71,7 @@ public class PistachiosServer {
 	static {	 
 		try {	 
 			NativeUtils.loadLibraryFromJar("/libkyotocabinet.so");	 
+			NativeUtils.loadLibraryFromJar("/libjkyotocabinet.so");
 		} catch (Exception e) {	 
 			e.printStackTrace(); // This is probably not the best way to handle exception :-)	 
 		}	 
