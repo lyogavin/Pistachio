@@ -309,8 +309,8 @@ public class PistachiosServer {
 			profileStore = new TLongKyotoCabinetStore(
 			        conf.getString(PROFILE_BASE_DIR),
 			        0, 8,
-			        conf.getInt("StorageEngine.KC.RecordsPerServer"),
-			        conf.getLong("StorageEngine.KC.MemoryPerServer"));
+			        conf.getInt("StorageEngine.KC.RecordsPerPartition"),
+			        conf.getLong("StorageEngine.KC.MemoryPerPartition"));
 			/*
 			*/
 			//profileStore.open();
