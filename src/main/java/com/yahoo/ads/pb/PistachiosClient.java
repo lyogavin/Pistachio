@@ -35,6 +35,20 @@ import com.codahale.metrics.JmxReporter;
 import com.google.api.client.util.ExponentialBackOff;
 import com.google.api.client.util.BackOff;
 
+/**
+ * Main Pistachio Client Class
+ * <ul>
+ * <li>To use the Client, new an instance and call the functions
+ * <li>TBA: Thread Safty
+ * <li>TBA: Connection Reuse
+ *     (see <a href="#setXORMode">setXORMode</a>)
+ * </ul>
+ * <p>
+ * 
+ * @author      Gavin Li
+ * @version     %I%, %G%
+ * @since       1.0
+ */
 public class PistachiosClient {
 	private static Logger logger = LoggerFactory.getLogger(PistachiosClient.class);
 	final static MetricRegistry metrics = new MetricRegistry();
@@ -120,6 +134,12 @@ public class PistachiosClient {
 		return client;
 	}
 
+    /** 
+     * To lookup the value of an id. Given the id return the value as a byte array.
+     *
+     * @param id        id to look up as long.
+     * @return          <code>byte array</code> return in byte array
+     */
 	public byte[] lookup(long id) {
 
 		final Timer.Context context = lookupTimer.time();
@@ -185,6 +205,12 @@ public class PistachiosClient {
 		return ret;
 	}
 
+    /** 
+     * To store the key value.
+     *
+     * @param id        id to store as long.
+     * @param value     value to store as byte array
+     */
 	public void store(long id, byte[] value) {
 		final Timer.Context context = storeTimer.time();
 		boolean succeeded = false;
