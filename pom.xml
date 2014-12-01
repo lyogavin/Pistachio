@@ -19,6 +19,11 @@
 
     <dependencies>
 	<dependency>
+		<groupId>io.netty</groupId>
+			<artifactId>netty-all</artifactId>
+				<version>4.0.24.Final</version>
+				</dependency>
+		<dependency>
 	  <groupId>com.google.http-client</groupId>
 	    <artifactId>google-http-client</artifactId>
 		  <version>1.18.0-rc</version>
