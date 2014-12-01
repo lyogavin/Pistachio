@@ -22,6 +22,10 @@ import java.util.Formatter;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+
+
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +36,24 @@ public class NettyPistachioClientHandler extends SimpleChannelInboundHandler<Res
 
     // Stateful properties
     private volatile Channel channel;
-    private final BlockingQueue<Response> answer = new LinkedBlockingQueue<Response>();
+    private final ArrayList<LinkedBlockingQueue<Response>> answerQueues = new ArrayList<LinkedBlockingQueue<Response>>(20);
+
+    private AtomicInteger nextRequestId = new AtomicInteger();
+
+    private final ThreadLocal<Integer> threadAnswerQueueId =
+        new ThreadLocal<Integer>() {
+            @Override protected Integer initialValue() {
+                LinkedBlockingQueue<Response> q = new LinkedBlockingQueue<Response>();
+                Integer id = 0;
+                synchronized(answerQueues) {
+                    answerQueues.add(q);
+                    id = answerQueues.size() - 1;
+                }
+                return id;
+            }
+        };
+
+
 
     public NettyPistachioClientHandler() {
         super(false);
@@ -40,13 +61,20 @@ public class NettyPistachioClientHandler extends SimpleChannelInboundHandler<Res
 
 	public Response lookup(Long id) {
 		Request.Builder builder = Request.newBuilder();
+        builder.setRequestId(threadAnswerQueueId.get());
 		builder.setId(123);
+
+
+
         channel.writeAndFlush(builder.build());
+
+
         boolean interrupted = false;
 		Response response;
+
         for (;;) {
             try {
-                response = answer.take();
+                response = answerQueues.get(threadAnswerQueueId.get()).take();
                 break;
             } catch (InterruptedException ignore) {
                 interrupted = true;
@@ -69,8 +97,8 @@ public class NettyPistachioClientHandler extends SimpleChannelInboundHandler<Res
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, Response response) throws Exception {
-            System.out.println("got:"+ response.getId());
-        answer.add(response);
+		System.out.println("got:"+ response.getId());
+        answerQueues.get(response.getRequestId()).add(response);
     }
 
     @Override
