@@ -23,9 +23,10 @@ import org.slf4j.LoggerFactory;
 
 import com.yahoo.ads.pb.helix.PartitionHandler;
 import com.yahoo.ads.pb.helix.PartitionHandlerFactory;
+import com.yahoo.ads.pb.util.PistachiosConstants;
 
-@StateModelInfo(initialState = "OFFLINE", states = {
-	    "ONLINE", "ERROR"
+@StateModelInfo(initialState = PistachiosConstants.PARTITION_OFFLINE, states = {
+		PistachiosConstants.PARTITION_OFFLINE, PistachiosConstants.PARTITION_ERROR
 	})
 public class OnlineOfflineStateModel extends StateModel {
 	
@@ -40,7 +41,7 @@ public class OnlineOfflineStateModel extends StateModel {
 		this.handlerFactory = handlerFactory;
 	}
 	
-	@Transition(to = "ONLINE", from = "OFFLINE")
+	@Transition(to = PistachiosConstants.PARTITION_OFFLINE, from = PistachiosConstants.PARTITION_OFFLINE)
 	public void onBecomeOnlineFromOffline(Message message, NotificationContext context) {
 		logger.info("becomes ONLINE from OFFLINE for {}", partitionId);
 		if (handler.compareAndSet(null, handlerFactory.createParitionHandler(partitionId))) {
@@ -58,19 +59,19 @@ public class OnlineOfflineStateModel extends StateModel {
 		}
 	}
 	
-	@Transition(to = "OFFLINE", from = "ONLINE")
+	@Transition(to = PistachiosConstants.PARTITION_OFFLINE, from = PistachiosConstants.PARTITION_OFFLINE)
 	public void onBecomeOfflineFromOnline(Message message, NotificationContext context) {
 		logger.info("becomes OFFLINE from ONLINE for {}", partitionId);
 		stop();
 	}
 		
-	@Transition(to = "DROPPED", from = "OFFLINE")
+	@Transition(to = PistachiosConstants.PARTITION_DROPPED, from = PistachiosConstants.PARTITION_OFFLINE)
 	public void onBecomeDroppedFromOffline(Message message, NotificationContext context) {
 		logger.info("becomes DROPPED from OFFLINE for {}", partitionId);	
 		stop();
 	}
 	
-	@Transition(to = "OFFLINE", from = "ERROR")
+	@Transition(to = PistachiosConstants.PARTITION_OFFLINE, from = PistachiosConstants.PARTITION_ERROR)
 	public void onBecomeOfflineFromError(Message message, NotificationContext context) {
 		logger.info("becomes OFFLINE from ERROR for {}", partitionId);				
 	}

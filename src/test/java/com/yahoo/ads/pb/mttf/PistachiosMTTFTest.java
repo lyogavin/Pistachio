@@ -52,9 +52,9 @@ public class PistachiosMTTFTest{
 		  try {
 		  long id = rand.nextLong();
 		  String value=InetAddress.getLocalHost().getHostName() + rand.nextInt() ;
-		  client.store(id, value.getBytes());
+		  client.store(0, id, value.getBytes());
 		  for (int i =0; i<30; i++) {
-			  byte[] clientValue = client.lookup(id);
+			  byte[] clientValue = client.lookup(0, id);
 			  String remoteValue = new String(clientValue);
 			  if (Arrays.equals(value.getBytes(), clientValue) || !remoteValue.contains(InetAddress.getLocalHost().getHostName())) {
 				  logger.debug("succeeded checking id {} value {}", id, value);

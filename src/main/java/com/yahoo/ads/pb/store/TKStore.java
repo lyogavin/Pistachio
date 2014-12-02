@@ -58,13 +58,15 @@ public class TKStore implements Store {
 
 		KeyValue keyValue = kryo.readObject(input, KeyValue.class);
 		input.close();
+	
+		logger.info("stored {}:{}:{}, seq id:{}", keyValue.partition, keyValue.key, new String(keyValue.value), keyValue.seqId);
 		try {
-		PistachiosServer.getInstance().getProfileStore().store(keyValue.key, keyValue.value);
+			PistachiosServer.getInstance().getProfileStore().store(keyValue.partition, keyValue.key, keyValue.value);
 		} catch (Exception e) {
+			logger.info("error {}", e);
 		}
 
-logger.info("stored {}:{}, seq id:{}", keyValue.key, keyValue.value, keyValue.seqId);
-		long st = System.currentTimeMillis();
+		// long st = System.currentTimeMillis();
 		//storeCounter.begin();
 		//try {
 			/*
@@ -185,7 +187,6 @@ logger.info("stored {}:{}, seq id:{}", keyValue.key, keyValue.value, keyValue.se
 	        profileStore.storeOffset( offset, partitionId);
 	        return true;
         } catch (Exception e) {
-	        // TODO Auto-generated catch block
 	        logger.error("exception while storing offset", e);
 	        return false;
         }

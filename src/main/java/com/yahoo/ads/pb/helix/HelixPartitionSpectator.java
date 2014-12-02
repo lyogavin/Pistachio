@@ -31,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.yahoo.ads.pb.util.ConfigurationManager;
+import com.yahoo.ads.pb.util.PistachiosConstants;
 
 public class HelixPartitionSpectator {
 	
@@ -52,6 +53,8 @@ public class HelixPartitionSpectator {
 			routingTableProvider = new RoutingTableProvider();
 			manager.addExternalViewChangeListener(routingTableProvider);
 		} catch (Exception e) {
+			e.printStackTrace();
+			
 			logger.error("caught exception when init HelixPartitionSpectator", e);
 			if (manager != null) {
 				manager.disconnect();
@@ -95,7 +98,7 @@ public class HelixPartitionSpectator {
 		logger.debug("inside get all instance");
 		logger.debug("resource name"+resource +" partition "+partition+ " state "+state);
 		List<InstanceConfig> instances = routingTableProvider.getInstances(resource, String.format("%s_%d", resource, partition), state);
-		List<InstanceConfig> instancesSet = routingTableProvider.getInstances(resource, String.format("%s_%d", resource, partition), "SLAVE");
+		List<InstanceConfig> instancesSet = routingTableProvider.getInstances(resource, String.format("%s_%d", resource, partition), PistachiosConstants.PARTITION_SLAVE);
 
 		for (InstanceConfig instance: instancesSet) {
 			String hostname = instance.getHostName();

@@ -162,7 +162,7 @@ public class KafkaSimpleConsumer {
 	@SuppressWarnings("unchecked")
 	public KafkaSimpleConsumer(String topic, int partitionId, String clientId, boolean crossColo) {
 		List<String> brokers = null;
-		brokers = conf.getList("Kafka.Broker");
+		brokers = conf.getList("kafka.metadata.broker.list");
 		List<KafkaBroker> brokerList = new ArrayList<KafkaBroker>();
 		for (String broker: brokers) {
 			String[] tokens = broker.split(":");
@@ -235,8 +235,8 @@ public class KafkaSimpleConsumer {
 			logger.info("create SimpleConsumer for {} - {}, leader broker {}:{}", topic, partitionId, leaderBroker.host(), leaderBroker.port());
 
 			consumer = new SimpleConsumer(leaderBroker.host(),
-					leaderBroker.port(), conf.getInt("kafka.soTimeout"),
-					conf.getInt("kafka.bufferSize"), clientId);
+					leaderBroker.port(), conf.getInt("Pistachio.Kafka.soTimeout"),
+					conf.getInt("Pistachio.Kafka.bufferSize"), clientId);
 		}
 		return consumer;
 	}
@@ -349,7 +349,7 @@ public class KafkaSimpleConsumer {
 			
 			if (response == null || response.hasError()) {
 				short errorCode = response != null ? response.errorCode(topic, partitionId) : ErrorMapping.UnknownCode();
-				logger.warn("fetch {} - {} with offset {} encounters error: {}", topic, partitionId, offset, errorCode);
+				logger.debug("fetch {} - {} with offset {} encounters error: {}", topic, partitionId, offset, errorCode);
 				
 				boolean needNewLeader = false;
 				if (errorCode == ErrorMapping.RequestTimedOutCode()) {
@@ -412,8 +412,8 @@ public class KafkaSimpleConsumer {
 			SimpleConsumer consumer = null;
 			try {
 				logger.debug("findLeader, try broker {}:{}", broker.host, broker.port);
-				consumer = new SimpleConsumer(broker.host, broker.port, conf.getInt("kafka.soTimeout"), 
-						conf.getInt("kafka.bufferSize"), clientId + "leaderLookup");
+				consumer = new SimpleConsumer(broker.host, broker.port, conf.getInt("Pistachio.Kafka.soTimeout"), 
+						conf.getInt("Pistachio.Kafka.bufferSize"), clientId + "leaderLookup");
 				TopicMetadataResponse resp = consumer.send(new TopicMetadataRequest(topics));
 				
 				// just one topic inside the topics
