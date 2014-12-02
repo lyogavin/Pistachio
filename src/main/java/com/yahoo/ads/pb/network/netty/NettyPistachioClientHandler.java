@@ -31,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class NettyPistachioClientHandler extends SimpleChannelInboundHandler<Response> {
+	private static Logger logger = LoggerFactory.getLogger(NettyPistachioClientHandler.class);
 
     private static final Pattern DELIM = Pattern.compile("/");
 
@@ -49,6 +50,7 @@ public class NettyPistachioClientHandler extends SimpleChannelInboundHandler<Res
                     answerQueues.add(q);
                     id = answerQueues.size() - 1;
                 }
+                logger.debug("created blocking queue for thread id: {}", id);
                 return id;
             }
         };
@@ -61,12 +63,16 @@ public class NettyPistachioClientHandler extends SimpleChannelInboundHandler<Res
 
 	public Response lookup(Long id) {
 		Request.Builder builder = Request.newBuilder();
-        builder.setRequestId(threadAnswerQueueId.get());
-		builder.setId(123);
+        builder.setThreadId(threadAnswerQueueId.get());
+		builder.setId(id);
+        Integer requestId = nextRequestId.incrementAndGet() & 0xffff;
+        builder.setRequestId(requestId);
 
 
 
-        channel.writeAndFlush(builder.build());
+        Request request = builder.build();
+        channel.writeAndFlush(request);
+        logger.debug("request constructed: {} and sent.", request);
 
 
         boolean interrupted = false;
@@ -74,7 +80,16 @@ public class NettyPistachioClientHandler extends SimpleChannelInboundHandler<Res
 
         for (;;) {
             try {
-                response = answerQueues.get(threadAnswerQueueId.get()).take();
+                response = answerQueues.get(threadAnswerQueueId.get()).poll(100, java.util.concurrent.TimeUnit.SECONDS);
+                if (response.getRequestId() != requestId)
+                {
+                    logger.debug("got response {}, but id not match {}, may be the previous timed out response.", response, requestId);
+                    continue;
+                } else if (response == null) {
+                    logger.debug("times out");
+                    return null;
+                }
+                logger.debug("got response {}", response);
                 break;
             } catch (InterruptedException ignore) {
                 interrupted = true;
@@ -97,13 +112,13 @@ public class NettyPistachioClientHandler extends SimpleChannelInboundHandler<Res
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, Response response) throws Exception {
-		System.out.println("got:"+ response.getId());
-        answerQueues.get(response.getRequestId()).add(response);
+        logger.debug("got response {} in channelRead0", response);
+        answerQueues.get(response.getThreadId()).add(response);
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        cause.printStackTrace();
+        logger.info("Exception caught", cause);
         ctx.close();
     }
 }

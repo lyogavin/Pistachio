@@ -18,22 +18,29 @@ import com.google.protobuf.ByteString;
 
 import java.util.Calendar;
 import java.util.TimeZone;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static java.util.Calendar.*;
 
 public class NettyPistachioServerHandler extends SimpleChannelInboundHandler<Request> {
+	private static Logger logger = LoggerFactory.getLogger(NettyPistachioServerHandler.class);
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, Request request) throws Exception {
-        long currentTime = System.currentTimeMillis();
+        logger.debug("got request: {}", request);
 
 		Response.Builder builder = Response.newBuilder();
 		builder.setId(request.getId());
 		builder.setSucceeded(true);
+        builder.setThreadId(request.getThreadId());
+        builder.setRequestId(request.getRequestId());
 		builder.setData(ByteString.copyFromUtf8("succeeded"));
 
 
-        ctx.write(builder.build());
+        Response response = builder.build();
+        logger.debug("writing response: {}", response);
+        ctx.write(response);
     }
 
     @Override
@@ -43,7 +50,7 @@ public class NettyPistachioServerHandler extends SimpleChannelInboundHandler<Req
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        cause.printStackTrace();
+        logger.info("error: ", cause);
         ctx.close();
     }
 

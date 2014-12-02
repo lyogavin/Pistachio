@@ -94,6 +94,10 @@ public final class NettyPistachioProtocol {
     // optional uint32 request_id = 3;
     boolean hasRequestId();
     int getRequestId();
+    
+    // optional uint32 thread_id = 4;
+    boolean hasThreadId();
+    int getThreadId();
   }
   public static final class Request extends
       com.google.protobuf.GeneratedMessage
@@ -154,10 +158,21 @@ public final class NettyPistachioProtocol {
       return requestId_;
     }
     
+    // optional uint32 thread_id = 4;
+    public static final int THREAD_ID_FIELD_NUMBER = 4;
+    private int threadId_;
+    public boolean hasThreadId() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    public int getThreadId() {
+      return threadId_;
+    }
+    
     private void initFields() {
       type_ = com.yahoo.ads.pb.network.netty.NettyPistachioProtocol.RequestType.LOOKUP;
       id_ = 0L;
       requestId_ = 0;
+      threadId_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -180,6 +195,9 @@ public final class NettyPistachioProtocol {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeUInt32(3, requestId_);
       }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeUInt32(4, threadId_);
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -200,6 +218,10 @@ public final class NettyPistachioProtocol {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(3, requestId_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(4, threadId_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -331,6 +353,8 @@ public final class NettyPistachioProtocol {
         bitField0_ = (bitField0_ & ~0x00000002);
         requestId_ = 0;
         bitField0_ = (bitField0_ & ~0x00000004);
+        threadId_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
       
@@ -381,6 +405,10 @@ public final class NettyPistachioProtocol {
           to_bitField0_ |= 0x00000004;
         }
         result.requestId_ = requestId_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.threadId_ = threadId_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -405,6 +433,9 @@ public final class NettyPistachioProtocol {
         }
         if (other.hasRequestId()) {
           setRequestId(other.getRequestId());
+        }
+        if (other.hasThreadId()) {
+          setThreadId(other.getThreadId());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -456,6 +487,11 @@ public final class NettyPistachioProtocol {
             case 24: {
               bitField0_ |= 0x00000004;
               requestId_ = input.readUInt32();
+              break;
+            }
+            case 32: {
+              bitField0_ |= 0x00000008;
+              threadId_ = input.readUInt32();
               break;
             }
           }
@@ -530,6 +566,27 @@ public final class NettyPistachioProtocol {
         return this;
       }
       
+      // optional uint32 thread_id = 4;
+      private int threadId_ ;
+      public boolean hasThreadId() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      public int getThreadId() {
+        return threadId_;
+      }
+      public Builder setThreadId(int value) {
+        bitField0_ |= 0x00000008;
+        threadId_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearThreadId() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        threadId_ = 0;
+        onChanged();
+        return this;
+      }
+      
       // @@protoc_insertion_point(builder_scope:com.yahoo.ads.pb.network.netty.Request)
     }
     
@@ -563,6 +620,10 @@ public final class NettyPistachioProtocol {
     // optional uint32 request_id = 5;
     boolean hasRequestId();
     int getRequestId();
+    
+    // optional uint32 thread_id = 6;
+    boolean hasThreadId();
+    int getThreadId();
   }
   public static final class Response extends
       com.google.protobuf.GeneratedMessage
@@ -665,12 +726,23 @@ public final class NettyPistachioProtocol {
       return requestId_;
     }
     
+    // optional uint32 thread_id = 6;
+    public static final int THREAD_ID_FIELD_NUMBER = 6;
+    private int threadId_;
+    public boolean hasThreadId() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    public int getThreadId() {
+      return threadId_;
+    }
+    
     private void initFields() {
       id_ = 0L;
       succeeded_ = false;
       errorMessage_ = "";
       data_ = com.google.protobuf.ByteString.EMPTY;
       requestId_ = 0;
+      threadId_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -698,6 +770,9 @@ public final class NettyPistachioProtocol {
       }
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         output.writeUInt32(5, requestId_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeUInt32(6, threadId_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -727,6 +802,10 @@ public final class NettyPistachioProtocol {
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(5, requestId_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(6, threadId_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -862,6 +941,8 @@ public final class NettyPistachioProtocol {
         bitField0_ = (bitField0_ & ~0x00000008);
         requestId_ = 0;
         bitField0_ = (bitField0_ & ~0x00000010);
+        threadId_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000020);
         return this;
       }
       
@@ -920,6 +1001,10 @@ public final class NettyPistachioProtocol {
           to_bitField0_ |= 0x00000010;
         }
         result.requestId_ = requestId_;
+        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        result.threadId_ = threadId_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -950,6 +1035,9 @@ public final class NettyPistachioProtocol {
         }
         if (other.hasRequestId()) {
           setRequestId(other.getRequestId());
+        }
+        if (other.hasThreadId()) {
+          setThreadId(other.getThreadId());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -1005,6 +1093,11 @@ public final class NettyPistachioProtocol {
             case 40: {
               bitField0_ |= 0x00000010;
               requestId_ = input.readUInt32();
+              break;
+            }
+            case 48: {
+              bitField0_ |= 0x00000020;
+              threadId_ = input.readUInt32();
               break;
             }
           }
@@ -1136,6 +1229,27 @@ public final class NettyPistachioProtocol {
         return this;
       }
       
+      // optional uint32 thread_id = 6;
+      private int threadId_ ;
+      public boolean hasThreadId() {
+        return ((bitField0_ & 0x00000020) == 0x00000020);
+      }
+      public int getThreadId() {
+        return threadId_;
+      }
+      public Builder setThreadId(int value) {
+        bitField0_ |= 0x00000020;
+        threadId_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearThreadId() {
+        bitField0_ = (bitField0_ & ~0x00000020);
+        threadId_ = 0;
+        onChanged();
+        return this;
+      }
+      
       // @@protoc_insertion_point(builder_scope:com.yahoo.ads.pb.network.netty.Response)
     }
     
@@ -1168,14 +1282,15 @@ public final class NettyPistachioProtocol {
     java.lang.String[] descriptorData = {
       "\nIsrc/main/java/com/yahoo/ads/pb/network" +
       "/netty/NettyPistachioProtocol.proto\022\036com" +
-      ".yahoo.ads.pb.network.netty\"d\n\007Request\0229" +
+      ".yahoo.ads.pb.network.netty\"w\n\007Request\0229" +
       "\n\004type\030\001 \001(\0162+.com.yahoo.ads.pb.network." +
       "netty.RequestType\022\n\n\002id\030\002 \001(\004\022\022\n\nrequest" +
-      "_id\030\003 \001(\r\"b\n\010Response\022\n\n\002id\030\001 \001(\004\022\021\n\tsuc" +
-      "ceeded\030\002 \001(\010\022\025\n\rerror_message\030\003 \001(\t\022\014\n\004d" +
-      "ata\030\004 \001(\014\022\022\n\nrequest_id\030\005 \001(\r*7\n\013Request" +
-      "Type\022\n\n\006LOOKUP\020\001\022\t\n\005STORE\020\002\022\021\n\rPROCESS_E" +
-      "VENT\020\003B\002H\001"
+      "_id\030\003 \001(\r\022\021\n\tthread_id\030\004 \001(\r\"u\n\010Response" +
+      "\022\n\n\002id\030\001 \001(\004\022\021\n\tsucceeded\030\002 \001(\010\022\025\n\rerror" +
+      "_message\030\003 \001(\t\022\014\n\004data\030\004 \001(\014\022\022\n\nrequest_" +
+      "id\030\005 \001(\r\022\021\n\tthread_id\030\006 \001(\r*7\n\013RequestTy" +
+      "pe\022\n\n\006LOOKUP\020\001\022\t\n\005STORE\020\002\022\021\n\rPROCESS_EVE",
+      "NT\020\003B\002H\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -1187,7 +1302,7 @@ public final class NettyPistachioProtocol {
           internal_static_com_yahoo_ads_pb_network_netty_Request_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_com_yahoo_ads_pb_network_netty_Request_descriptor,
-              new java.lang.String[] { "Type", "Id", "RequestId", },
+              new java.lang.String[] { "Type", "Id", "RequestId", "ThreadId", },
               com.yahoo.ads.pb.network.netty.NettyPistachioProtocol.Request.class,
               com.yahoo.ads.pb.network.netty.NettyPistachioProtocol.Request.Builder.class);
           internal_static_com_yahoo_ads_pb_network_netty_Response_descriptor =
@@ -1195,7 +1310,7 @@ public final class NettyPistachioProtocol {
           internal_static_com_yahoo_ads_pb_network_netty_Response_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_com_yahoo_ads_pb_network_netty_Response_descriptor,
-              new java.lang.String[] { "Id", "Succeeded", "ErrorMessage", "Data", "RequestId", },
+              new java.lang.String[] { "Id", "Succeeded", "ErrorMessage", "Data", "RequestId", "ThreadId", },
               com.yahoo.ads.pb.network.netty.NettyPistachioProtocol.Response.class,
               com.yahoo.ads.pb.network.netty.NettyPistachioProtocol.Response.Builder.class);
           return null;
