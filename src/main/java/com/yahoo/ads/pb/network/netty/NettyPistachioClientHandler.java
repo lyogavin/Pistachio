@@ -61,10 +61,9 @@ public class NettyPistachioClientHandler extends SimpleChannelInboundHandler<Res
         super(false);
     }
 
-	public Response lookup(Long id) {
-		Request.Builder builder = Request.newBuilder();
+	public Response sendRequest(Request.Builder builder) {
+		//Request.Builder builder = Request.newBuilder();
         builder.setThreadId(threadAnswerQueueId.get());
-		builder.setId(id);
         Integer requestId = nextRequestId.incrementAndGet() & 0xffff;
         builder.setRequestId(requestId);
 

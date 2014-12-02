@@ -19,29 +19,38 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Receives a list of continent/city pairs from a {@link WorldClockClient} to
  * get the local times of the specified cities.
  */
 public final class NettyPistachioServer {
+	private static Logger logger = LoggerFactory.getLogger(NettyPistachioServer.class);
 
     static final boolean SSL = System.getProperty("ssl") != null;
     static final int PORT = Integer.parseInt(System.getProperty("port", "8463"));
 
     public static void main(String[] args) throws Exception {
-        // Configure SSL.
-        final SslContext sslCtx;
-        if (SSL) {
-            SelfSignedCertificate ssc = new SelfSignedCertificate();
-            sslCtx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
-        } else {
-            sslCtx = null;
-        }
+        startServer();
+    }
 
-        EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
+    public static void startServer(){
+        EventLoopGroup bossGroup = null;
+        EventLoopGroup workerGroup = null;
         try {
+            // Configure SSL.
+            final SslContext sslCtx;
+            if (SSL) {
+                SelfSignedCertificate ssc = new SelfSignedCertificate();
+                sslCtx = SslContext.newServerContext(ssc.certificate(), ssc.privateKey());
+            } else {
+                sslCtx = null;
+            }
+
+            bossGroup = new NioEventLoopGroup(1);
+            workerGroup = new NioEventLoopGroup();
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
@@ -49,9 +58,13 @@ public final class NettyPistachioServer {
              .childHandler(new NettyPistachioServerInitializer(sslCtx));
 
             b.bind(PORT).sync().channel().closeFuture().sync();
-        } finally {
-            bossGroup.shutdownGracefully();
-            workerGroup.shutdownGracefully();
+        } catch (Exception e) {
+            logger.debug("error:", e);
+        }finally {
+            if (bossGroup != null)
+                bossGroup.shutdownGracefully();
+            if (workerGroup != null)
+                workerGroup.shutdownGracefully();
         }
     }
 }

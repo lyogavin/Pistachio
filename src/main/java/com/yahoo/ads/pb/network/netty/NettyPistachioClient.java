@@ -21,12 +21,15 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import java.util.Arrays;
 import java.util.List;
 import com.yahoo.ads.pb.network.netty.NettyPistachioProtocol.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Sends a list of continent/city pairs to a {@link NettyPistachioServer} to
  * get the local times of the specified cities.
  */
-public final class NettyPistachioClient extends Thread {
+public final class NettyPistachioClient {
+	private static Logger logger = LoggerFactory.getLogger(NettyPistachioClient.class);
 
     static final boolean SSL = System.getProperty("ssl") != null;
     static final String HOST = System.getProperty("host", "127.0.0.1");
@@ -34,29 +37,60 @@ public final class NettyPistachioClient extends Thread {
     static final List<String> CITIES = Arrays.asList(System.getProperty(
             "cities", "Asia/Seoul,Europe/Berlin,America/Los_Angeles").split(","));
 
-    private java.util.Random rand = new java.util.Random();
     private NettyPistachioClientHandler handler;
 
-
-    public NettyPistachioClient(NettyPistachioClientHandler handler0) {
-        handler = handler0;
-    }
-    public void run() {
+    public NettyPistachioClient() {
         try {
-            // Request and get the response.
-            Long l = rand.nextLong();
-                System.out.println("sending : " + l);
-            Response res = handler.lookup(l);
-
-            if (l != res.getId()) {
-                System.out.println("Thread #" + Thread.currentThread().getId() + ", incorrect result: " + l + ", " + res.getId());
-            } else  {
-                System.out.println("Thread #" + Thread.currentThread().getId() + ", correct result: " + l );
+            // Configure SSL.
+            final SslContext sslCtx;
+            if (SSL) {
+                sslCtx = SslContext.newClientContext(InsecureTrustManagerFactory.INSTANCE);
+            } else {
+                sslCtx = null;
             }
-        } catch (Exception e) {
-                System.out.println("error: " + e);
-        }
 
+            EventLoopGroup group = new NioEventLoopGroup();
+            Bootstrap b = new Bootstrap();
+            b.group(group)
+             .channel(NioSocketChannel.class)
+             .handler(new NettyPistachioClientInitializer(sslCtx));
+
+            // Make a new connection.
+            Channel ch = b.connect(HOST, PORT).sync().channel();
+
+            // Get the handler instance to initiate the request.
+            NettyPistachioClientHandler handler = ch.pipeline().get(NettyPistachioClientHandler.class);
+
+        } catch (Throwable e) {
+            logger.info("error constructor ", e);
+        }
+    }
+
+
+    static private class TestRunnable extends Thread {
+        private java.util.Random rand = new java.util.Random();
+        private NettyPistachioClientHandler handler;
+        public TestRunnable(NettyPistachioClientHandler handler0) {
+            handler = handler0;
+        }
+        public void run() {
+            try {
+                // Request and get the response.
+                Long l = rand.nextLong();
+                    System.out.println("sending : " + l);
+                Request.Builder builder = Request.newBuilder();
+                Response res = handler.sendRequest(builder.setId(l));
+
+                if (l != res.getId()) {
+                    System.out.println("Thread #" + Thread.currentThread().getId() + ", incorrect result: " + l + ", " + res.getId());
+                } else  {
+                    System.out.println("Thread #" + Thread.currentThread().getId() + ", correct result: " + l );
+                }
+            } catch (Exception e) {
+                    System.out.println("error: " + e);
+            }
+
+        }
     }
 
     public static void main(String[] args) throws Exception {
@@ -86,7 +120,7 @@ public final class NettyPistachioClient extends Thread {
             //Response res = handler.lookup(12345L);
             Thread [] t = new Thread[1000];
             for (int i = 0; i< 1000; i++) {
-                t[i] = new NettyPistachioClient(handler);
+                t[i] = new TestRunnable(handler);
             }
             for (int i = 0; i< 1000; i++) {
                 t[i].start();
