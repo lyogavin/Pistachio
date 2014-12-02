@@ -90,9 +90,7 @@ public class PistachiosServer {
 	private final static Timer lookupTimer = metrics.timer(MetricRegistry.name(PistachiosServer.class, "lookupTimer"));
 	private final static Timer storeTimer = metrics.timer(MetricRegistry.name(PistachiosServer.class, "storeTimer"));
 
-	static final String PROFILE_BASE_DIR = "Profile.Base";
-	static final String PROFILE_NUM_STORE = "Profile.NumStore";
-	static final String PROFILE_RECORDS_PER_SERVER = "Profile.RecordsPerServer";
+	static final String PROFILE_BASE_DIR = "StorageEngine.Location";
 	static final String ZOOKEEPER_SERVER = "Pistachio.ZooKeeper.Server";
 	static final String PROFILE_HELIX_INSTANCE_ID = "Profile.Helix.InstanceId";
 
@@ -237,6 +235,7 @@ public class PistachiosServer {
 
 	  // embed helix controller
 		Configuration conf = ConfigurationManager.getConfiguration();
+		logger.info("zk conn str {}", conf.getString(ZOOKEEPER_SERVER));
 		helixManager = HelixManagerFactory.getZKHelixManager("PistachiosCluster",
 				InetAddress.getLocalHost().getHostName(), //conf.getString(PROFILE_HELIX_INSTANCE_ID),
 				InstanceType.CONTROLLER,
@@ -310,8 +309,8 @@ public class PistachiosServer {
 			profileStore = new TLongKyotoCabinetStore(
 			        conf.getString(PROFILE_BASE_DIR),
 			        0, 8,
-			        conf.getInt("Profile.RecordsPerServer"),
-			        conf.getLong("Profile.MemoryPerServer"));
+			        conf.getInt("StorageEngine.KC.RecordsPerPartition"),
+			        conf.getLong("StorageEngine.KC.MemoryPerPartition"));
 			/*
 			*/
 			//profileStore.open();

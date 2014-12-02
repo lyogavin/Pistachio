@@ -53,7 +53,7 @@ public class StorePartition implements BootstrapPartitionHandler, StoreChangable
 	private Configuration conf = ConfigurationManager.getConfiguration();
 	private static final int maxTryTime = 3;
 	private static final int offsetThreadHold = ConfigurationManager.getConfiguration().getInt(
-            "Profile.Store.offsetGapThreadHold");
+            "Pistachio.offsetGapThreadHold");
 	private KafkaSimpleConsumer consumer ;
 
 	private AtomicLong seqId = new AtomicLong(0);
