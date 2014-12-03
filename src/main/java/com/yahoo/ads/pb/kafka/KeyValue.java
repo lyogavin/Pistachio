@@ -16,6 +16,7 @@ import java.util.Arrays;
 
 public class KeyValue {
 
+	public int partition;
 	public long key;
 	public long seqId;
 	public byte[] value;
@@ -26,6 +27,6 @@ public class KeyValue {
 
 		KeyValue that = (KeyValue)obj;
 
-		return (key == that.key) && (seqId == that.seqId) && Arrays.equals(value, that.value);
+		return (partition==that.partition) && (key == that.key) && (seqId == that.seqId) && Arrays.equals(value, that.value);
 	}
 }

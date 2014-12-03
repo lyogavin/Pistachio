@@ -138,12 +138,11 @@ public class TLongKyotoCabinetStore {
 	 * @param key
 	 * @param value
 	 */
-	public void store(long key, byte[] value) throws Exception {
-		int dbIndex = getDbIndex(key);
-		if(stores[dbIndex] != null)
-			stores[dbIndex].store(key, value);
+	public void store(int partition, long key, byte[] value) throws Exception {
+		if(stores[partition] != null)
+			stores[partition].store(key, value);
 		else
-			throw new Exception("partition "+dbIndex+" not exist, can't store");
+			throw new Exception("partition "+partition+" not exist, can't store");
 	}
 	
 	public void storeOffset( long value, int partitionId) throws Exception {
@@ -173,10 +172,9 @@ public class TLongKyotoCabinetStore {
 	 * @param key
 	 * @return
 	 */
-	public byte[] get(long key) {
-		int dbIndex = getDbIndex(key);
-		if(stores[dbIndex] != null)
-			return stores[dbIndex].get(key);
+	public byte[] get(int partition, long key) {
+		if(stores[partition] != null)
+			return stores[partition].get(key);
 		else
 			return null;
 	}
@@ -187,10 +185,9 @@ public class TLongKyotoCabinetStore {
 	 * @param key
 	 * @return
 	 */
-	public boolean delete(long key) {
-		int dbIndex = getDbIndex(key);
-		if(stores[dbIndex] != null)
-			return stores[dbIndex].delete(key);
+	public boolean delete(int partition, long key) {
+		if(stores[partition] != null)
+			return stores[partition].delete(key);
 		else
 			return false;
 	}

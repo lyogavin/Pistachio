@@ -23,18 +23,18 @@ import org.slf4j.LoggerFactory;
 
 import com.yahoo.ads.pb.helix.BootstrapPartitionHandler;
 import com.yahoo.ads.pb.helix.PartitionHandlerFactory;
+import com.yahoo.ads.pb.util.PistachiosConstants;
 
-@StateModelInfo(initialState = "OFFLINE", states = {
-	    "MASTER", "SLAVE", "ERROR", "DROPPED"
-	})
+@StateModelInfo(initialState = PistachiosConstants.PARTITION_OFFLINE, states = { PistachiosConstants.PARTITION_MASTER,
+		PistachiosConstants.PARTITION_SLAVE, PistachiosConstants.PARTITION_ERROR, "DROPPED" })
 /*
-@StateModelInfo(initialState = "OFFLINE", states = {
-	    "ONLINE", "SELFBOOTSTRAP", "BOOTSTRAPOTHER", "ERROR", "DROPPED"
+@StateModelInfo(initialState = PistachiosConstants.PARTITION_OFFLINE, states = {
+	    "ONLINE", "SELFBOOTSTRAP", "BOOTSTRAPOTHER", PistachiosConstants.PARTITION_ERROR, PistachiosConstants.PARTITION_DROPPED
 	})
 */
-public class BootstrapOnlineOfflineStateModel extends StateModel{
+public class BootstrapOnlineOfflineStateModel extends StateModel {
 	private static Logger logger = LoggerFactory.getLogger(OnlineOfflineStateModel.class);
-	
+
 	private final AtomicReference<BootstrapPartitionHandler> handler = new AtomicReference<BootstrapPartitionHandler>();
 	private final PartitionHandlerFactory handlerFactory;
 	private final int partitionId;
@@ -43,30 +43,29 @@ public class BootstrapOnlineOfflineStateModel extends StateModel{
 		this.partitionId = partitionId;
 		this.handlerFactory = handlerFactory;
 	}
-	
-	@Transition(to = "SLAVE", from = "OFFLINE")
+
+	@Transition(to = PistachiosConstants.PARTITION_SLAVE, from = PistachiosConstants.PARTITION_OFFLINE)
 	public void onBecomeSlaveFromOffline(Message message, NotificationContext context) {
 		logger.info("becomes SLAVE from OFFLINE for {}", partitionId);
 		//handler.compareAndSet(null, (BootstrapPartitionHandler)handlerFactory.createParitionHandler(partitionId));
-		if (handler.compareAndSet(null, (BootstrapPartitionHandler)handlerFactory.createParitionHandler(partitionId))) {
+		if (handler.compareAndSet(null, (BootstrapPartitionHandler) handlerFactory.createParitionHandler(partitionId))) {
 			//handler.get().selfBootstraping();
-		if (handler.get() != null) {
-		logger.info("start serving {}", partitionId);
-			handler.get().startServing();
-		}
-		else {
-		logger.info("null handler{}", partitionId);
-		}
+			if (handler.get() != null) {
+				logger.info("start serving {}", partitionId);
+				handler.get().startServing();
+			} else {
+				logger.info("null handler{}", partitionId);
+			}
 
 		}
 	}
-	
-	@Transition(to = "SLAVE", from = "MASTER")
+
+	@Transition(to = PistachiosConstants.PARTITION_SLAVE, from = PistachiosConstants.PARTITION_MASTER)
 	public void onBecomeSlaveFromMaster(Message message, NotificationContext context) {
 		logger.info("becomes SLAVE from MASTER for {}", partitionId);
 	}
-	
-	@Transition(to = "MASTER", from = "SLAVE")
+
+	@Transition(to = PistachiosConstants.PARTITION_MASTER, from = PistachiosConstants.PARTITION_SLAVE)
 	public void onBecomeMasterFromSlave(Message message, NotificationContext context) {
 		logger.info("becomes MASTER from SLAVE for {}", partitionId);
 		BootstrapPartitionHandler originHandler = handler.get();
@@ -74,7 +73,7 @@ public class BootstrapOnlineOfflineStateModel extends StateModel{
 			originHandler.selfBootstraping();
 		}
 	}
-	
+
 	/*
 	@Transition(to = "BOOTSTRAPOTHER", from = "ONLINE")
 	public void onBecomeBootstrapotherFromOnline(Message message, NotificationContext context) {
@@ -94,7 +93,7 @@ public class BootstrapOnlineOfflineStateModel extends StateModel{
 		}		
 	}
 	*/
-	
+
 	private void stop() {
 		BootstrapPartitionHandler originHandler = handler.get();
 		if (originHandler != null) {
@@ -104,25 +103,24 @@ public class BootstrapOnlineOfflineStateModel extends StateModel{
 			logger.info("Stopping for partition {} done", partitionId);
 		}
 	}
-	
-	@Transition(to = "OFFLINE", from = "SLAVE")
+
+	@Transition(to = PistachiosConstants.PARTITION_OFFLINE, from = PistachiosConstants.PARTITION_SLAVE)
 	public void onBecomeOfflineFromSlave(Message message, NotificationContext context) {
 		logger.info("becomes OFFLINE from Slave for {}", partitionId);
 		stop();
 	}
-	
-			
-	@Transition(to = "DROPPED", from = "OFFLINE")
+
+	@Transition(to = PistachiosConstants.PARTITION_DROPPED, from = PistachiosConstants.PARTITION_OFFLINE)
 	public void onBecomeDroppedFromOffline(Message message, NotificationContext context) {
-		logger.info("becomes DROPPED from OFFLINE for {}", partitionId);	
+		logger.info("becomes DROPPED from OFFLINE for {}", partitionId);
 		stop();
 	}
-	
-	@Transition(to = "OFFLINE", from = "ERROR")
+
+	@Transition(to = PistachiosConstants.PARTITION_OFFLINE, from = PistachiosConstants.PARTITION_ERROR)
 	public void onBecomeOfflineFromError(Message message, NotificationContext context) {
-		logger.info("becomes OFFLINE from ERROR for {}", partitionId);				
+		logger.info("becomes OFFLINE from ERROR for {}", partitionId);
 	}
-		
+
 	@Override
 	public void reset() {
 		logger.info("reset called");

@@ -1,33 +1,74 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.yahoo.ads.pb</groupId>
-    <artifactId>pistachios</artifactId>
-    <packaging>jar</packaging>
-    <version>0.1.0.0</version>
-    <name>Pistachios</name>
-    <description>Pistachios</description>
+	<groupId>yahoo.yinst.pb_be_pastperf_nrt</groupId>
+	<artifactId>pb_be_pastperf_nrt</artifactId>
+	<packaging>jar</packaging>
+	<version>0.0.${build}</version>
+	<name>pb_be_pastperf_nrt</name>
+	<description>Pistachios for pastperf in near realtime</description>
 
-    <url></url>
+	<url></url>
+
+	<parent>
+		<groupId>yahoo.yinst.java_base_build</groupId>
+		<artifactId>java_base_build</artifactId>
+		<version>4.0.30</version>
+	</parent>
+
 	<properties>
+		<bug.product>Yahoo Buying Platform</bug.product>
+		<bug.component>Backend</bug.component>
+		<scm.path>ybp/dynamite</scm.path>
+		<mailingList.name>rtbbe</mailingList.name>
+		<maven.deploy.skip>true</maven.deploy.skip>
+		<enforcer.skip>true</enforcer.skip>
+		<checkstyle.skip>true</checkstyle.skip>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<!-- various version definitions -->
+		<joda-time.version>2.4</joda-time.version>
+		<org.apache.httpcomponents.version>4.1.1</org.apache.httpcomponents.version>
+		<org.apache.httpcomponents.httpcore.version>4.1</org.apache.httpcomponents.httpcore.version>
+		<com.googlecode.json-simple.version>1.1.1</com.googlecode.json-simple.version>
+		<commons-configuration.version>1.7</commons-configuration.version>
+		<org.apache.commons.version>3.1</org.apache.commons.version>
+		<commons-lang.version>2.6</commons-lang.version>
+		<org.javalite.version>1.4.8</org.javalite.version>
+		<org.apache.tomcat.version>7.0.40</org.apache.tomcat.version>
+		<mysql.version>5.1.31</mysql.version>
+		<net.sf.trove4j.version>3.0.3</net.sf.trove4j.version>
+		<log4j.version>1.2.17</log4j.version>
+		<org.slf4j.version>1.7.7</org.slf4j.version>
+		<org.testng.version>6.1.1</org.testng.version>
+		<org.jmockit.version>1.10</org.jmockit.version>
+		<org.quartz-scheduler.version>2.2.1</org.quartz-scheduler.version>
+		<org.apache.storm.version>0.9.1-incubating</org.apache.storm.version>
+		<org.apache.storm-kestrel.version>0.7.2-SNAPSHOT</org.apache.storm-kestrel.version>
+		<maven-jar-plugin.version>2.5</maven-jar-plugin.version>
+		<maven-surefire-plugin.version>2.17</maven-surefire-plugin.version>
+		<maven-javadoc-plugin.version>2.9.1</maven-javadoc-plugin.version>
 		<maven-compiler-plugin.version>2.5.1</maven-compiler-plugin.version>
-		<maven-clean-plugin.version>2.5</maven-clean-plugin.version>
+		<maven-source-plugin.version>2.3</maven-source-plugin.version>
+		<maven-assembly-plugin.version>2.4.1</maven-assembly-plugin.version>
+		<maven-release-plugin.version>2.5</maven-release-plugin.version>
+		<yahoo.yinst.pb_be_dynamite_optimizer.version>0.0.53</yahoo.yinst.pb_be_dynamite_optimizer.version>
+		<yahoo.yinst.pb_be_dynamite_optimizer.mainclass>com.yahoo.ads.pb.platform.dynamite.BudgetOptimizationJob</yahoo.yinst.pb_be_dynamite_optimizer.mainclass>
+		<yahoo.yinst.yjava_ycore.version>0.9.125</yahoo.yinst.yjava_ycore.version>
+		<yahoo.yinst.mon_metrics_java.version>0.2.8_25</yahoo.yinst.mon_metrics_java.version>
 	</properties>
 
-
-
-    <dependencies>
-	<dependency>
+	<dependencies>
+		<dependency>
 		<groupId>io.netty</groupId>
 			<artifactId>netty-all</artifactId>
 				<version>4.0.24.Final</version>
 				</dependency>
 		<dependency>
-	  <groupId>com.google.http-client</groupId>
-	    <artifactId>google-http-client</artifactId>
-		  <version>1.18.0-rc</version>
-		  </dependency>
+			<groupId>com.google.http-client</groupId>
+			<artifactId>google-http-client</artifactId>
+			<version>1.18.0-rc</version>
+		</dependency>
 		<dependency>
 			<groupId>com.codahale.metrics</groupId>
 			<artifactId>metrics-core</artifactId>
@@ -40,7 +81,7 @@
 		</dependency>
 		<dependency>
 			<groupId>net.sourceforge.findbugs</groupId>
-		    <artifactId>jsr305</artifactId>
+			<artifactId>jsr305</artifactId>
 			<version>1.3.7</version>
 		</dependency>
 		<dependency>
@@ -59,11 +100,11 @@
 			<artifactId>commons-io</artifactId>
 			<version>2.4</version>
 		</dependency>
-        <dependency>
-            <groupId>commons-configuration</groupId>
-            <artifactId>commons-configuration</artifactId>
-            <version>1.7</version>
-        </dependency>
+		<dependency>
+			<groupId>commons-configuration</groupId>
+			<artifactId>commons-configuration</artifactId>
+			<version>1.7</version>
+		</dependency>
 		<dependency>
 			<groupId>org.apache.thrift</groupId>
 			<artifactId>libthrift</artifactId>
@@ -74,26 +115,25 @@
 			<artifactId>kafka_2.10</artifactId>
 			<version>0.8.0</version>
 		</dependency>
+		<!-- <dependency> <groupId>com.fallabs</groupId> <artifactId>kyotocabinet-java</artifactId> 
+			<version>1.24</version> </dependency> -->
 		<dependency>
-		<groupId>com.fallabs</groupId>
-		<artifactId>kyotocabinet-java</artifactId>
-		<version>1.24</version>
+			<groupId>com.googlecode.protobuf-java-format</groupId>
+			<artifactId>protobuf-java-format</artifactId>
+			<version>1.2</version>
 		</dependency>
 		<dependency>
-		<groupId>com.googlecode.protobuf-java-format</groupId>
-		<artifactId>protobuf-java-format</artifactId>
-		<version>1.2</version>
-		</dependency>
-		<dependency>
-		<groupId>com.google.protobuf</groupId>
-		<artifactId>protobuf-java</artifactId>
-		<version>2.4.1</version>
+			<groupId>com.google.protobuf</groupId>
+			<artifactId>protobuf-java</artifactId>
+			<version>2.4.1</version>
 		</dependency>
 		<dependency>
 			<groupId>com.esotericsoftware.kryo</groupId>
 			<artifactId>kryo</artifactId>
 			<version>2.24.0</version>
 		</dependency>
+		<!-- <dependency> <groupId>org.slf4j</groupId> <artifactId>slf4j-log4j12</artifactId> 
+			<version>1.7.5</version> </dependency> -->
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-log4j12</artifactId>
@@ -105,39 +145,163 @@
 			<version>3.4.5</version>
 		</dependency>
 		<dependency>
-		<groupId>org.slf4j</groupId>
-		<artifactId>slf4j-api</artifactId>
-		<version>1.7.5</version>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.7.5</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-compress</artifactId>
+			<version>1.9</version>
 		</dependency>
 
-        <dependency>
-            <groupId>org.testng</groupId>
-            <artifactId>testng</artifactId>
-            <version>5.14.7</version>
-            <scope>test</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>junit</groupId>
-                    <artifactId>junit</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-    </dependencies>
+		<dependency>
+			<groupId>org.apache.storm</groupId>
+			<artifactId>storm-core</artifactId>
+			<version>0.9.2-incubating</version>
+			<scope>provided</scope>
+		</dependency>
 
-    <build>
-		<sourceDirectory>./src</sourceDirectory>
-        <finalName>Pistachios</finalName>
+		<dependency>
+			<groupId>storm</groupId>
+			<artifactId>storm-kestrel</artifactId>
+			<version>0.9.0-wip5-multischeme</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.storm</groupId>
+			<artifactId>storm-kafka</artifactId>
+			<version>0.9.2-incubating</version>
+		</dependency>
+
+
+		<dependency>
+			<groupId>org.testng</groupId>
+			<artifactId>testng</artifactId>
+			<version>5.14.7</version>
+			<scope>test</scope>
+			<exclusions>
+				<exclusion>
+					<groupId>junit</groupId>
+					<artifactId>junit</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<dependency>
+			<groupId>com.cloudhopper</groupId>
+			<artifactId>ch-tokyocabinet-java</artifactId>
+			<version>1.24.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>net.sf.trove4j</groupId>
+			<artifactId>trove4j</artifactId>
+			<version>3.0.3</version>
+		</dependency>
+
+		<dependency>
+			<groupId>io.netty</groupId>
+			<artifactId>netty-all</artifactId>
+			<version>4.0.24.Final</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.facebook.nifty</groupId>
+			<artifactId>nifty-core</artifactId>
+			<version>0.14.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>com.facebook.nifty</groupId>
+			<artifactId>nifty-client</artifactId>
+			<version>0.14.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>yahoo.yinst.mon_metrics_java</groupId>
+			<artifactId>mon_metrics_java</artifactId>
+			<version>${yahoo.yinst.mon_metrics_java.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>javax.inject</groupId>
+			<artifactId>javax.inject</artifactId>
+			<version>1</version>
+		</dependency>
+
+	</dependencies>
+
+	<build>
+		<finalName>${project.artifactId}-${project.version}</finalName>
+		<resources>
+			<resource>
+				<directory>${project.basedir}/resources</directory>
+				<filtering>false</filtering>
+			</resource>
+		</resources>
+		<testResources>
+			<testResource>
+				<directory>${project.basedir}/resources</directory>
+			</testResource>
+		</testResources>
 		<plugins>
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${maven-compiler-plugin.version}</version>
+				<configuration>
+					<source>1.7</source>
+					<target>1.7</target>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>${maven-javadoc-plugin.version}</version>
+				<configuration>
+					<show>private</show>
+					<tags>
+						<tag>
+							<name>note</name>
+							<placement>a</placement>
+							<head></head>
+						</tag>
+					</tags>
+				</configuration>
+				<executions>
+					<execution>
+						<id>attach-javadocs</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>${maven-source-plugin.version}</version>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<!-- -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-jar-plugin</artifactId>
 				<version>2.3.1</version>
 				<executions>
 					<execution>
-					<goals>
-						<goal>jar</goal>
-						<goal>test-jar</goal>
-					</goals>
+						<goals>
+							<goal>jar</goal>
+							<goal>test-jar</goal>
+						</goals>
 					</execution>
 				</executions>
 				<configuration>
@@ -148,62 +312,131 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-dependency-plugin</artifactId>
 				<executions>
-				<execution>
-				<id>copy-dependencies</id>
-				<phase>prepare-package</phase>
-				<goals>
-				<goal>copy-dependencies</goal>
-				</goals>
-				<configuration>
-				<excludeArtifactIds>slf4j-simple</excludeArtifactIds>
-				<outputDirectory>${basedir}/lib</outputDirectory>
-				<overWriteReleases>false</overWriteReleases>
-				<overWriteSnapshots>false</overWriteSnapshots>
-				<overWriteIfNewer>true</overWriteIfNewer>
-				</configuration>
-				</execution>
-				</executions>
-			</plugin>
-			<plugin>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<version>${maven-compiler-plugin.version}</version>
-
-				<configuration>
-					<source>1.7</source>
-					<target>1.7</target>
-					<argLine>-Xmx2048m -XX:MaxPermSize=1024m</argLine>
-					<excludes>
-						<exclude>**/gen-java/*.java</exclude>
-					</excludes>>
-				</configuration>
-			</plugin>
-			<plugin>
-				<artifactId>maven-clean-plugin</artifactId>
-				<version>${maven-clean-plugin.version}</version>
-			</plugin>
-			<plugin>
-				<artifactId>maven-resources-plugin</artifactId>
-				<version>2.6</version>
-				<executions>
 					<execution>
-						<id>copy-resources</id>
-						<phase>validate</phase>
+						<id>copy-dependencies</id>
+						<phase>prepare-package</phase>
 						<goals>
-							<goal>copy-resources</goal>
+							<goal>copy-dependencies</goal>
 						</goals>
 						<configuration>
-							<outputDirectory>${project.build.directory}/classes</outputDirectory>
-							<includeEmptyDirs>true</includeEmptyDirs>
-							<resources>
-								<resource>
-									<directory>${basedir}/resources</directory>
-									<filtering>false</filtering>
-								</resource>
-							</resources>
+							<excludeArtifactIds>slf4j-simple</excludeArtifactIds>
+							<outputDirectory>${basedir}/lib</outputDirectory>
+							<overWriteReleases>false</overWriteReleases>
+							<overWriteSnapshots>false</overWriteSnapshots>
+							<overWriteIfNewer>true</overWriteIfNewer>
 						</configuration>
 					</execution>
 				</executions>
 			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>${maven-surefire-plugin.version}</version>
+				<configuration>
+					<includes>
+						<include>**/*.java</include>
+					</includes>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>yahoo.yinst.maven_plugins</groupId>
+				<artifactId>yjava_maven_plugins_yinst</artifactId>
+				<version>0.4.12</version>
+				<executions>
+					<execution>
+						<id>update-yicf</id>
+						<phase>prepare-package</phase>
+						<goals>
+							<goal>yicf</goal>
+						</goals>
+						<configuration>
+							<scopeString>provided</scopeString>
+							<editYicf>true</editYicf>
+							<breakOnMissingRequires>false</breakOnMissingRequires>
+							<yicfPrepend>print &lt;&lt;EOF;</yicfPrepend>
+							<yicfAppend>EOF</yicfAppend>
+						</configuration>
+					</execution>
+					<execution>
+						<id>yinst create</id>
+						<phase>package</phase>
+						<goals>
+							<goal>create</goal>
+						</goals>
+						<configuration>
+							<enablePom>true</enablePom>
+							<!-- <buildtype>release</buildtype> -->
+							<sourceDirectory>src/main/yinst</sourceDirectory>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-release-plugin</artifactId>
+				<version>${maven-release-plugin.version}</version>
+				<configuration>
+					<!-- During release:perform, enable the "distPush" profile -->
+					<releaseProfiles>pushDist</releaseProfiles>
+					<goals>install</goals>
+					<useReleaseProfile>false</useReleaseProfile>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>${maven-assembly-plugin.version}</version>
+				<configuration>
+					<descriptorRefs>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
+					</descriptorRefs>
+					<archive>
+						<manifest>
+							<addClasspath>true</addClasspath>
+							<mainClass>${yahoo.yinst.pb_be_dynamite_optimizer.mainclass}</mainClass>
+							<addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+							<addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+						</manifest>
+					</archive>
+				</configuration>
+				<executions>
+					<execution>
+						<id>make-assembly</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
-    </build>
+
+	</build>
+
+	<repositories>
+		<repository>
+			<id>clojars.org</id>
+			<url>http://clojars.org/repo</url>
+		</repository>
+	</repositories>
+
+	<reporting>
+		<plugins>
+			<!-- <plugin> <groupId>org.apache.maven.plugins</groupId> <artifactId>maven-pmd-plugin</artifactId> 
+				<version>${maven-pmd-plugin-version}</version> </plugin> -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-report-plugin</artifactId>
+				<version>${maven-surefire-report-plugin.version}</version>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>${maven-javadoc-plugin.version}</version>
+				<configuration>
+					<show>private</show>
+				</configuration>
+			</plugin>
+		</plugins>
+	</reporting>
 </project>
