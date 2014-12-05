@@ -21,6 +21,8 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.yahoo.ads.pb.PistachiosHandler;
+import com.yahoo.ads.pb.util.ConfigurationManager;
 
 /**
  * Receives a list of continent/city pairs from a {@link WorldClockClient} to
@@ -30,13 +32,14 @@ public final class NettyPistachioServer {
 	private static Logger logger = LoggerFactory.getLogger(NettyPistachioServer.class);
 
     static final boolean SSL = System.getProperty("ssl") != null;
-    static final int PORT = Integer.parseInt(System.getProperty("port", "8463"));
+    //static final int PORT = Integer.parseInt(System.getProperty("port", "8463"));
+    static final int PORT = ConfigurationManager.getConfiguration().getInt("Network.Netty.Port", 9091);
 
     public static void main(String[] args) throws Exception {
-        startServer();
+        startServer(null);
     }
 
-    public static void startServer(){
+    public static void startServer(PistachiosHandler handler){
         EventLoopGroup bossGroup = null;
         EventLoopGroup workerGroup = null;
         try {
@@ -49,13 +52,13 @@ public final class NettyPistachioServer {
                 sslCtx = null;
             }
 
-            bossGroup = new NioEventLoopGroup(1);
-            workerGroup = new NioEventLoopGroup();
+            bossGroup = new NioEventLoopGroup(ConfigurationManager.getConfiguration().getInt("Network.Netty.BossThreads",1));
+            workerGroup = new NioEventLoopGroup(ConfigurationManager.getConfiguration().getInt("Network.Netty.WorkerThreads",1));
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
              .channel(NioServerSocketChannel.class)
              .handler(new LoggingHandler(LogLevel.INFO))
-             .childHandler(new NettyPistachioServerInitializer(sslCtx));
+             .childHandler(new NettyPistachioServerInitializer(sslCtx, handler));
 
             b.bind(PORT).sync().channel().closeFuture().sync();
         } catch (Exception e) {

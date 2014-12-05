@@ -32,6 +32,12 @@ message Request {
   optional uint64 id = 2;
   optional uint32 request_id = 3;
   optional uint32 thread_id = 4;
+  optional uint64 partition = 5;
+  optional bytes data = 6;
+  repeated bytes events = 7;
+  optional string jar_server_url = 8;
+  optional string process_class = 9;
+
 }
 
 message Response {

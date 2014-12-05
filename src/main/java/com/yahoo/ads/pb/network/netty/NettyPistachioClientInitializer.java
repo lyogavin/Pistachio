@@ -20,7 +20,12 @@ import io.netty.handler.codec.protobuf.ProtobufVarint32FrameDecoder;
 import io.netty.handler.codec.protobuf.ProtobufVarint32LengthFieldPrepender;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import java.util.concurrent.TimeUnit;
+import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.ssl.SslContext;
+import com.yahoo.ads.pb.network.netty.NettyPistachioProtocol.*;
+import com.yahoo.ads.pb.PistachiosHandler;
+import com.yahoo.ads.pb.util.ConfigurationManager;
 
 public class NettyPistachioClientInitializer extends ChannelInitializer<SocketChannel> {
 
@@ -38,6 +43,7 @@ public class NettyPistachioClientInitializer extends ChannelInitializer<SocketCh
         }
 
         p.addLast(new LoggingHandler(LogLevel.INFO));
+        p.addLast(new ReadTimeoutHandler(ConfigurationManager.getConfiguration().getInt("Network.Netty.ClientReadTimeoutMillis",10000), TimeUnit.MILLISECONDS));
         p.addLast(new ProtobufVarint32FrameDecoder());
         p.addLast(new ProtobufDecoder(NettyPistachioProtocol.Response.getDefaultInstance()));
 

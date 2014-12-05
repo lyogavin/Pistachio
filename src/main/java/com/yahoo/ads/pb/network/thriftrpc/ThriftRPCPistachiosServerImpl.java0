@@ -26,7 +26,6 @@ import kafka.producer.ProducerConfig;
 
 import com.yahoo.ads.pb.store.StorePartition;
 import java.util.concurrent.TimeUnit;
-import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import com.yahoo.ads.pb.store.TKStoreFactory;
 import com.codahale.metrics.MetricRegistry;
@@ -45,7 +44,6 @@ import com.yahoo.ads.pb.helix.BootstrapOnlineOfflineStateModelFactory;
 import com.yahoo.ads.pb.helix.BootstrapPartitionHandler;
 import com.yahoo.ads.pb.helix.HelixPartitionManager;
 import com.yahoo.ads.pb.helix.HelixPartitionSpectator;
-import com.yahoo.ads.pb.network.netty.NettyPistachioServer;
 import org.apache.helix.HelixManagerFactory;
 import org.apache.helix.HelixManager;
 import org.apache.helix.InstanceType;
@@ -59,7 +57,6 @@ import com.yahoo.ads.pb.util.NativeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.configuration.Configuration;
-import com.google.common.base.Joiner.MapJoiner;
 import com.google.common.base.Joiner;
 
 
@@ -104,10 +101,6 @@ public class PistachiosServer {
 
 	private static Producer<String, byte[]> kafkaProducer = null;
 
-    public static boolean servingAsServer() {
-        return (handler != null);
-    }
-
 	public static Producer getKafkaProducerInstance() {
 		try {
 			if (kafkaProducer == null) {
@@ -121,9 +114,9 @@ public class PistachiosServer {
 							props.put("serializer.class", "com.yahoo.ads.pb.kafka.KeyValueEncoder");
 							//props.put("combiner.class", "com.yahoo.ads.pb.application.servlet.Combiner");
 							//props.put("serializer.class", "StringEncoder");
-							props.put("request.required.acks", ConfigurationManager.getConfiguration().getString("request.required.acks", "1"));
-							props.put("queue.buffering.max.ms", ConfigurationManager.getConfiguration().getString("queue.buffering.max.ms", "100"));
-							props.put("producer.type", ConfigurationManager.getConfiguration().getString("producer.type", "async"));
+							props.put("request.required.acks", "0");
+							props.put("queue.buffering.max.ms", "100");
+							props.put("producer.type", "sync");
 							props.put("auto.create.topics.enable", "true");
 
 							ProducerConfig kafkaConf = new ProducerConfig(props);
@@ -145,65 +138,55 @@ public class PistachiosServer {
 
 
 
-  //public static class PistachiosHandler implements Pistachios.Iface{
-  public static class DefaultPistachiosHandler implements PistachiosHandler{
+  public static class PistachiosHandler implements Pistachios.Iface{
 	String storage;
 
-    public byte[] lookup(long id, long partitionId)
+    public ByteBuffer lookup(long id) throws org.apache.thrift.TException
 	{
 		lookupRequests.mark();
 		final Timer.Context context = lookupTimer.time();
 
 		try {
+			int partitionId = (int)(id % 256);
+			partitionId = partitionId >= 0 ? partitionId : partitionId + 256;
 			//return ByteBuffer.wrap(storage.getBytes());
-            StorePartition storePartition = PistachiosServer.storePartitionMap.get(partitionId);
-
-            if (storePartition == null) {
-                logger.info("error getting storePartition for partition id {}, dump map: {}.", partitionId, Joiner.on(',').withKeyValueSeparator("=").join(PistachiosServer.storePartitionMap));
-                return null;
-            }
-			KeyValue toRetrun = storePartition.getWriteCache().get(id);
+			KeyValue toRetrun = PistachiosServer.storePartitionMap.get(partitionId).getWriteCache().get(id);
 			if (toRetrun != null)
-				return toRetrun.value;
+				return ByteBuffer.wrap(toRetrun.value);
 
 			if (null != PistachiosServer.getInstance().getProfileStore().get(id))
-				return PistachiosServer.getInstance().getProfileStore().get(id);
+				return ByteBuffer.wrap(PistachiosServer.getInstance().getProfileStore().get(id));
 
-			return null;
+			return ByteBuffer.wrap("".getBytes());
 		} catch (Exception e) {
 			logger.info("Exception lookup {}", id, e);
 			lookupFailureRequests.mark();
-			return null;
+			return ByteBuffer.wrap("".getBytes());
 		} finally {
 			context.stop();
 		}
 	}
 
-    public boolean processBatch(long id, long partitionId, List<byte[]> events) {
-        return true;
-    }
-    public boolean store(long id, long partitionId, byte[] value)
+    public boolean store(long id, ByteBuffer value) throws org.apache.thrift.TException
 	{
 		storeRequests.mark();
 		final Timer.Context context = storeTimer.time();
 
 		try {
+			int partitionId = (int)(id % 256);
+			partitionId = partitionId >= 0 ? partitionId : partitionId + 256;
 			long nextSeqId = -1;
-            StorePartition storePartition = PistachiosServer.storePartitionMap.get(partitionId);
-
-            if (storePartition == null) {
-                logger.info("error getting storePartition for partition id {}.", partitionId);
-                return false;
-            }
-			if ((nextSeqId = storePartition.getNextSeqId()) == -1) {
+			if ((nextSeqId = PistachiosServer.storePartitionMap.get(partitionId).getNextSeqId()) == -1) {
 				return false;
 			}
 
-			String partitionTopic = ConfigurationManager.getConfiguration().getString("Profile.Kafka.TopicPrefix") + partitionId;
+		  int shard = (int)(id % 256);
+		  shard = shard < 0 ? shard + 256: shard;
+			String partitionTopic = ConfigurationManager.getConfiguration().getString("Profile.Kafka.TopicPrefix") + (shard);
 			KeyValue kv = new KeyValue();
 			kv.key = id;
 			kv.seqId = nextSeqId;
-			kv.value = value;
+			kv.value = value.array();
 			KeyedMessage<String, KeyValue> message = new KeyedMessage<String, KeyValue>(partitionTopic, kv);
 			getKafkaProducerInstance().send(message);
 
@@ -229,7 +212,7 @@ public class PistachiosServer {
 	}
   }
 
-  public static PistachiosHandler handler = null;
+  public static PistachiosHandler handler;
 
   public static Pistachios.Processor processor;
 
@@ -239,7 +222,7 @@ public class PistachiosServer {
 
   private static GenericHelixController controller;// = new GenericHelixController();
 
-  public static ConcurrentHashMap<Long, StorePartition> storePartitionMap = new ConcurrentHashMap<Long, StorePartition>();
+  public static ConcurrentHashMap<Integer, StorePartition> storePartitionMap = new ConcurrentHashMap<Integer, StorePartition>();
 
   public static PistachiosServer getInstance() {
 	  return instance;
@@ -268,13 +251,12 @@ public class PistachiosServer {
 
 	  instance = new PistachiosServer();
 	  instance.init();
-      handler = new DefaultPistachiosHandler();
-      //processor = new Pistachios.Processor(handler);
+      handler = new PistachiosHandler();
+      processor = new Pistachios.Processor(handler);
 
       Runnable simple = new Runnable() {
         public void run() {
-          //simple(processor);
-          NettyPistachioServer.startServer(handler);
+          simple(processor);
         }
       };      
 
@@ -444,7 +426,7 @@ public class PistachiosServer {
 				StorePartition sp = new StorePartition(partitionId);
 				sp.setStoreFactory(new TKStoreFactory());
 
-				PistachiosServer.storePartitionMap.put((long)partitionId, sp);
+				PistachiosServer.storePartitionMap.put(partitionId, sp);
 		logger.info("creating partition handler........... {}", sp);
 				return sp;
 				/*

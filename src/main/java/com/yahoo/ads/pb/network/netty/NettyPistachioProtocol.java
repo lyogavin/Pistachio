@@ -98,6 +98,27 @@ public final class NettyPistachioProtocol {
     // optional uint32 thread_id = 4;
     boolean hasThreadId();
     int getThreadId();
+    
+    // optional uint64 partition = 5;
+    boolean hasPartition();
+    long getPartition();
+    
+    // optional bytes data = 6;
+    boolean hasData();
+    com.google.protobuf.ByteString getData();
+    
+    // repeated bytes events = 7;
+    java.util.List<com.google.protobuf.ByteString> getEventsList();
+    int getEventsCount();
+    com.google.protobuf.ByteString getEvents(int index);
+    
+    // optional string jar_server_url = 8;
+    boolean hasJarServerUrl();
+    String getJarServerUrl();
+    
+    // optional string process_class = 9;
+    boolean hasProcessClass();
+    String getProcessClass();
   }
   public static final class Request extends
       com.google.protobuf.GeneratedMessage
@@ -168,11 +189,114 @@ public final class NettyPistachioProtocol {
       return threadId_;
     }
     
+    // optional uint64 partition = 5;
+    public static final int PARTITION_FIELD_NUMBER = 5;
+    private long partition_;
+    public boolean hasPartition() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    public long getPartition() {
+      return partition_;
+    }
+    
+    // optional bytes data = 6;
+    public static final int DATA_FIELD_NUMBER = 6;
+    private com.google.protobuf.ByteString data_;
+    public boolean hasData() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    public com.google.protobuf.ByteString getData() {
+      return data_;
+    }
+    
+    // repeated bytes events = 7;
+    public static final int EVENTS_FIELD_NUMBER = 7;
+    private java.util.List<com.google.protobuf.ByteString> events_;
+    public java.util.List<com.google.protobuf.ByteString>
+        getEventsList() {
+      return events_;
+    }
+    public int getEventsCount() {
+      return events_.size();
+    }
+    public com.google.protobuf.ByteString getEvents(int index) {
+      return events_.get(index);
+    }
+    
+    // optional string jar_server_url = 8;
+    public static final int JAR_SERVER_URL_FIELD_NUMBER = 8;
+    private java.lang.Object jarServerUrl_;
+    public boolean hasJarServerUrl() {
+      return ((bitField0_ & 0x00000040) == 0x00000040);
+    }
+    public String getJarServerUrl() {
+      java.lang.Object ref = jarServerUrl_;
+      if (ref instanceof String) {
+        return (String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+          jarServerUrl_ = s;
+        }
+        return s;
+      }
+    }
+    private com.google.protobuf.ByteString getJarServerUrlBytes() {
+      java.lang.Object ref = jarServerUrl_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+        jarServerUrl_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    
+    // optional string process_class = 9;
+    public static final int PROCESS_CLASS_FIELD_NUMBER = 9;
+    private java.lang.Object processClass_;
+    public boolean hasProcessClass() {
+      return ((bitField0_ & 0x00000080) == 0x00000080);
+    }
+    public String getProcessClass() {
+      java.lang.Object ref = processClass_;
+      if (ref instanceof String) {
+        return (String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+          processClass_ = s;
+        }
+        return s;
+      }
+    }
+    private com.google.protobuf.ByteString getProcessClassBytes() {
+      java.lang.Object ref = processClass_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+        processClass_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    
     private void initFields() {
       type_ = com.yahoo.ads.pb.network.netty.NettyPistachioProtocol.RequestType.LOOKUP;
       id_ = 0L;
       requestId_ = 0;
       threadId_ = 0;
+      partition_ = 0L;
+      data_ = com.google.protobuf.ByteString.EMPTY;
+      events_ = java.util.Collections.emptyList();;
+      jarServerUrl_ = "";
+      processClass_ = "";
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -198,6 +322,21 @@ public final class NettyPistachioProtocol {
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         output.writeUInt32(4, threadId_);
       }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeUInt64(5, partition_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeBytes(6, data_);
+      }
+      for (int i = 0; i < events_.size(); i++) {
+        output.writeBytes(7, events_.get(i));
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        output.writeBytes(8, getJarServerUrlBytes());
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        output.writeBytes(9, getProcessClassBytes());
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -222,6 +361,31 @@ public final class NettyPistachioProtocol {
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(4, threadId_);
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(5, partition_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(6, data_);
+      }
+      {
+        int dataSize = 0;
+        for (int i = 0; i < events_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeBytesSizeNoTag(events_.get(i));
+        }
+        size += dataSize;
+        size += 1 * getEventsList().size();
+      }
+      if (((bitField0_ & 0x00000040) == 0x00000040)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(8, getJarServerUrlBytes());
+      }
+      if (((bitField0_ & 0x00000080) == 0x00000080)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(9, getProcessClassBytes());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -355,6 +519,16 @@ public final class NettyPistachioProtocol {
         bitField0_ = (bitField0_ & ~0x00000004);
         threadId_ = 0;
         bitField0_ = (bitField0_ & ~0x00000008);
+        partition_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000010);
+        data_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000020);
+        events_ = java.util.Collections.emptyList();;
+        bitField0_ = (bitField0_ & ~0x00000040);
+        jarServerUrl_ = "";
+        bitField0_ = (bitField0_ & ~0x00000080);
+        processClass_ = "";
+        bitField0_ = (bitField0_ & ~0x00000100);
         return this;
       }
       
@@ -409,6 +583,27 @@ public final class NettyPistachioProtocol {
           to_bitField0_ |= 0x00000008;
         }
         result.threadId_ = threadId_;
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.partition_ = partition_;
+        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        result.data_ = data_;
+        if (((bitField0_ & 0x00000040) == 0x00000040)) {
+          events_ = java.util.Collections.unmodifiableList(events_);
+          bitField0_ = (bitField0_ & ~0x00000040);
+        }
+        result.events_ = events_;
+        if (((from_bitField0_ & 0x00000080) == 0x00000080)) {
+          to_bitField0_ |= 0x00000040;
+        }
+        result.jarServerUrl_ = jarServerUrl_;
+        if (((from_bitField0_ & 0x00000100) == 0x00000100)) {
+          to_bitField0_ |= 0x00000080;
+        }
+        result.processClass_ = processClass_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -436,6 +631,28 @@ public final class NettyPistachioProtocol {
         }
         if (other.hasThreadId()) {
           setThreadId(other.getThreadId());
+        }
+        if (other.hasPartition()) {
+          setPartition(other.getPartition());
+        }
+        if (other.hasData()) {
+          setData(other.getData());
+        }
+        if (!other.events_.isEmpty()) {
+          if (events_.isEmpty()) {
+            events_ = other.events_;
+            bitField0_ = (bitField0_ & ~0x00000040);
+          } else {
+            ensureEventsIsMutable();
+            events_.addAll(other.events_);
+          }
+          onChanged();
+        }
+        if (other.hasJarServerUrl()) {
+          setJarServerUrl(other.getJarServerUrl());
+        }
+        if (other.hasProcessClass()) {
+          setProcessClass(other.getProcessClass());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -492,6 +709,31 @@ public final class NettyPistachioProtocol {
             case 32: {
               bitField0_ |= 0x00000008;
               threadId_ = input.readUInt32();
+              break;
+            }
+            case 40: {
+              bitField0_ |= 0x00000010;
+              partition_ = input.readUInt64();
+              break;
+            }
+            case 50: {
+              bitField0_ |= 0x00000020;
+              data_ = input.readBytes();
+              break;
+            }
+            case 58: {
+              ensureEventsIsMutable();
+              events_.add(input.readBytes());
+              break;
+            }
+            case 66: {
+              bitField0_ |= 0x00000080;
+              jarServerUrl_ = input.readBytes();
+              break;
+            }
+            case 74: {
+              bitField0_ |= 0x00000100;
+              processClass_ = input.readBytes();
               break;
             }
           }
@@ -585,6 +827,174 @@ public final class NettyPistachioProtocol {
         threadId_ = 0;
         onChanged();
         return this;
+      }
+      
+      // optional uint64 partition = 5;
+      private long partition_ ;
+      public boolean hasPartition() {
+        return ((bitField0_ & 0x00000010) == 0x00000010);
+      }
+      public long getPartition() {
+        return partition_;
+      }
+      public Builder setPartition(long value) {
+        bitField0_ |= 0x00000010;
+        partition_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearPartition() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        partition_ = 0L;
+        onChanged();
+        return this;
+      }
+      
+      // optional bytes data = 6;
+      private com.google.protobuf.ByteString data_ = com.google.protobuf.ByteString.EMPTY;
+      public boolean hasData() {
+        return ((bitField0_ & 0x00000020) == 0x00000020);
+      }
+      public com.google.protobuf.ByteString getData() {
+        return data_;
+      }
+      public Builder setData(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
+        data_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearData() {
+        bitField0_ = (bitField0_ & ~0x00000020);
+        data_ = getDefaultInstance().getData();
+        onChanged();
+        return this;
+      }
+      
+      // repeated bytes events = 7;
+      private java.util.List<com.google.protobuf.ByteString> events_ = java.util.Collections.emptyList();;
+      private void ensureEventsIsMutable() {
+        if (!((bitField0_ & 0x00000040) == 0x00000040)) {
+          events_ = new java.util.ArrayList<com.google.protobuf.ByteString>(events_);
+          bitField0_ |= 0x00000040;
+         }
+      }
+      public java.util.List<com.google.protobuf.ByteString>
+          getEventsList() {
+        return java.util.Collections.unmodifiableList(events_);
+      }
+      public int getEventsCount() {
+        return events_.size();
+      }
+      public com.google.protobuf.ByteString getEvents(int index) {
+        return events_.get(index);
+      }
+      public Builder setEvents(
+          int index, com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureEventsIsMutable();
+        events_.set(index, value);
+        onChanged();
+        return this;
+      }
+      public Builder addEvents(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureEventsIsMutable();
+        events_.add(value);
+        onChanged();
+        return this;
+      }
+      public Builder addAllEvents(
+          java.lang.Iterable<? extends com.google.protobuf.ByteString> values) {
+        ensureEventsIsMutable();
+        super.addAll(values, events_);
+        onChanged();
+        return this;
+      }
+      public Builder clearEvents() {
+        events_ = java.util.Collections.emptyList();;
+        bitField0_ = (bitField0_ & ~0x00000040);
+        onChanged();
+        return this;
+      }
+      
+      // optional string jar_server_url = 8;
+      private java.lang.Object jarServerUrl_ = "";
+      public boolean hasJarServerUrl() {
+        return ((bitField0_ & 0x00000080) == 0x00000080);
+      }
+      public String getJarServerUrl() {
+        java.lang.Object ref = jarServerUrl_;
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+          jarServerUrl_ = s;
+          return s;
+        } else {
+          return (String) ref;
+        }
+      }
+      public Builder setJarServerUrl(String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000080;
+        jarServerUrl_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearJarServerUrl() {
+        bitField0_ = (bitField0_ & ~0x00000080);
+        jarServerUrl_ = getDefaultInstance().getJarServerUrl();
+        onChanged();
+        return this;
+      }
+      void setJarServerUrl(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000080;
+        jarServerUrl_ = value;
+        onChanged();
+      }
+      
+      // optional string process_class = 9;
+      private java.lang.Object processClass_ = "";
+      public boolean hasProcessClass() {
+        return ((bitField0_ & 0x00000100) == 0x00000100);
+      }
+      public String getProcessClass() {
+        java.lang.Object ref = processClass_;
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+          processClass_ = s;
+          return s;
+        } else {
+          return (String) ref;
+        }
+      }
+      public Builder setProcessClass(String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000100;
+        processClass_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearProcessClass() {
+        bitField0_ = (bitField0_ & ~0x00000100);
+        processClass_ = getDefaultInstance().getProcessClass();
+        onChanged();
+        return this;
+      }
+      void setProcessClass(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000100;
+        processClass_ = value;
+        onChanged();
       }
       
       // @@protoc_insertion_point(builder_scope:com.yahoo.ads.pb.network.netty.Request)
@@ -1282,15 +1692,17 @@ public final class NettyPistachioProtocol {
     java.lang.String[] descriptorData = {
       "\nIsrc/main/java/com/yahoo/ads/pb/network" +
       "/netty/NettyPistachioProtocol.proto\022\036com" +
-      ".yahoo.ads.pb.network.netty\"w\n\007Request\0229" +
-      "\n\004type\030\001 \001(\0162+.com.yahoo.ads.pb.network." +
-      "netty.RequestType\022\n\n\002id\030\002 \001(\004\022\022\n\nrequest" +
-      "_id\030\003 \001(\r\022\021\n\tthread_id\030\004 \001(\r\"u\n\010Response" +
-      "\022\n\n\002id\030\001 \001(\004\022\021\n\tsucceeded\030\002 \001(\010\022\025\n\rerror" +
-      "_message\030\003 \001(\t\022\014\n\004data\030\004 \001(\014\022\022\n\nrequest_" +
-      "id\030\005 \001(\r\022\021\n\tthread_id\030\006 \001(\r*7\n\013RequestTy" +
-      "pe\022\n\n\006LOOKUP\020\001\022\t\n\005STORE\020\002\022\021\n\rPROCESS_EVE",
-      "NT\020\003B\002H\001"
+      ".yahoo.ads.pb.network.netty\"\327\001\n\007Request\022" +
+      "9\n\004type\030\001 \001(\0162+.com.yahoo.ads.pb.network" +
+      ".netty.RequestType\022\n\n\002id\030\002 \001(\004\022\022\n\nreques" +
+      "t_id\030\003 \001(\r\022\021\n\tthread_id\030\004 \001(\r\022\021\n\tpartiti" +
+      "on\030\005 \001(\004\022\014\n\004data\030\006 \001(\014\022\016\n\006events\030\007 \003(\014\022\026" +
+      "\n\016jar_server_url\030\010 \001(\t\022\025\n\rprocess_class\030" +
+      "\t \001(\t\"u\n\010Response\022\n\n\002id\030\001 \001(\004\022\021\n\tsucceed" +
+      "ed\030\002 \001(\010\022\025\n\rerror_message\030\003 \001(\t\022\014\n\004data\030",
+      "\004 \001(\014\022\022\n\nrequest_id\030\005 \001(\r\022\021\n\tthread_id\030\006" +
+      " \001(\r*7\n\013RequestType\022\n\n\006LOOKUP\020\001\022\t\n\005STORE" +
+      "\020\002\022\021\n\rPROCESS_EVENT\020\003B\002H\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -1302,7 +1714,7 @@ public final class NettyPistachioProtocol {
           internal_static_com_yahoo_ads_pb_network_netty_Request_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_com_yahoo_ads_pb_network_netty_Request_descriptor,
-              new java.lang.String[] { "Type", "Id", "RequestId", "ThreadId", },
+              new java.lang.String[] { "Type", "Id", "RequestId", "ThreadId", "Partition", "Data", "Events", "JarServerUrl", "ProcessClass", },
               com.yahoo.ads.pb.network.netty.NettyPistachioProtocol.Request.class,
               com.yahoo.ads.pb.network.netty.NettyPistachioProtocol.Request.Builder.class);
           internal_static_com_yahoo_ads_pb_network_netty_Response_descriptor =

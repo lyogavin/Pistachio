@@ -24,6 +24,7 @@ import com.yahoo.ads.pb.util.ConfigurationManager;
 import org.apache.commons.configuration.Configuration;
 import java.net.InetAddress;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.google.api.client.util.ExponentialBackOff;
@@ -34,6 +35,9 @@ import com.codahale.metrics.Timer;
 import com.codahale.metrics.JmxReporter;
 import com.google.api.client.util.ExponentialBackOff;
 import com.google.api.client.util.BackOff;
+import com.yahoo.ads.pb.PistachiosClientImpl;
+import com.yahoo.ads.pb.PistachiosServer;
+import com.yahoo.ads.pb.network.netty.NettyPistachioClient;
 
 /**
  * Main Pistachio Client Class
@@ -52,86 +56,34 @@ import com.google.api.client.util.BackOff;
 public class PistachiosClient {
 	private static Logger logger = LoggerFactory.getLogger(PistachiosClient.class);
 	final static MetricRegistry metrics = new MetricRegistry();
-	final static JmxReporter reporter = JmxReporter.forRegistry(metrics).build();
+	final static JmxReporter reporter = JmxReporter.forRegistry(metrics).inDomain("pistachio.client.metrics").build();
 
 	private final static Meter lookupFailureRequests = metrics.meter(MetricRegistry.name(PistachiosServer.class, "lookupFailureRequests"));
 	private final static Meter storeFailureRequests = metrics.meter(MetricRegistry.name(PistachiosServer.class, "storeFailureRequests"));
+	private final static Meter processFailureRequests = metrics.meter(MetricRegistry.name(PistachiosServer.class, "processFailureRequests"));
 
 	private final static Timer lookupTimer = metrics.timer(MetricRegistry.name(PistachiosServer.class, "lookupTimer"));
 	private final static Timer storeTimer = metrics.timer(MetricRegistry.name(PistachiosServer.class, "storeTimer"));
+	private final static Timer processTimer = metrics.timer(MetricRegistry.name(PistachiosServer.class, "processTimer"));
+
+    private PistachiosClientImpl clientImpl = new NettyPistachioClient();
 
 
 
 	static {
 		reporter.start();
 	}
-	String ZOOKEEPER_SERVER = "Pistachio.ZooKeeper.Server";
-	String PROFILE_HELIX_INSTANCE_ID = "Profile.Helix.InstanceId";
 	Configuration conf = ConfigurationManager.getConfiguration();
 	private int initialIntervalMillis = conf.getInt("Pistachio.BackOff.InitialIntervalMillis", 100);
 	private int maxElapsedTimeMillis = conf.getInt("Pistachio.BackOff.MaxElapsedTimeMillis", 100 * 1000);
 	private int maxIntervalMillis = conf.getInt("Pistachio.BackOff.MaxIntervalMillis", 5000);
+    BackOff backoff = (new ExponentialBackOff.Builder()).setInitialIntervalMillis(initialIntervalMillis)
+        .setMaxElapsedTimeMillis(maxElapsedTimeMillis)
+        .setMaxIntervalMillis(maxIntervalMillis)
+        .build();
 
-	HelixPartitionSpectator helixPartitionSpectator;
-
-	ConcurrentHashMap<String, Pistachios.Client> ipToClientMap = new ConcurrentHashMap<String, Pistachios.Client>();
 
 	public PistachiosClient() throws Exception {
-		try {
-			helixPartitionSpectator = new HelixPartitionSpectator(
-								conf.getString(ZOOKEEPER_SERVER), // zkAddr
-								"PistachiosCluster",
-								InetAddress.getLocalHost().getHostName() //conf.getString(PROFILE_HELIX_INSTANCE_ID) // instanceName
-								);
-
-		} catch(Exception e) {
-			logger.error("Error init HelixPartitionSpectator, are zookeeper and helix installed and configured correctly?", e);
-			throw e;
-		}
-	}
-
-	private void closeClient(long id) {
-		ipToClientMap.remove(id);
-	}
-
-	private Pistachios.Client getClient(long id, boolean reconnect) {
-		  String ip = null;
-		  int count = 0;
-		  while (ip == null && count++ < 1) {
-		  int shard = (int)id % 256;
-		  shard = shard < 0 ? shard + 256: shard;
-		ip = helixPartitionSpectator.getOneInstanceForPartition("PistachiosResource", shard, "MASTER");
-			logger.info("partition found {}", ip);
-
-		  }
-		if (ip == null) {
-			logger.info("partition not found");
-			return null;
-		}
-		logger.debug("partition found:" + ip);
-
-		Pistachios.Client client = null;
-		if (reconnect  || ((client =ipToClientMap.get(ip)) == null)) {
-
-			try {
-				TTransport transport;
-				transport = new TSocket(ip, 9090, 1000);
-				transport.open();
-
-				TProtocol protocol = new  TBinaryProtocol(transport);
-				client = new Pistachios.Client(protocol);
-
-				ipToClientMap.put(ip, client);
-
-
-				//transport.close();
-			} catch (TException x) {
-				logger.info("error: ", x);
-			} 
-		}
-
-      //perform(store, client);
-		return client;
 	}
 
     /** 
@@ -144,57 +96,31 @@ public class PistachiosClient {
 
 		final Timer.Context context = lookupTimer.time();
 		boolean succeeded = false;
-		Pistachios.Client client = null;
 		byte[] ret =  null;
-		boolean reconnect = false;
-		BackOff backoff;
-
-		backoff = (new ExponentialBackOff.Builder()).setInitialIntervalMillis(initialIntervalMillis)
-											  .setMaxElapsedTimeMillis(maxElapsedTimeMillis)
-											  .setMaxIntervalMillis(maxIntervalMillis)
-											  .build();
+        long backOffMillis =  0;
 
 		try {
-			long backOffMillis = backoff.nextBackOffMillis();
 			while (!succeeded && (backOffMillis != BackOff.STOP)) {
-				client = getClient(id, reconnect);
-				if (client == null) {
-					logger.info("failed get client, retry in {} getting client", backOffMillis);
-					try{
-						Thread.sleep(backOffMillis);
-					}catch(Exception e) {
-					}
-					backOffMillis = backoff.nextBackOffMillis();
-					continue;
+                ret = clientImpl.lookup(id);
+                //if (ret != null) {
+                //TODO: add a way to return success status 
+                if (true) {
+                    succeeded = true;
+                    backoff.reset();
+                    break;
+                } else {
+                    try{
+                        backOffMillis = backoff.nextBackOffMillis();
+                        Thread.sleep(backOffMillis);
+                    }catch(Exception e) {
+                    }
+                    continue;
 				}
+            }
 
-				int actionRetry = 5;
-				while (actionRetry-- > 0) {
-					try {
-						ret = client.lookup(id).array();
-						logger.info("retry {} client.lookup(" + id + ")" + new String(ret), actionRetry);
-						succeeded = true;
-						break;
-					} catch (TException x) {
-						logger.info("error: retry {}", actionRetry, x);
-						reconnect = true;
-					} 
-				}
-
-				if (!succeeded) {
-					//closeClient(id);
-					try {
-						logger.debug("failed lookup, retry in {}", backOffMillis);
-					Thread.sleep(backOffMillis);
-					} catch(Exception e) {
-					}
-				}
-				backOffMillis = backoff.nextBackOffMillis();
-			}
-
-
-		//perform(store, client);
-
+            if (!succeeded) {
+                logger.debug("failed lookup, retry in {}", backOffMillis);
+            }
 		} catch (Exception e) {
 			logger.info("exception lookup {}", id, e);
 		} finally {
@@ -210,57 +136,33 @@ public class PistachiosClient {
      *
      * @param id        id to store as long.
      * @param value     value to store as byte array
+     * @return          <code>boolean</code> succeeded or not
      */
-	public void store(long id, byte[] value) {
+	public boolean store(long id, byte[] value) {
 		final Timer.Context context = storeTimer.time();
 		boolean succeeded = false;
-		Pistachios.Client client = null;
-		byte[] ret =  null;
-		boolean reconnect = false;
-
-		BackOff backoff;
-
-		backoff = (new ExponentialBackOff.Builder()).setInitialIntervalMillis(initialIntervalMillis)
-											  .setMaxElapsedTimeMillis(maxElapsedTimeMillis)
-											  .setMaxIntervalMillis(maxIntervalMillis)
-											  .build();
+        long backOffMillis =  0;
 
 
 		try {
-			long backOffMillis = backoff.nextBackOffMillis();
 			while (!succeeded && (backOffMillis != BackOff.STOP)) {
-				client = getClient(id, reconnect);
-				if (client == null) {
+				if (!clientImpl.store(id, value)) {
 					logger.info("failed get client, retry in {} getting client", backOffMillis);
 					try{
-					Thread.sleep(backOffMillis);
+                        backOffMillis = backoff.nextBackOffMillis();
+                        Thread.sleep(backOffMillis);
 					}catch(Exception e) {
 					}
-					backOffMillis = backoff.nextBackOffMillis();
 					continue;
-				}
-				int actionRetry = 5;
-				while (actionRetry-- > 0) {
-					try {
-						client.store(id, ByteBuffer.wrap(value));
-						logger.info("client.store(" + id + ","+ value+")" );
-						succeeded = true;
-						break;
-					} catch (TException x) {
-						logger.info("error: ", x);
-						reconnect = true;
-					} 
-				}
+				} else {
+                    succeeded = true;
+                    backoff.reset();
+                    break;
+                }
+            }
 
-				if (!succeeded) {
-					logger.info("failed store, retry in {}", backOffMillis);
-					//closeClient(id);
-					try{
-					Thread.sleep(backOffMillis);
-					}catch(Exception e) {
-					}
-				}
-				backOffMillis = backoff.nextBackOffMillis();
+            if (!succeeded) {
+                logger.info("failed store, retry in {}", backOffMillis);
 			}
 
 		} catch (Exception e) {
@@ -270,39 +172,99 @@ public class PistachiosClient {
 				storeFailureRequests.mark();
 			context.stop();
 		}
+        return succeeded;
+	}
+
+    /** 
+     * To close all the resource gracefully
+     */
+	public void close() {
+        clientImpl.close();
+    }
+
+    /** 
+     * To process a batch of events
+     *
+     * @param id        id to store as long.
+     * @param events    list of events as byte []
+     * @return          <code>boolean</code> succeeded or not
+     */
+	public boolean processBatch(long id, List<byte[]> events) {
+		final Timer.Context context = processTimer.time();
+		boolean succeeded = false;
+		byte[] ret =  null;
+
+        long backOffMillis =  0;
+
+		try {
+			while (!succeeded && (backOffMillis != BackOff.STOP)) {
+				if (!clientImpl.processBatch(id, events)) {
+					logger.info("failed get client, retry in {} getting client", backOffMillis);
+					try{
+                        backOffMillis = backoff.nextBackOffMillis();
+                        Thread.sleep(backOffMillis);
+					}catch(Exception e) {
+					}
+					continue;
+				} else {
+                    succeeded = true;
+                    backoff.reset();
+                    break;
+                }
+            }
+
+            if (!succeeded) {
+                logger.info("failed process, retry in {}", backOffMillis);
+			}
+
+		} catch (Exception e) {
+			logger.info("exception process {} {}", id, events, e);
+		} finally {
+			if (!succeeded)
+				storeFailureRequests.mark();
+			context.stop();
+		}
+        return succeeded;
 	}
 
   public static void main(String [] args) {
-	  PistachiosClient client;
-	  try {
-	  client = new PistachiosClient();
-	  }catch (Exception e) {
-		  logger.info("error creating clietn", e);
-		  return;
-	  }
+	  PistachiosClient client = null;
+      try {
+          client = new PistachiosClient();
+      }catch (Exception e) {
+          logger.info("error creating clietn", e);
+          if (client != null)
+              client.close();
+          return;
+      }
 
-		  long id = 0;
-		  boolean store = false;
-		  String value="" ;
-	  if (args.length ==2 && args[0].equals("lookup") ) {
-		  try {
-		  id = Long.parseLong(args[1]);
-			System.out.println("client.lookup(" + id + ")" + new String(client.lookup(id)));
-		  } catch (Exception e) {
-		  }
-	  } else if (args.length == 3 && args[0].equals("store") ) {
-		  try {
-		  id = Long.parseLong(args[1]);
-		  } catch (Exception e) {
-		  }
-		  store = true;
-		  value = args[2];
-		  client.store(id, value.getBytes());
+      try {
 
-	  } else {
-      System.out.println("USAGE: xxxx lookup id or xxxx store id value");
-      System.exit(0);
-	  }
+          long id = 0;
+          boolean store = false;
+          String value="" ;
+          if (args.length ==2 && args[0].equals("lookup") ) {
+              try {
+                  id = Long.parseLong(args[1]);
+                  System.out.println("client.lookup(" + id + ")" + new String(client.lookup(id)));
+              } catch (Exception e) {
+              }
+          } else if (args.length == 3 && args[0].equals("store") ) {
+              try {
+                  id = Long.parseLong(args[1]);
+              } catch (Exception e) {
+              }
+              store = true;
+              value = args[2];
+              client.store(id, value.getBytes());
+
+          } else {
+              System.out.println("USAGE: xxxx lookup id or xxxx store id value");
+              System.exit(0);
+          }
+      } finally {
+          client.close();
+      }
 
 
 

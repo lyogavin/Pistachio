@@ -29,6 +29,8 @@ import org.apache.helix.model.InstanceConfig;
 import org.apache.helix.spectator.RoutingTableProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.helix.manager.zk.ZKHelixAdmin;
+import org.apache.helix.model.IdealState;
 
 import com.yahoo.ads.pb.util.ConfigurationManager;
 
@@ -42,15 +44,24 @@ public class HelixPartitionSpectator {
 	private static String[] readExclusionList = ConfigurationManager.getConfiguration().getStringArray("Profile.ReadExclusionList");
 	private final ConcurrentHashMap<String, String> host2ip = new ConcurrentHashMap<>(); // cache hostname -> ip mapping
 
+    private long totalParition = -1;
+
+    private String zkAddress;
+    private String helixClusterName;
+
 	public HelixPartitionSpectator(String zkAddr, String clusterName, String instanceName) {
 		logger.info("init HelixPartitionSpectator with zkAddr @{}, clusterName {}, instanceName {}",
 				zkAddr, clusterName, instanceName);
 		manager = HelixManagerFactory.getZKHelixManager(clusterName, instanceName, 
 				InstanceType.SPECTATOR, zkAddr);
+        zkAddress = zkAddr;
+        helixClusterName = clusterName;
 		try {
 			manager.connect();
 			routingTableProvider = new RoutingTableProvider();
 			manager.addExternalViewChangeListener(routingTableProvider);
+
+
 		} catch (Exception e) {
 			logger.error("caught exception when init HelixPartitionSpectator", e);
 			if (manager != null) {
@@ -59,6 +70,17 @@ public class HelixPartitionSpectator {
 			throw new RuntimeException("init HelixPartitionSpectator failure");
 		}
 	}
+
+    public long getTotalPartition(String resource) {
+        if (totalParition == -1) {
+
+            ZKHelixAdmin admin = new ZKHelixAdmin(zkAddress);
+            IdealState idealState = admin.getResourceIdealState(helixClusterName, resource);
+            totalParition = idealState.getNumPartitions();
+        }
+
+        return totalParition;
+    }
 	
 	/**
 	 * Get random one instance name for given partition

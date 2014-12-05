@@ -4,7 +4,6 @@
  * DO NOT EDIT UNLESS YOU ARE SURE THAT YOU KNOW WHAT YOU ARE DOING
  *  @generated
  */
-package com.yahoo.ads.pb;
 import org.apache.thrift.scheme.IScheme;
 import org.apache.thrift.scheme.SchemeFactory;
 import org.apache.thrift.scheme.StandardScheme;
@@ -33,22 +32,15 @@ import org.slf4j.LoggerFactory;
 
 public class Pistachios {
 
-  /**
-   * Ahh, now onto the cool part, defining a service. Services just need a name
-   * and can optionally inherit from another service using the extends keyword.
-   */
   public interface Iface {
 
-    /**
-     * This method has a oneway modifier. That means the client only makes
-     * a request and does not listen for any response at all. Oneway methods
-     * must be void.
-     * 
-     * @param id
-     */
     public ByteBuffer lookup(long id) throws org.apache.thrift.TException;
 
     public boolean store(long id, ByteBuffer value) throws org.apache.thrift.TException;
+
+    public boolean processEvent(ByteBuffer event, String jar_url, String class_full_name) throws org.apache.thrift.TException;
+
+    public boolean registerPartitioner(String jar_url, String class_full_name) throws org.apache.thrift.TException;
 
   }
 
@@ -57,6 +49,10 @@ public class Pistachios {
     public void lookup(long id, org.apache.thrift.async.AsyncMethodCallback resultHandler) throws org.apache.thrift.TException;
 
     public void store(long id, ByteBuffer value, org.apache.thrift.async.AsyncMethodCallback resultHandler) throws org.apache.thrift.TException;
+
+    public void processEvent(ByteBuffer event, String jar_url, String class_full_name, org.apache.thrift.async.AsyncMethodCallback resultHandler) throws org.apache.thrift.TException;
+
+    public void registerPartitioner(String jar_url, String class_full_name, org.apache.thrift.async.AsyncMethodCallback resultHandler) throws org.apache.thrift.TException;
 
   }
 
@@ -125,6 +121,55 @@ public class Pistachios {
         return result.success;
       }
       throw new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.MISSING_RESULT, "store failed: unknown result");
+    }
+
+    public boolean processEvent(ByteBuffer event, String jar_url, String class_full_name) throws org.apache.thrift.TException
+    {
+      send_processEvent(event, jar_url, class_full_name);
+      return recv_processEvent();
+    }
+
+    public void send_processEvent(ByteBuffer event, String jar_url, String class_full_name) throws org.apache.thrift.TException
+    {
+      processEvent_args args = new processEvent_args();
+      args.setEvent(event);
+      args.setJar_url(jar_url);
+      args.setClass_full_name(class_full_name);
+      sendBase("processEvent", args);
+    }
+
+    public boolean recv_processEvent() throws org.apache.thrift.TException
+    {
+      processEvent_result result = new processEvent_result();
+      receiveBase(result, "processEvent");
+      if (result.isSetSuccess()) {
+        return result.success;
+      }
+      throw new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.MISSING_RESULT, "processEvent failed: unknown result");
+    }
+
+    public boolean registerPartitioner(String jar_url, String class_full_name) throws org.apache.thrift.TException
+    {
+      send_registerPartitioner(jar_url, class_full_name);
+      return recv_registerPartitioner();
+    }
+
+    public void send_registerPartitioner(String jar_url, String class_full_name) throws org.apache.thrift.TException
+    {
+      registerPartitioner_args args = new registerPartitioner_args();
+      args.setJar_url(jar_url);
+      args.setClass_full_name(class_full_name);
+      sendBase("registerPartitioner", args);
+    }
+
+    public boolean recv_registerPartitioner() throws org.apache.thrift.TException
+    {
+      registerPartitioner_result result = new registerPartitioner_result();
+      receiveBase(result, "registerPartitioner");
+      if (result.isSetSuccess()) {
+        return result.success;
+      }
+      throw new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.MISSING_RESULT, "registerPartitioner failed: unknown result");
     }
 
   }
@@ -212,6 +257,79 @@ public class Pistachios {
       }
     }
 
+    public void processEvent(ByteBuffer event, String jar_url, String class_full_name, org.apache.thrift.async.AsyncMethodCallback resultHandler) throws org.apache.thrift.TException {
+      checkReady();
+      processEvent_call method_call = new processEvent_call(event, jar_url, class_full_name, resultHandler, this, ___protocolFactory, ___transport);
+      this.___currentMethod = method_call;
+      ___manager.call(method_call);
+    }
+
+    public static class processEvent_call extends org.apache.thrift.async.TAsyncMethodCall {
+      private ByteBuffer event;
+      private String jar_url;
+      private String class_full_name;
+      public processEvent_call(ByteBuffer event, String jar_url, String class_full_name, org.apache.thrift.async.AsyncMethodCallback resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+        super(client, protocolFactory, transport, resultHandler, false);
+        this.event = event;
+        this.jar_url = jar_url;
+        this.class_full_name = class_full_name;
+      }
+
+      public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
+        prot.writeMessageBegin(new org.apache.thrift.protocol.TMessage("processEvent", org.apache.thrift.protocol.TMessageType.CALL, 0));
+        processEvent_args args = new processEvent_args();
+        args.setEvent(event);
+        args.setJar_url(jar_url);
+        args.setClass_full_name(class_full_name);
+        args.write(prot);
+        prot.writeMessageEnd();
+      }
+
+      public boolean getResult() throws org.apache.thrift.TException {
+        if (getState() != org.apache.thrift.async.TAsyncMethodCall.State.RESPONSE_READ) {
+          throw new IllegalStateException("Method call not finished!");
+        }
+        org.apache.thrift.transport.TMemoryInputTransport memoryTransport = new org.apache.thrift.transport.TMemoryInputTransport(getFrameBuffer().array());
+        org.apache.thrift.protocol.TProtocol prot = client.getProtocolFactory().getProtocol(memoryTransport);
+        return (new Client(prot)).recv_processEvent();
+      }
+    }
+
+    public void registerPartitioner(String jar_url, String class_full_name, org.apache.thrift.async.AsyncMethodCallback resultHandler) throws org.apache.thrift.TException {
+      checkReady();
+      registerPartitioner_call method_call = new registerPartitioner_call(jar_url, class_full_name, resultHandler, this, ___protocolFactory, ___transport);
+      this.___currentMethod = method_call;
+      ___manager.call(method_call);
+    }
+
+    public static class registerPartitioner_call extends org.apache.thrift.async.TAsyncMethodCall {
+      private String jar_url;
+      private String class_full_name;
+      public registerPartitioner_call(String jar_url, String class_full_name, org.apache.thrift.async.AsyncMethodCallback resultHandler, org.apache.thrift.async.TAsyncClient client, org.apache.thrift.protocol.TProtocolFactory protocolFactory, org.apache.thrift.transport.TNonblockingTransport transport) throws org.apache.thrift.TException {
+        super(client, protocolFactory, transport, resultHandler, false);
+        this.jar_url = jar_url;
+        this.class_full_name = class_full_name;
+      }
+
+      public void write_args(org.apache.thrift.protocol.TProtocol prot) throws org.apache.thrift.TException {
+        prot.writeMessageBegin(new org.apache.thrift.protocol.TMessage("registerPartitioner", org.apache.thrift.protocol.TMessageType.CALL, 0));
+        registerPartitioner_args args = new registerPartitioner_args();
+        args.setJar_url(jar_url);
+        args.setClass_full_name(class_full_name);
+        args.write(prot);
+        prot.writeMessageEnd();
+      }
+
+      public boolean getResult() throws org.apache.thrift.TException {
+        if (getState() != org.apache.thrift.async.TAsyncMethodCall.State.RESPONSE_READ) {
+          throw new IllegalStateException("Method call not finished!");
+        }
+        org.apache.thrift.transport.TMemoryInputTransport memoryTransport = new org.apache.thrift.transport.TMemoryInputTransport(getFrameBuffer().array());
+        org.apache.thrift.protocol.TProtocol prot = client.getProtocolFactory().getProtocol(memoryTransport);
+        return (new Client(prot)).recv_registerPartitioner();
+      }
+    }
+
   }
 
   public static class Processor<I extends Iface> extends org.apache.thrift.TBaseProcessor<I> implements org.apache.thrift.TProcessor {
@@ -227,6 +345,8 @@ public class Pistachios {
     private static <I extends Iface> Map<String,  org.apache.thrift.ProcessFunction<I, ? extends  org.apache.thrift.TBase>> getProcessMap(Map<String,  org.apache.thrift.ProcessFunction<I, ? extends  org.apache.thrift.TBase>> processMap) {
       processMap.put("lookup", new lookup());
       processMap.put("store", new store());
+      processMap.put("processEvent", new processEvent());
+      processMap.put("registerPartitioner", new registerPartitioner());
       return processMap;
     }
 
@@ -271,6 +391,48 @@ public class Pistachios {
       }
     }
 
+    public static class processEvent<I extends Iface> extends org.apache.thrift.ProcessFunction<I, processEvent_args> {
+      public processEvent() {
+        super("processEvent");
+      }
+
+      public processEvent_args getEmptyArgsInstance() {
+        return new processEvent_args();
+      }
+
+      protected boolean isOneway() {
+        return false;
+      }
+
+      public processEvent_result getResult(I iface, processEvent_args args) throws org.apache.thrift.TException {
+        processEvent_result result = new processEvent_result();
+        result.success = iface.processEvent(args.event, args.jar_url, args.class_full_name);
+        result.setSuccessIsSet(true);
+        return result;
+      }
+    }
+
+    public static class registerPartitioner<I extends Iface> extends org.apache.thrift.ProcessFunction<I, registerPartitioner_args> {
+      public registerPartitioner() {
+        super("registerPartitioner");
+      }
+
+      public registerPartitioner_args getEmptyArgsInstance() {
+        return new registerPartitioner_args();
+      }
+
+      protected boolean isOneway() {
+        return false;
+      }
+
+      public registerPartitioner_result getResult(I iface, registerPartitioner_args args) throws org.apache.thrift.TException {
+        registerPartitioner_result result = new registerPartitioner_result();
+        result.success = iface.registerPartitioner(args.jar_url, args.class_full_name);
+        result.setSuccessIsSet(true);
+        return result;
+      }
+    }
+
   }
 
   public static class AsyncProcessor<I extends AsyncIface> extends org.apache.thrift.TBaseAsyncProcessor<I> {
@@ -286,6 +448,8 @@ public class Pistachios {
     private static <I extends AsyncIface> Map<String,  org.apache.thrift.AsyncProcessFunction<I, ? extends  org.apache.thrift.TBase,?>> getProcessMap(Map<String,  org.apache.thrift.AsyncProcessFunction<I, ? extends  org.apache.thrift.TBase, ?>> processMap) {
       processMap.put("lookup", new lookup());
       processMap.put("store", new store());
+      processMap.put("processEvent", new processEvent());
+      processMap.put("registerPartitioner", new registerPartitioner());
       return processMap;
     }
 
@@ -389,6 +553,110 @@ public class Pistachios {
 
       public void start(I iface, store_args args, org.apache.thrift.async.AsyncMethodCallback<Boolean> resultHandler) throws TException {
         iface.store(args.id, args.value,resultHandler);
+      }
+    }
+
+    public static class processEvent<I extends AsyncIface> extends org.apache.thrift.AsyncProcessFunction<I, processEvent_args, Boolean> {
+      public processEvent() {
+        super("processEvent");
+      }
+
+      public processEvent_args getEmptyArgsInstance() {
+        return new processEvent_args();
+      }
+
+      public AsyncMethodCallback<Boolean> getResultHandler(final AsyncFrameBuffer fb, final int seqid) {
+        final org.apache.thrift.AsyncProcessFunction fcall = this;
+        return new AsyncMethodCallback<Boolean>() { 
+          public void onComplete(Boolean o) {
+            processEvent_result result = new processEvent_result();
+            result.success = o;
+            result.setSuccessIsSet(true);
+            try {
+              fcall.sendResponse(fb,result, org.apache.thrift.protocol.TMessageType.REPLY,seqid);
+              return;
+            } catch (Exception e) {
+              LOGGER.error("Exception writing to internal frame buffer", e);
+            }
+            fb.close();
+          }
+          public void onError(Exception e) {
+            byte msgType = org.apache.thrift.protocol.TMessageType.REPLY;
+            org.apache.thrift.TBase msg;
+            processEvent_result result = new processEvent_result();
+            {
+              msgType = org.apache.thrift.protocol.TMessageType.EXCEPTION;
+              msg = (org.apache.thrift.TBase)new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.INTERNAL_ERROR, e.getMessage());
+            }
+            try {
+              fcall.sendResponse(fb,msg,msgType,seqid);
+              return;
+            } catch (Exception ex) {
+              LOGGER.error("Exception writing to internal frame buffer", ex);
+            }
+            fb.close();
+          }
+        };
+      }
+
+      protected boolean isOneway() {
+        return false;
+      }
+
+      public void start(I iface, processEvent_args args, org.apache.thrift.async.AsyncMethodCallback<Boolean> resultHandler) throws TException {
+        iface.processEvent(args.event, args.jar_url, args.class_full_name,resultHandler);
+      }
+    }
+
+    public static class registerPartitioner<I extends AsyncIface> extends org.apache.thrift.AsyncProcessFunction<I, registerPartitioner_args, Boolean> {
+      public registerPartitioner() {
+        super("registerPartitioner");
+      }
+
+      public registerPartitioner_args getEmptyArgsInstance() {
+        return new registerPartitioner_args();
+      }
+
+      public AsyncMethodCallback<Boolean> getResultHandler(final AsyncFrameBuffer fb, final int seqid) {
+        final org.apache.thrift.AsyncProcessFunction fcall = this;
+        return new AsyncMethodCallback<Boolean>() { 
+          public void onComplete(Boolean o) {
+            registerPartitioner_result result = new registerPartitioner_result();
+            result.success = o;
+            result.setSuccessIsSet(true);
+            try {
+              fcall.sendResponse(fb,result, org.apache.thrift.protocol.TMessageType.REPLY,seqid);
+              return;
+            } catch (Exception e) {
+              LOGGER.error("Exception writing to internal frame buffer", e);
+            }
+            fb.close();
+          }
+          public void onError(Exception e) {
+            byte msgType = org.apache.thrift.protocol.TMessageType.REPLY;
+            org.apache.thrift.TBase msg;
+            registerPartitioner_result result = new registerPartitioner_result();
+            {
+              msgType = org.apache.thrift.protocol.TMessageType.EXCEPTION;
+              msg = (org.apache.thrift.TBase)new org.apache.thrift.TApplicationException(org.apache.thrift.TApplicationException.INTERNAL_ERROR, e.getMessage());
+            }
+            try {
+              fcall.sendResponse(fb,msg,msgType,seqid);
+              return;
+            } catch (Exception ex) {
+              LOGGER.error("Exception writing to internal frame buffer", ex);
+            }
+            fb.close();
+          }
+        };
+      }
+
+      protected boolean isOneway() {
+        return false;
+      }
+
+      public void start(I iface, registerPartitioner_args args, org.apache.thrift.async.AsyncMethodCallback<Boolean> resultHandler) throws TException {
+        iface.registerPartitioner(args.jar_url, args.class_full_name,resultHandler);
       }
     }
 
@@ -1917,6 +2185,1733 @@ public class Pistachios {
 
       @Override
       public void read(org.apache.thrift.protocol.TProtocol prot, store_result struct) throws org.apache.thrift.TException {
+        TTupleProtocol iprot = (TTupleProtocol) prot;
+        BitSet incoming = iprot.readBitSet(1);
+        if (incoming.get(0)) {
+          struct.success = iprot.readBool();
+          struct.setSuccessIsSet(true);
+        }
+      }
+    }
+
+  }
+
+  public static class processEvent_args implements org.apache.thrift.TBase<processEvent_args, processEvent_args._Fields>, java.io.Serializable, Cloneable, Comparable<processEvent_args>   {
+    private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("processEvent_args");
+
+    private static final org.apache.thrift.protocol.TField EVENT_FIELD_DESC = new org.apache.thrift.protocol.TField("event", org.apache.thrift.protocol.TType.STRING, (short)1);
+    private static final org.apache.thrift.protocol.TField JAR_URL_FIELD_DESC = new org.apache.thrift.protocol.TField("jar_url", org.apache.thrift.protocol.TType.STRING, (short)2);
+    private static final org.apache.thrift.protocol.TField CLASS_FULL_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("class_full_name", org.apache.thrift.protocol.TType.STRING, (short)3);
+
+    private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
+    static {
+      schemes.put(StandardScheme.class, new processEvent_argsStandardSchemeFactory());
+      schemes.put(TupleScheme.class, new processEvent_argsTupleSchemeFactory());
+    }
+
+    public ByteBuffer event; // required
+    public String jar_url; // required
+    public String class_full_name; // required
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements org.apache.thrift.TFieldIdEnum {
+      EVENT((short)1, "event"),
+      JAR_URL((short)2, "jar_url"),
+      CLASS_FULL_NAME((short)3, "class_full_name");
+
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        switch(fieldId) {
+          case 1: // EVENT
+            return EVENT;
+          case 2: // JAR_URL
+            return JAR_URL;
+          case 3: // CLASS_FULL_NAME
+            return CLASS_FULL_NAME;
+          default:
+            return null;
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+    public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
+    static {
+      Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
+      tmpMap.put(_Fields.EVENT, new org.apache.thrift.meta_data.FieldMetaData("event", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING          , true)));
+      tmpMap.put(_Fields.JAR_URL, new org.apache.thrift.meta_data.FieldMetaData("jar_url", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
+      tmpMap.put(_Fields.CLASS_FULL_NAME, new org.apache.thrift.meta_data.FieldMetaData("class_full_name", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
+      metaDataMap = Collections.unmodifiableMap(tmpMap);
+      org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(processEvent_args.class, metaDataMap);
+    }
+
+    public processEvent_args() {
+    }
+
+    public processEvent_args(
+      ByteBuffer event,
+      String jar_url,
+      String class_full_name)
+    {
+      this();
+      this.event = event;
+      this.jar_url = jar_url;
+      this.class_full_name = class_full_name;
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public processEvent_args(processEvent_args other) {
+      if (other.isSetEvent()) {
+        this.event = org.apache.thrift.TBaseHelper.copyBinary(other.event);
+;
+      }
+      if (other.isSetJar_url()) {
+        this.jar_url = other.jar_url;
+      }
+      if (other.isSetClass_full_name()) {
+        this.class_full_name = other.class_full_name;
+      }
+    }
+
+    public processEvent_args deepCopy() {
+      return new processEvent_args(this);
+    }
+
+    @Override
+    public void clear() {
+      this.event = null;
+      this.jar_url = null;
+      this.class_full_name = null;
+    }
+
+    public byte[] getEvent() {
+      setEvent(org.apache.thrift.TBaseHelper.rightSize(event));
+      return event == null ? null : event.array();
+    }
+
+    public ByteBuffer bufferForEvent() {
+      return event;
+    }
+
+    public processEvent_args setEvent(byte[] event) {
+      setEvent(event == null ? (ByteBuffer)null : ByteBuffer.wrap(event));
+      return this;
+    }
+
+    public processEvent_args setEvent(ByteBuffer event) {
+      this.event = event;
+      return this;
+    }
+
+    public void unsetEvent() {
+      this.event = null;
+    }
+
+    /** Returns true if field event is set (has been assigned a value) and false otherwise */
+    public boolean isSetEvent() {
+      return this.event != null;
+    }
+
+    public void setEventIsSet(boolean value) {
+      if (!value) {
+        this.event = null;
+      }
+    }
+
+    public String getJar_url() {
+      return this.jar_url;
+    }
+
+    public processEvent_args setJar_url(String jar_url) {
+      this.jar_url = jar_url;
+      return this;
+    }
+
+    public void unsetJar_url() {
+      this.jar_url = null;
+    }
+
+    /** Returns true if field jar_url is set (has been assigned a value) and false otherwise */
+    public boolean isSetJar_url() {
+      return this.jar_url != null;
+    }
+
+    public void setJar_urlIsSet(boolean value) {
+      if (!value) {
+        this.jar_url = null;
+      }
+    }
+
+    public String getClass_full_name() {
+      return this.class_full_name;
+    }
+
+    public processEvent_args setClass_full_name(String class_full_name) {
+      this.class_full_name = class_full_name;
+      return this;
+    }
+
+    public void unsetClass_full_name() {
+      this.class_full_name = null;
+    }
+
+    /** Returns true if field class_full_name is set (has been assigned a value) and false otherwise */
+    public boolean isSetClass_full_name() {
+      return this.class_full_name != null;
+    }
+
+    public void setClass_full_nameIsSet(boolean value) {
+      if (!value) {
+        this.class_full_name = null;
+      }
+    }
+
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case EVENT:
+        if (value == null) {
+          unsetEvent();
+        } else {
+          setEvent((ByteBuffer)value);
+        }
+        break;
+
+      case JAR_URL:
+        if (value == null) {
+          unsetJar_url();
+        } else {
+          setJar_url((String)value);
+        }
+        break;
+
+      case CLASS_FULL_NAME:
+        if (value == null) {
+          unsetClass_full_name();
+        } else {
+          setClass_full_name((String)value);
+        }
+        break;
+
+      }
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case EVENT:
+        return getEvent();
+
+      case JAR_URL:
+        return getJar_url();
+
+      case CLASS_FULL_NAME:
+        return getClass_full_name();
+
+      }
+      throw new IllegalStateException();
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been assigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
+      switch (field) {
+      case EVENT:
+        return isSetEvent();
+      case JAR_URL:
+        return isSetJar_url();
+      case CLASS_FULL_NAME:
+        return isSetClass_full_name();
+      }
+      throw new IllegalStateException();
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof processEvent_args)
+        return this.equals((processEvent_args)that);
+      return false;
+    }
+
+    public boolean equals(processEvent_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_event = true && this.isSetEvent();
+      boolean that_present_event = true && that.isSetEvent();
+      if (this_present_event || that_present_event) {
+        if (!(this_present_event && that_present_event))
+          return false;
+        if (!this.event.equals(that.event))
+          return false;
+      }
+
+      boolean this_present_jar_url = true && this.isSetJar_url();
+      boolean that_present_jar_url = true && that.isSetJar_url();
+      if (this_present_jar_url || that_present_jar_url) {
+        if (!(this_present_jar_url && that_present_jar_url))
+          return false;
+        if (!this.jar_url.equals(that.jar_url))
+          return false;
+      }
+
+      boolean this_present_class_full_name = true && this.isSetClass_full_name();
+      boolean that_present_class_full_name = true && that.isSetClass_full_name();
+      if (this_present_class_full_name || that_present_class_full_name) {
+        if (!(this_present_class_full_name && that_present_class_full_name))
+          return false;
+        if (!this.class_full_name.equals(that.class_full_name))
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return 0;
+    }
+
+    @Override
+    public int compareTo(processEvent_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+
+      lastComparison = Boolean.valueOf(isSetEvent()).compareTo(other.isSetEvent());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetEvent()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.event, other.event);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
+      lastComparison = Boolean.valueOf(isSetJar_url()).compareTo(other.isSetJar_url());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetJar_url()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.jar_url, other.jar_url);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
+      lastComparison = Boolean.valueOf(isSetClass_full_name()).compareTo(other.isSetClass_full_name());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetClass_full_name()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.class_full_name, other.class_full_name);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
+      return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
+    }
+
+    public void read(org.apache.thrift.protocol.TProtocol iprot) throws org.apache.thrift.TException {
+      schemes.get(iprot.getScheme()).getScheme().read(iprot, this);
+    }
+
+    public void write(org.apache.thrift.protocol.TProtocol oprot) throws org.apache.thrift.TException {
+      schemes.get(oprot.getScheme()).getScheme().write(oprot, this);
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("processEvent_args(");
+      boolean first = true;
+
+      sb.append("event:");
+      if (this.event == null) {
+        sb.append("null");
+      } else {
+        org.apache.thrift.TBaseHelper.toString(this.event, sb);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("jar_url:");
+      if (this.jar_url == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.jar_url);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("class_full_name:");
+      if (this.class_full_name == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.class_full_name);
+      }
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws org.apache.thrift.TException {
+      // check for required fields
+      // check for sub-struct validity
+    }
+
+    private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
+      try {
+        write(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(out)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te);
+      }
+    }
+
+    private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
+      try {
+        read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te);
+      }
+    }
+
+    private static class processEvent_argsStandardSchemeFactory implements SchemeFactory {
+      public processEvent_argsStandardScheme getScheme() {
+        return new processEvent_argsStandardScheme();
+      }
+    }
+
+    private static class processEvent_argsStandardScheme extends StandardScheme<processEvent_args> {
+
+      public void read(org.apache.thrift.protocol.TProtocol iprot, processEvent_args struct) throws org.apache.thrift.TException {
+        org.apache.thrift.protocol.TField schemeField;
+        iprot.readStructBegin();
+        while (true)
+        {
+          schemeField = iprot.readFieldBegin();
+          if (schemeField.type == org.apache.thrift.protocol.TType.STOP) { 
+            break;
+          }
+          switch (schemeField.id) {
+            case 1: // EVENT
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.event = iprot.readBinary();
+                struct.setEventIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
+            case 2: // JAR_URL
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.jar_url = iprot.readString();
+                struct.setJar_urlIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
+            case 3: // CLASS_FULL_NAME
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.class_full_name = iprot.readString();
+                struct.setClass_full_nameIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
+            default:
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+          }
+          iprot.readFieldEnd();
+        }
+        iprot.readStructEnd();
+
+        // check for required fields of primitive type, which can't be checked in the validate method
+        struct.validate();
+      }
+
+      public void write(org.apache.thrift.protocol.TProtocol oprot, processEvent_args struct) throws org.apache.thrift.TException {
+        struct.validate();
+
+        oprot.writeStructBegin(STRUCT_DESC);
+        if (struct.event != null) {
+          oprot.writeFieldBegin(EVENT_FIELD_DESC);
+          oprot.writeBinary(struct.event);
+          oprot.writeFieldEnd();
+        }
+        if (struct.jar_url != null) {
+          oprot.writeFieldBegin(JAR_URL_FIELD_DESC);
+          oprot.writeString(struct.jar_url);
+          oprot.writeFieldEnd();
+        }
+        if (struct.class_full_name != null) {
+          oprot.writeFieldBegin(CLASS_FULL_NAME_FIELD_DESC);
+          oprot.writeString(struct.class_full_name);
+          oprot.writeFieldEnd();
+        }
+        oprot.writeFieldStop();
+        oprot.writeStructEnd();
+      }
+
+    }
+
+    private static class processEvent_argsTupleSchemeFactory implements SchemeFactory {
+      public processEvent_argsTupleScheme getScheme() {
+        return new processEvent_argsTupleScheme();
+      }
+    }
+
+    private static class processEvent_argsTupleScheme extends TupleScheme<processEvent_args> {
+
+      @Override
+      public void write(org.apache.thrift.protocol.TProtocol prot, processEvent_args struct) throws org.apache.thrift.TException {
+        TTupleProtocol oprot = (TTupleProtocol) prot;
+        BitSet optionals = new BitSet();
+        if (struct.isSetEvent()) {
+          optionals.set(0);
+        }
+        if (struct.isSetJar_url()) {
+          optionals.set(1);
+        }
+        if (struct.isSetClass_full_name()) {
+          optionals.set(2);
+        }
+        oprot.writeBitSet(optionals, 3);
+        if (struct.isSetEvent()) {
+          oprot.writeBinary(struct.event);
+        }
+        if (struct.isSetJar_url()) {
+          oprot.writeString(struct.jar_url);
+        }
+        if (struct.isSetClass_full_name()) {
+          oprot.writeString(struct.class_full_name);
+        }
+      }
+
+      @Override
+      public void read(org.apache.thrift.protocol.TProtocol prot, processEvent_args struct) throws org.apache.thrift.TException {
+        TTupleProtocol iprot = (TTupleProtocol) prot;
+        BitSet incoming = iprot.readBitSet(3);
+        if (incoming.get(0)) {
+          struct.event = iprot.readBinary();
+          struct.setEventIsSet(true);
+        }
+        if (incoming.get(1)) {
+          struct.jar_url = iprot.readString();
+          struct.setJar_urlIsSet(true);
+        }
+        if (incoming.get(2)) {
+          struct.class_full_name = iprot.readString();
+          struct.setClass_full_nameIsSet(true);
+        }
+      }
+    }
+
+  }
+
+  public static class processEvent_result implements org.apache.thrift.TBase<processEvent_result, processEvent_result._Fields>, java.io.Serializable, Cloneable, Comparable<processEvent_result>   {
+    private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("processEvent_result");
+
+    private static final org.apache.thrift.protocol.TField SUCCESS_FIELD_DESC = new org.apache.thrift.protocol.TField("success", org.apache.thrift.protocol.TType.BOOL, (short)0);
+
+    private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
+    static {
+      schemes.put(StandardScheme.class, new processEvent_resultStandardSchemeFactory());
+      schemes.put(TupleScheme.class, new processEvent_resultTupleSchemeFactory());
+    }
+
+    public boolean success; // required
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements org.apache.thrift.TFieldIdEnum {
+      SUCCESS((short)0, "success");
+
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        switch(fieldId) {
+          case 0: // SUCCESS
+            return SUCCESS;
+          default:
+            return null;
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+    private static final int __SUCCESS_ISSET_ID = 0;
+    private byte __isset_bitfield = 0;
+    public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
+    static {
+      Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
+      tmpMap.put(_Fields.SUCCESS, new org.apache.thrift.meta_data.FieldMetaData("success", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.BOOL)));
+      metaDataMap = Collections.unmodifiableMap(tmpMap);
+      org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(processEvent_result.class, metaDataMap);
+    }
+
+    public processEvent_result() {
+    }
+
+    public processEvent_result(
+      boolean success)
+    {
+      this();
+      this.success = success;
+      setSuccessIsSet(true);
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public processEvent_result(processEvent_result other) {
+      __isset_bitfield = other.__isset_bitfield;
+      this.success = other.success;
+    }
+
+    public processEvent_result deepCopy() {
+      return new processEvent_result(this);
+    }
+
+    @Override
+    public void clear() {
+      setSuccessIsSet(false);
+      this.success = false;
+    }
+
+    public boolean isSuccess() {
+      return this.success;
+    }
+
+    public processEvent_result setSuccess(boolean success) {
+      this.success = success;
+      setSuccessIsSet(true);
+      return this;
+    }
+
+    public void unsetSuccess() {
+      __isset_bitfield = EncodingUtils.clearBit(__isset_bitfield, __SUCCESS_ISSET_ID);
+    }
+
+    /** Returns true if field success is set (has been assigned a value) and false otherwise */
+    public boolean isSetSuccess() {
+      return EncodingUtils.testBit(__isset_bitfield, __SUCCESS_ISSET_ID);
+    }
+
+    public void setSuccessIsSet(boolean value) {
+      __isset_bitfield = EncodingUtils.setBit(__isset_bitfield, __SUCCESS_ISSET_ID, value);
+    }
+
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case SUCCESS:
+        if (value == null) {
+          unsetSuccess();
+        } else {
+          setSuccess((Boolean)value);
+        }
+        break;
+
+      }
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case SUCCESS:
+        return Boolean.valueOf(isSuccess());
+
+      }
+      throw new IllegalStateException();
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been assigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
+      switch (field) {
+      case SUCCESS:
+        return isSetSuccess();
+      }
+      throw new IllegalStateException();
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof processEvent_result)
+        return this.equals((processEvent_result)that);
+      return false;
+    }
+
+    public boolean equals(processEvent_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true;
+      boolean that_present_success = true;
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (this.success != that.success)
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return 0;
+    }
+
+    @Override
+    public int compareTo(processEvent_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+
+      lastComparison = Boolean.valueOf(isSetSuccess()).compareTo(other.isSetSuccess());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetSuccess()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.success, other.success);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
+      return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
+    }
+
+    public void read(org.apache.thrift.protocol.TProtocol iprot) throws org.apache.thrift.TException {
+      schemes.get(iprot.getScheme()).getScheme().read(iprot, this);
+    }
+
+    public void write(org.apache.thrift.protocol.TProtocol oprot) throws org.apache.thrift.TException {
+      schemes.get(oprot.getScheme()).getScheme().write(oprot, this);
+      }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("processEvent_result(");
+      boolean first = true;
+
+      sb.append("success:");
+      sb.append(this.success);
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws org.apache.thrift.TException {
+      // check for required fields
+      // check for sub-struct validity
+    }
+
+    private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
+      try {
+        write(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(out)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te);
+      }
+    }
+
+    private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
+      try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bitfield = 0;
+        read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te);
+      }
+    }
+
+    private static class processEvent_resultStandardSchemeFactory implements SchemeFactory {
+      public processEvent_resultStandardScheme getScheme() {
+        return new processEvent_resultStandardScheme();
+      }
+    }
+
+    private static class processEvent_resultStandardScheme extends StandardScheme<processEvent_result> {
+
+      public void read(org.apache.thrift.protocol.TProtocol iprot, processEvent_result struct) throws org.apache.thrift.TException {
+        org.apache.thrift.protocol.TField schemeField;
+        iprot.readStructBegin();
+        while (true)
+        {
+          schemeField = iprot.readFieldBegin();
+          if (schemeField.type == org.apache.thrift.protocol.TType.STOP) { 
+            break;
+          }
+          switch (schemeField.id) {
+            case 0: // SUCCESS
+              if (schemeField.type == org.apache.thrift.protocol.TType.BOOL) {
+                struct.success = iprot.readBool();
+                struct.setSuccessIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
+            default:
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+          }
+          iprot.readFieldEnd();
+        }
+        iprot.readStructEnd();
+
+        // check for required fields of primitive type, which can't be checked in the validate method
+        struct.validate();
+      }
+
+      public void write(org.apache.thrift.protocol.TProtocol oprot, processEvent_result struct) throws org.apache.thrift.TException {
+        struct.validate();
+
+        oprot.writeStructBegin(STRUCT_DESC);
+        if (struct.isSetSuccess()) {
+          oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
+          oprot.writeBool(struct.success);
+          oprot.writeFieldEnd();
+        }
+        oprot.writeFieldStop();
+        oprot.writeStructEnd();
+      }
+
+    }
+
+    private static class processEvent_resultTupleSchemeFactory implements SchemeFactory {
+      public processEvent_resultTupleScheme getScheme() {
+        return new processEvent_resultTupleScheme();
+      }
+    }
+
+    private static class processEvent_resultTupleScheme extends TupleScheme<processEvent_result> {
+
+      @Override
+      public void write(org.apache.thrift.protocol.TProtocol prot, processEvent_result struct) throws org.apache.thrift.TException {
+        TTupleProtocol oprot = (TTupleProtocol) prot;
+        BitSet optionals = new BitSet();
+        if (struct.isSetSuccess()) {
+          optionals.set(0);
+        }
+        oprot.writeBitSet(optionals, 1);
+        if (struct.isSetSuccess()) {
+          oprot.writeBool(struct.success);
+        }
+      }
+
+      @Override
+      public void read(org.apache.thrift.protocol.TProtocol prot, processEvent_result struct) throws org.apache.thrift.TException {
+        TTupleProtocol iprot = (TTupleProtocol) prot;
+        BitSet incoming = iprot.readBitSet(1);
+        if (incoming.get(0)) {
+          struct.success = iprot.readBool();
+          struct.setSuccessIsSet(true);
+        }
+      }
+    }
+
+  }
+
+  public static class registerPartitioner_args implements org.apache.thrift.TBase<registerPartitioner_args, registerPartitioner_args._Fields>, java.io.Serializable, Cloneable, Comparable<registerPartitioner_args>   {
+    private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("registerPartitioner_args");
+
+    private static final org.apache.thrift.protocol.TField JAR_URL_FIELD_DESC = new org.apache.thrift.protocol.TField("jar_url", org.apache.thrift.protocol.TType.STRING, (short)1);
+    private static final org.apache.thrift.protocol.TField CLASS_FULL_NAME_FIELD_DESC = new org.apache.thrift.protocol.TField("class_full_name", org.apache.thrift.protocol.TType.STRING, (short)2);
+
+    private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
+    static {
+      schemes.put(StandardScheme.class, new registerPartitioner_argsStandardSchemeFactory());
+      schemes.put(TupleScheme.class, new registerPartitioner_argsTupleSchemeFactory());
+    }
+
+    public String jar_url; // required
+    public String class_full_name; // required
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements org.apache.thrift.TFieldIdEnum {
+      JAR_URL((short)1, "jar_url"),
+      CLASS_FULL_NAME((short)2, "class_full_name");
+
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        switch(fieldId) {
+          case 1: // JAR_URL
+            return JAR_URL;
+          case 2: // CLASS_FULL_NAME
+            return CLASS_FULL_NAME;
+          default:
+            return null;
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+    public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
+    static {
+      Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
+      tmpMap.put(_Fields.JAR_URL, new org.apache.thrift.meta_data.FieldMetaData("jar_url", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
+      tmpMap.put(_Fields.CLASS_FULL_NAME, new org.apache.thrift.meta_data.FieldMetaData("class_full_name", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.STRING)));
+      metaDataMap = Collections.unmodifiableMap(tmpMap);
+      org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(registerPartitioner_args.class, metaDataMap);
+    }
+
+    public registerPartitioner_args() {
+    }
+
+    public registerPartitioner_args(
+      String jar_url,
+      String class_full_name)
+    {
+      this();
+      this.jar_url = jar_url;
+      this.class_full_name = class_full_name;
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public registerPartitioner_args(registerPartitioner_args other) {
+      if (other.isSetJar_url()) {
+        this.jar_url = other.jar_url;
+      }
+      if (other.isSetClass_full_name()) {
+        this.class_full_name = other.class_full_name;
+      }
+    }
+
+    public registerPartitioner_args deepCopy() {
+      return new registerPartitioner_args(this);
+    }
+
+    @Override
+    public void clear() {
+      this.jar_url = null;
+      this.class_full_name = null;
+    }
+
+    public String getJar_url() {
+      return this.jar_url;
+    }
+
+    public registerPartitioner_args setJar_url(String jar_url) {
+      this.jar_url = jar_url;
+      return this;
+    }
+
+    public void unsetJar_url() {
+      this.jar_url = null;
+    }
+
+    /** Returns true if field jar_url is set (has been assigned a value) and false otherwise */
+    public boolean isSetJar_url() {
+      return this.jar_url != null;
+    }
+
+    public void setJar_urlIsSet(boolean value) {
+      if (!value) {
+        this.jar_url = null;
+      }
+    }
+
+    public String getClass_full_name() {
+      return this.class_full_name;
+    }
+
+    public registerPartitioner_args setClass_full_name(String class_full_name) {
+      this.class_full_name = class_full_name;
+      return this;
+    }
+
+    public void unsetClass_full_name() {
+      this.class_full_name = null;
+    }
+
+    /** Returns true if field class_full_name is set (has been assigned a value) and false otherwise */
+    public boolean isSetClass_full_name() {
+      return this.class_full_name != null;
+    }
+
+    public void setClass_full_nameIsSet(boolean value) {
+      if (!value) {
+        this.class_full_name = null;
+      }
+    }
+
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case JAR_URL:
+        if (value == null) {
+          unsetJar_url();
+        } else {
+          setJar_url((String)value);
+        }
+        break;
+
+      case CLASS_FULL_NAME:
+        if (value == null) {
+          unsetClass_full_name();
+        } else {
+          setClass_full_name((String)value);
+        }
+        break;
+
+      }
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case JAR_URL:
+        return getJar_url();
+
+      case CLASS_FULL_NAME:
+        return getClass_full_name();
+
+      }
+      throw new IllegalStateException();
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been assigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
+      switch (field) {
+      case JAR_URL:
+        return isSetJar_url();
+      case CLASS_FULL_NAME:
+        return isSetClass_full_name();
+      }
+      throw new IllegalStateException();
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof registerPartitioner_args)
+        return this.equals((registerPartitioner_args)that);
+      return false;
+    }
+
+    public boolean equals(registerPartitioner_args that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_jar_url = true && this.isSetJar_url();
+      boolean that_present_jar_url = true && that.isSetJar_url();
+      if (this_present_jar_url || that_present_jar_url) {
+        if (!(this_present_jar_url && that_present_jar_url))
+          return false;
+        if (!this.jar_url.equals(that.jar_url))
+          return false;
+      }
+
+      boolean this_present_class_full_name = true && this.isSetClass_full_name();
+      boolean that_present_class_full_name = true && that.isSetClass_full_name();
+      if (this_present_class_full_name || that_present_class_full_name) {
+        if (!(this_present_class_full_name && that_present_class_full_name))
+          return false;
+        if (!this.class_full_name.equals(that.class_full_name))
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return 0;
+    }
+
+    @Override
+    public int compareTo(registerPartitioner_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+
+      lastComparison = Boolean.valueOf(isSetJar_url()).compareTo(other.isSetJar_url());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetJar_url()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.jar_url, other.jar_url);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
+      lastComparison = Boolean.valueOf(isSetClass_full_name()).compareTo(other.isSetClass_full_name());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetClass_full_name()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.class_full_name, other.class_full_name);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
+      return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
+    }
+
+    public void read(org.apache.thrift.protocol.TProtocol iprot) throws org.apache.thrift.TException {
+      schemes.get(iprot.getScheme()).getScheme().read(iprot, this);
+    }
+
+    public void write(org.apache.thrift.protocol.TProtocol oprot) throws org.apache.thrift.TException {
+      schemes.get(oprot.getScheme()).getScheme().write(oprot, this);
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("registerPartitioner_args(");
+      boolean first = true;
+
+      sb.append("jar_url:");
+      if (this.jar_url == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.jar_url);
+      }
+      first = false;
+      if (!first) sb.append(", ");
+      sb.append("class_full_name:");
+      if (this.class_full_name == null) {
+        sb.append("null");
+      } else {
+        sb.append(this.class_full_name);
+      }
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws org.apache.thrift.TException {
+      // check for required fields
+      // check for sub-struct validity
+    }
+
+    private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
+      try {
+        write(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(out)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te);
+      }
+    }
+
+    private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
+      try {
+        read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te);
+      }
+    }
+
+    private static class registerPartitioner_argsStandardSchemeFactory implements SchemeFactory {
+      public registerPartitioner_argsStandardScheme getScheme() {
+        return new registerPartitioner_argsStandardScheme();
+      }
+    }
+
+    private static class registerPartitioner_argsStandardScheme extends StandardScheme<registerPartitioner_args> {
+
+      public void read(org.apache.thrift.protocol.TProtocol iprot, registerPartitioner_args struct) throws org.apache.thrift.TException {
+        org.apache.thrift.protocol.TField schemeField;
+        iprot.readStructBegin();
+        while (true)
+        {
+          schemeField = iprot.readFieldBegin();
+          if (schemeField.type == org.apache.thrift.protocol.TType.STOP) { 
+            break;
+          }
+          switch (schemeField.id) {
+            case 1: // JAR_URL
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.jar_url = iprot.readString();
+                struct.setJar_urlIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
+            case 2: // CLASS_FULL_NAME
+              if (schemeField.type == org.apache.thrift.protocol.TType.STRING) {
+                struct.class_full_name = iprot.readString();
+                struct.setClass_full_nameIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
+            default:
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+          }
+          iprot.readFieldEnd();
+        }
+        iprot.readStructEnd();
+
+        // check for required fields of primitive type, which can't be checked in the validate method
+        struct.validate();
+      }
+
+      public void write(org.apache.thrift.protocol.TProtocol oprot, registerPartitioner_args struct) throws org.apache.thrift.TException {
+        struct.validate();
+
+        oprot.writeStructBegin(STRUCT_DESC);
+        if (struct.jar_url != null) {
+          oprot.writeFieldBegin(JAR_URL_FIELD_DESC);
+          oprot.writeString(struct.jar_url);
+          oprot.writeFieldEnd();
+        }
+        if (struct.class_full_name != null) {
+          oprot.writeFieldBegin(CLASS_FULL_NAME_FIELD_DESC);
+          oprot.writeString(struct.class_full_name);
+          oprot.writeFieldEnd();
+        }
+        oprot.writeFieldStop();
+        oprot.writeStructEnd();
+      }
+
+    }
+
+    private static class registerPartitioner_argsTupleSchemeFactory implements SchemeFactory {
+      public registerPartitioner_argsTupleScheme getScheme() {
+        return new registerPartitioner_argsTupleScheme();
+      }
+    }
+
+    private static class registerPartitioner_argsTupleScheme extends TupleScheme<registerPartitioner_args> {
+
+      @Override
+      public void write(org.apache.thrift.protocol.TProtocol prot, registerPartitioner_args struct) throws org.apache.thrift.TException {
+        TTupleProtocol oprot = (TTupleProtocol) prot;
+        BitSet optionals = new BitSet();
+        if (struct.isSetJar_url()) {
+          optionals.set(0);
+        }
+        if (struct.isSetClass_full_name()) {
+          optionals.set(1);
+        }
+        oprot.writeBitSet(optionals, 2);
+        if (struct.isSetJar_url()) {
+          oprot.writeString(struct.jar_url);
+        }
+        if (struct.isSetClass_full_name()) {
+          oprot.writeString(struct.class_full_name);
+        }
+      }
+
+      @Override
+      public void read(org.apache.thrift.protocol.TProtocol prot, registerPartitioner_args struct) throws org.apache.thrift.TException {
+        TTupleProtocol iprot = (TTupleProtocol) prot;
+        BitSet incoming = iprot.readBitSet(2);
+        if (incoming.get(0)) {
+          struct.jar_url = iprot.readString();
+          struct.setJar_urlIsSet(true);
+        }
+        if (incoming.get(1)) {
+          struct.class_full_name = iprot.readString();
+          struct.setClass_full_nameIsSet(true);
+        }
+      }
+    }
+
+  }
+
+  public static class registerPartitioner_result implements org.apache.thrift.TBase<registerPartitioner_result, registerPartitioner_result._Fields>, java.io.Serializable, Cloneable, Comparable<registerPartitioner_result>   {
+    private static final org.apache.thrift.protocol.TStruct STRUCT_DESC = new org.apache.thrift.protocol.TStruct("registerPartitioner_result");
+
+    private static final org.apache.thrift.protocol.TField SUCCESS_FIELD_DESC = new org.apache.thrift.protocol.TField("success", org.apache.thrift.protocol.TType.BOOL, (short)0);
+
+    private static final Map<Class<? extends IScheme>, SchemeFactory> schemes = new HashMap<Class<? extends IScheme>, SchemeFactory>();
+    static {
+      schemes.put(StandardScheme.class, new registerPartitioner_resultStandardSchemeFactory());
+      schemes.put(TupleScheme.class, new registerPartitioner_resultTupleSchemeFactory());
+    }
+
+    public boolean success; // required
+
+    /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
+    public enum _Fields implements org.apache.thrift.TFieldIdEnum {
+      SUCCESS((short)0, "success");
+
+      private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
+
+      static {
+        for (_Fields field : EnumSet.allOf(_Fields.class)) {
+          byName.put(field.getFieldName(), field);
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, or null if its not found.
+       */
+      public static _Fields findByThriftId(int fieldId) {
+        switch(fieldId) {
+          case 0: // SUCCESS
+            return SUCCESS;
+          default:
+            return null;
+        }
+      }
+
+      /**
+       * Find the _Fields constant that matches fieldId, throwing an exception
+       * if it is not found.
+       */
+      public static _Fields findByThriftIdOrThrow(int fieldId) {
+        _Fields fields = findByThriftId(fieldId);
+        if (fields == null) throw new IllegalArgumentException("Field " + fieldId + " doesn't exist!");
+        return fields;
+      }
+
+      /**
+       * Find the _Fields constant that matches name, or null if its not found.
+       */
+      public static _Fields findByName(String name) {
+        return byName.get(name);
+      }
+
+      private final short _thriftId;
+      private final String _fieldName;
+
+      _Fields(short thriftId, String fieldName) {
+        _thriftId = thriftId;
+        _fieldName = fieldName;
+      }
+
+      public short getThriftFieldId() {
+        return _thriftId;
+      }
+
+      public String getFieldName() {
+        return _fieldName;
+      }
+    }
+
+    // isset id assignments
+    private static final int __SUCCESS_ISSET_ID = 0;
+    private byte __isset_bitfield = 0;
+    public static final Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> metaDataMap;
+    static {
+      Map<_Fields, org.apache.thrift.meta_data.FieldMetaData> tmpMap = new EnumMap<_Fields, org.apache.thrift.meta_data.FieldMetaData>(_Fields.class);
+      tmpMap.put(_Fields.SUCCESS, new org.apache.thrift.meta_data.FieldMetaData("success", org.apache.thrift.TFieldRequirementType.DEFAULT, 
+          new org.apache.thrift.meta_data.FieldValueMetaData(org.apache.thrift.protocol.TType.BOOL)));
+      metaDataMap = Collections.unmodifiableMap(tmpMap);
+      org.apache.thrift.meta_data.FieldMetaData.addStructMetaDataMap(registerPartitioner_result.class, metaDataMap);
+    }
+
+    public registerPartitioner_result() {
+    }
+
+    public registerPartitioner_result(
+      boolean success)
+    {
+      this();
+      this.success = success;
+      setSuccessIsSet(true);
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public registerPartitioner_result(registerPartitioner_result other) {
+      __isset_bitfield = other.__isset_bitfield;
+      this.success = other.success;
+    }
+
+    public registerPartitioner_result deepCopy() {
+      return new registerPartitioner_result(this);
+    }
+
+    @Override
+    public void clear() {
+      setSuccessIsSet(false);
+      this.success = false;
+    }
+
+    public boolean isSuccess() {
+      return this.success;
+    }
+
+    public registerPartitioner_result setSuccess(boolean success) {
+      this.success = success;
+      setSuccessIsSet(true);
+      return this;
+    }
+
+    public void unsetSuccess() {
+      __isset_bitfield = EncodingUtils.clearBit(__isset_bitfield, __SUCCESS_ISSET_ID);
+    }
+
+    /** Returns true if field success is set (has been assigned a value) and false otherwise */
+    public boolean isSetSuccess() {
+      return EncodingUtils.testBit(__isset_bitfield, __SUCCESS_ISSET_ID);
+    }
+
+    public void setSuccessIsSet(boolean value) {
+      __isset_bitfield = EncodingUtils.setBit(__isset_bitfield, __SUCCESS_ISSET_ID, value);
+    }
+
+    public void setFieldValue(_Fields field, Object value) {
+      switch (field) {
+      case SUCCESS:
+        if (value == null) {
+          unsetSuccess();
+        } else {
+          setSuccess((Boolean)value);
+        }
+        break;
+
+      }
+    }
+
+    public Object getFieldValue(_Fields field) {
+      switch (field) {
+      case SUCCESS:
+        return Boolean.valueOf(isSuccess());
+
+      }
+      throw new IllegalStateException();
+    }
+
+    /** Returns true if field corresponding to fieldID is set (has been assigned a value) and false otherwise */
+    public boolean isSet(_Fields field) {
+      if (field == null) {
+        throw new IllegalArgumentException();
+      }
+
+      switch (field) {
+      case SUCCESS:
+        return isSetSuccess();
+      }
+      throw new IllegalStateException();
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof registerPartitioner_result)
+        return this.equals((registerPartitioner_result)that);
+      return false;
+    }
+
+    public boolean equals(registerPartitioner_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true;
+      boolean that_present_success = true;
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (this.success != that.success)
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return 0;
+    }
+
+    @Override
+    public int compareTo(registerPartitioner_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+
+      lastComparison = Boolean.valueOf(isSetSuccess()).compareTo(other.isSetSuccess());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      if (isSetSuccess()) {
+        lastComparison = org.apache.thrift.TBaseHelper.compareTo(this.success, other.success);
+        if (lastComparison != 0) {
+          return lastComparison;
+        }
+      }
+      return 0;
+    }
+
+    public _Fields fieldForId(int fieldId) {
+      return _Fields.findByThriftId(fieldId);
+    }
+
+    public void read(org.apache.thrift.protocol.TProtocol iprot) throws org.apache.thrift.TException {
+      schemes.get(iprot.getScheme()).getScheme().read(iprot, this);
+    }
+
+    public void write(org.apache.thrift.protocol.TProtocol oprot) throws org.apache.thrift.TException {
+      schemes.get(oprot.getScheme()).getScheme().write(oprot, this);
+      }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("registerPartitioner_result(");
+      boolean first = true;
+
+      sb.append("success:");
+      sb.append(this.success);
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws org.apache.thrift.TException {
+      // check for required fields
+      // check for sub-struct validity
+    }
+
+    private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
+      try {
+        write(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(out)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te);
+      }
+    }
+
+    private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
+      try {
+        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
+        __isset_bitfield = 0;
+        read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
+      } catch (org.apache.thrift.TException te) {
+        throw new java.io.IOException(te);
+      }
+    }
+
+    private static class registerPartitioner_resultStandardSchemeFactory implements SchemeFactory {
+      public registerPartitioner_resultStandardScheme getScheme() {
+        return new registerPartitioner_resultStandardScheme();
+      }
+    }
+
+    private static class registerPartitioner_resultStandardScheme extends StandardScheme<registerPartitioner_result> {
+
+      public void read(org.apache.thrift.protocol.TProtocol iprot, registerPartitioner_result struct) throws org.apache.thrift.TException {
+        org.apache.thrift.protocol.TField schemeField;
+        iprot.readStructBegin();
+        while (true)
+        {
+          schemeField = iprot.readFieldBegin();
+          if (schemeField.type == org.apache.thrift.protocol.TType.STOP) { 
+            break;
+          }
+          switch (schemeField.id) {
+            case 0: // SUCCESS
+              if (schemeField.type == org.apache.thrift.protocol.TType.BOOL) {
+                struct.success = iprot.readBool();
+                struct.setSuccessIsSet(true);
+              } else { 
+                org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+              }
+              break;
+            default:
+              org.apache.thrift.protocol.TProtocolUtil.skip(iprot, schemeField.type);
+          }
+          iprot.readFieldEnd();
+        }
+        iprot.readStructEnd();
+
+        // check for required fields of primitive type, which can't be checked in the validate method
+        struct.validate();
+      }
+
+      public void write(org.apache.thrift.protocol.TProtocol oprot, registerPartitioner_result struct) throws org.apache.thrift.TException {
+        struct.validate();
+
+        oprot.writeStructBegin(STRUCT_DESC);
+        if (struct.isSetSuccess()) {
+          oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
+          oprot.writeBool(struct.success);
+          oprot.writeFieldEnd();
+        }
+        oprot.writeFieldStop();
+        oprot.writeStructEnd();
+      }
+
+    }
+
+    private static class registerPartitioner_resultTupleSchemeFactory implements SchemeFactory {
+      public registerPartitioner_resultTupleScheme getScheme() {
+        return new registerPartitioner_resultTupleScheme();
+      }
+    }
+
+    private static class registerPartitioner_resultTupleScheme extends TupleScheme<registerPartitioner_result> {
+
+      @Override
+      public void write(org.apache.thrift.protocol.TProtocol prot, registerPartitioner_result struct) throws org.apache.thrift.TException {
+        TTupleProtocol oprot = (TTupleProtocol) prot;
+        BitSet optionals = new BitSet();
+        if (struct.isSetSuccess()) {
+          optionals.set(0);
+        }
+        oprot.writeBitSet(optionals, 1);
+        if (struct.isSetSuccess()) {
+          oprot.writeBool(struct.success);
+        }
+      }
+
+      @Override
+      public void read(org.apache.thrift.protocol.TProtocol prot, registerPartitioner_result struct) throws org.apache.thrift.TException {
         TTupleProtocol iprot = (TTupleProtocol) prot;
         BitSet incoming = iprot.readBitSet(1);
         if (incoming.get(0)) {

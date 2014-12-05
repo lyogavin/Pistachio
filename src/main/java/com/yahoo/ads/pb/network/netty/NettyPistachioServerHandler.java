@@ -15,6 +15,9 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import com.yahoo.ads.pb.network.netty.NettyPistachioProtocol.*;
 import com.google.protobuf.ByteString;
+import com.google.common.collect.Lists;
+import com.google.common.base.Function;
+import com.yahoo.ads.pb.PistachiosHandler;
 
 import java.util.Calendar;
 import java.util.TimeZone;
@@ -25,17 +28,47 @@ import static java.util.Calendar.*;
 
 public class NettyPistachioServerHandler extends SimpleChannelInboundHandler<Request> {
 	private static Logger logger = LoggerFactory.getLogger(NettyPistachioServerHandler.class);
+    private PistachiosHandler handler;
+
+    public NettyPistachioServerHandler(PistachiosHandler handler) {
+        this.handler = handler;
+    }
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, Request request) throws Exception {
         logger.debug("got request: {}", request);
-
 		Response.Builder builder = Response.newBuilder();
 		builder.setId(request.getId());
-		builder.setSucceeded(true);
+        boolean result = false;
+
+        switch (request.getType()) {
+            case LOOKUP: 
+                byte[] res = handler.lookup(request.getId(), request.getPartition());
+                if (res != null) 
+                    builder.setData(ByteString.copyFrom(res));
+                builder.setSucceeded(res!=null);
+
+                break;
+            case STORE:
+                result = handler.store(request.getId(), request.getPartition(), request.getData().toByteArray());
+                builder.setSucceeded(result);
+                break;
+            case PROCESS_EVENT:
+                result = handler.processBatch(
+                    request.getId(), 
+                    request.getPartition(), 
+                    Lists.transform(request.getEventsList(), 
+                                    new Function<ByteString, byte[]>() {
+                                        public byte[] apply(ByteString from) {
+                                            return from.toByteArray();
+                                        }
+                                    }));
+                builder.setSucceeded(result);
+                break;
+        }
+
         builder.setThreadId(request.getThreadId());
         builder.setRequestId(request.getRequestId());
-		builder.setData(ByteString.copyFromUtf8("succeeded"));
 
 
         Response response = builder.build();

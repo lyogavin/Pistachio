@@ -249,7 +249,10 @@ public class PistachiosFormatter{
   }
 
   public static void main(String [] args) {
-	  String usage = "Usage: xxxx [format/cleanup/info] [comma seperated cluster] [num partition] [num replica] (kafka zk path, optional)";
+	  String usage = "Usage: \tformat_cluster.sh info \n";
+	  usage += "\tformat_cluster.sh format [comma seperated cluster] [num partition] [num replica] (kafka zk path, optional) \n";
+	  usage += "\tformat_cluster.sh cleanup [comma seperated cluster] [num partition] [num replica] (kafka zk path, optional) \n";
+	  usage += "\tkafkaTopicPrefix, ZK server conn string should also be set from config. \n";
 
 	  if (args.length > 0 && "info".equals(args[0])) {
 		  getClusterInfo();
@@ -283,14 +286,15 @@ public class PistachiosFormatter{
 	  } catch(Exception e) {
 	  }
 
-	  if (numPartitions == -1 || numReplicas == -1|| hostList == null || hostList.length == 0 || kafkaTopicPrefix == null) {
+	  String zookeeperConnStr = ConfigurationManager.getConfiguration().getString("Pistachio.ZooKeeper.Server");
+	  kafkaTopicPrefix = ConfigurationManager.getConfiguration().getString("Profile.Kafka.TopicPrefix");
+
+	  if (numPartitions == -1 || numReplicas == -1|| hostList == null || hostList.length == 0 || kafkaTopicPrefix == null || zookeeperConnStr == null) {
 		  System.out.println("invalid parameters");
 		  System.out.println(usage);
 		  return;
 	  }
 
-	  String zookeeperConnStr = ConfigurationManager.getConfiguration().getString("Pistachio.ZooKeeper.Server");
-	  kafkaTopicPrefix = ConfigurationManager.getConfiguration().getString("Profile.Kafka.TopicPrefix");
 
 	  
 

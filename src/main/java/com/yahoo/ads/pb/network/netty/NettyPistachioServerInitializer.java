@@ -20,15 +20,22 @@ import io.netty.handler.codec.protobuf.ProtobufVarint32FrameDecoder;
 import io.netty.handler.codec.protobuf.ProtobufVarint32LengthFieldPrepender;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.util.HashedWheelTimer;
 import io.netty.handler.ssl.SslContext;
 import com.yahoo.ads.pb.network.netty.NettyPistachioProtocol.*;
+import com.yahoo.ads.pb.PistachiosHandler;
+import com.yahoo.ads.pb.util.ConfigurationManager;
+import java.util.concurrent.TimeUnit;
 
 public class NettyPistachioServerInitializer extends ChannelInitializer<SocketChannel> {
 
     private final SslContext sslCtx;
+    private PistachiosHandler handler;
 
-    public NettyPistachioServerInitializer(SslContext sslCtx) {
+    public NettyPistachioServerInitializer(SslContext sslCtx, PistachiosHandler handler) {
         this.sslCtx = sslCtx;
+        this.handler = handler;
     }
 
     @Override
@@ -39,12 +46,14 @@ public class NettyPistachioServerInitializer extends ChannelInitializer<SocketCh
         }
 
         p.addLast(new LoggingHandler(LogLevel.INFO));
+
+        p.addLast(new ReadTimeoutHandler(ConfigurationManager.getConfiguration().getInt("Network.Netty.ServerReadTimeoutMillis",10000), TimeUnit.MILLISECONDS));
         p.addLast(new ProtobufVarint32FrameDecoder());
         p.addLast(new ProtobufDecoder(NettyPistachioProtocol.Request.getDefaultInstance()));
 
         p.addLast(new ProtobufVarint32LengthFieldPrepender());
         p.addLast(new ProtobufEncoder());
 
-        p.addLast(new NettyPistachioServerHandler());
+        p.addLast(new NettyPistachioServerHandler(handler));
     }
 }
