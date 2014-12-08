@@ -138,8 +138,11 @@ public class TLongKyotoCabinetStore {
 	 * @param key
 	 * @param value
 	 */
-	public void store(long key, byte[] value) throws Exception {
+	public void store(long key, long partition, byte[] value) throws Exception {
+		int dbIndex = (int)partition;
+        /*
 		int dbIndex = getDbIndex(key);
+        */
 		if(stores[dbIndex] != null)
 			stores[dbIndex].store(key, value);
 		else
@@ -173,8 +176,8 @@ public class TLongKyotoCabinetStore {
 	 * @param key
 	 * @return
 	 */
-	public byte[] get(long key) {
-		int dbIndex = getDbIndex(key);
+	public byte[] get(long key, int partitionId) {
+		int dbIndex = partitionId;//getDbIndex(key);
 		if(stores[dbIndex] != null)
 			return stores[dbIndex].get(key);
 		else

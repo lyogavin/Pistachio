@@ -59,11 +59,12 @@ public class TKStore implements Store {
 		KeyValue keyValue = kryo.readObject(input, KeyValue.class);
 		input.close();
 		try {
-		PistachiosServer.getInstance().getProfileStore().store(keyValue.key, keyValue.value);
+		PistachiosServer.getInstance().getProfileStore().store(keyValue.key, partitionId, keyValue.value);
 		} catch (Exception e) {
+            logger.info("error storing into store", e);
 		}
 
-logger.info("stored {}:{}, seq id:{}", keyValue.key, keyValue.value, keyValue.seqId);
+        logger.info("stored {}:{}, seq id:{}", keyValue.key, keyValue.value, keyValue.seqId);
 		long st = System.currentTimeMillis();
 		//storeCounter.begin();
 		//try {
@@ -165,6 +166,7 @@ logger.info("stored {}:{}, seq id:{}", keyValue.key, keyValue.value, keyValue.se
 		this.partitionId = partitionId;
 		profileStore = PistachiosServer.getInstance().getProfileStore();
 		try {
+	       logger.debug("open store for partition {}",partitionId);
 	        profileStore.open(partitionId);
         } catch (Exception e) {
 	       logger.error("server open error",e);

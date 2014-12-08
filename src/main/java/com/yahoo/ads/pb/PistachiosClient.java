@@ -37,6 +37,7 @@ import com.google.api.client.util.ExponentialBackOff;
 import com.google.api.client.util.BackOff;
 import com.yahoo.ads.pb.PistachiosClientImpl;
 import com.yahoo.ads.pb.PistachiosServer;
+import com.yahoo.ads.pb.exception.*;
 import com.yahoo.ads.pb.network.netty.NettyPistachioClient;
 
 /**
@@ -74,14 +75,11 @@ public class PistachiosClient {
 		reporter.start();
 	}
 	Configuration conf = ConfigurationManager.getConfiguration();
-	private int initialIntervalMillis = conf.getInt("Pistachio.BackOff.InitialIntervalMillis", 100);
-	private int maxElapsedTimeMillis = conf.getInt("Pistachio.BackOff.MaxElapsedTimeMillis", 100 * 1000);
-	private int maxIntervalMillis = conf.getInt("Pistachio.BackOff.MaxIntervalMillis", 5000);
-    BackOff backoff = (new ExponentialBackOff.Builder()).setInitialIntervalMillis(initialIntervalMillis)
-        .setMaxElapsedTimeMillis(maxElapsedTimeMillis)
-        .setMaxIntervalMillis(maxIntervalMillis)
-        .build();
-
+	private int initialIntervalMillis = conf.getInt("Pistachio.AutoRetry.BackOff.InitialIntervalMillis", 100);
+	private int maxElapsedTimeMillis = conf.getInt("Pistachio.AutoRetry.BackOff.MaxElapsedTimeMillis", 100 * 1000);
+	private int maxIntervalMillis = conf.getInt("Pistachio.AutoRetry.BackOff.MaxIntervalMillis", 5000);
+	private Boolean noMasterAutoRetry = conf.getBoolean("Pistachio.NoMasterAutoRetry", true);
+	private Boolean connectionBrokenAutoRetry = conf.getBoolean("Pistachio.ConnectionBrokenAutoRetry", true);
 
 	public PistachiosClient() throws Exception {
 	}
@@ -90,45 +88,58 @@ public class PistachiosClient {
      * To lookup the value of an id. Given the id return the value as a byte array.
      *
      * @param id        id to look up as long.
-     * @return          <code>byte array</code> return in byte array
+     * @return          <code>byte array</code> return in byte array, null if key not found
+     * @exception       MasterNotFoundException when fail because no master found
+     * @exception       ConnectionBrokenException when fail because connection is broken in the middle
+     * @exception       Exception other errors indicating failure
      */
-	public byte[] lookup(long id) {
+	public byte[] lookup(long id) throws MasterNotFoundException, Exception{
 
 		final Timer.Context context = lookupTimer.time();
-		boolean succeeded = false;
 		byte[] ret =  null;
         long backOffMillis =  0;
+        boolean succeeded = false;
+        BackOff backoff = (new ExponentialBackOff.Builder()).setInitialIntervalMillis(initialIntervalMillis)
+            .setMaxElapsedTimeMillis(maxElapsedTimeMillis)
+            .setMaxIntervalMillis(maxIntervalMillis)
+            .build();
+
 
 		try {
-			while (!succeeded && (backOffMillis != BackOff.STOP)) {
-                ret = clientImpl.lookup(id);
-                //if (ret != null) {
-                //TODO: add a way to return success status 
-                if (true) {
-                    succeeded = true;
-                    backoff.reset();
-                    break;
-                } else {
+			while (true) {
+                try {
+                    ret = clientImpl.lookup(id);
+                } catch (MasterNotFoundException | ConnectionBrokenException me) {
+                    if (me instanceof MasterNotFoundException && !noMasterAutoRetry)
+                        throw me;
+
+                    if (me instanceof ConnectionBrokenException && !connectionBrokenAutoRetry)
+                        throw me;
+
                     try{
                         backOffMillis = backoff.nextBackOffMillis();
+                        if (backOffMillis == BackOff.STOP) {
+                            throw me;
+                        }
+                        logger.debug("no master found, auto retry after sleeping {} ms", backOffMillis);
                         Thread.sleep(backOffMillis);
                     }catch(Exception e) {
                     }
                     continue;
-				}
+                } catch (Exception e) {
+                    throw e;
+                }
+
+                succeeded = true;
+                return ret;
             }
 
-            if (!succeeded) {
-                logger.debug("failed lookup, retry in {}", backOffMillis);
-            }
-		} catch (Exception e) {
-			logger.info("exception lookup {}", id, e);
 		} finally {
 			if (!succeeded)
 				lookupFailureRequests.mark();
 			context.stop();
 		}
-		return ret;
+
 	}
 
     /** 
@@ -136,29 +147,41 @@ public class PistachiosClient {
      *
      * @param id        id to store as long.
      * @param value     value to store as byte array
+     * @exception       MasterNotFoundException when fail because no master found
+     * @exception       ConnectionBrokenException when fail because connection is broken in the middle
      * @return          <code>boolean</code> succeeded or not
      */
-	public boolean store(long id, byte[] value) {
+	public boolean store(long id, byte[] value)  throws MasterNotFoundException, ConnectionBrokenException{
 		final Timer.Context context = storeTimer.time();
 		boolean succeeded = false;
         long backOffMillis =  0;
+        BackOff backoff = (new ExponentialBackOff.Builder()).setInitialIntervalMillis(initialIntervalMillis)
+            .setMaxElapsedTimeMillis(maxElapsedTimeMillis)
+            .setMaxIntervalMillis(maxIntervalMillis)
+            .build();
 
 
 		try {
-			while (!succeeded && (backOffMillis != BackOff.STOP)) {
-				if (!clientImpl.store(id, value)) {
-					logger.info("failed get client, retry in {} getting client", backOffMillis);
-					try{
+			while (true) {
+                try {
+                    succeeded = clientImpl.store(id, value);
+                } catch (MasterNotFoundException | ConnectionBrokenException me) {
+                    if (me instanceof MasterNotFoundException && !noMasterAutoRetry)
+                        throw me;
+
+                    if (me instanceof ConnectionBrokenException && !connectionBrokenAutoRetry)
+                        throw me;
+                    try{
                         backOffMillis = backoff.nextBackOffMillis();
+                        if (backOffMillis == BackOff.STOP) {
+                            throw me;
+                        }
                         Thread.sleep(backOffMillis);
-					}catch(Exception e) {
-					}
-					continue;
-				} else {
-                    succeeded = true;
-                    backoff.reset();
-                    break;
+                    }catch(Exception e) {
+                    }
+                    continue;
                 }
+                break;
             }
 
             if (!succeeded) {
@@ -167,6 +190,7 @@ public class PistachiosClient {
 
 		} catch (Exception e) {
 			logger.info("exception store {} {}", id, value, e);
+            succeeded = false;
 		} finally {
 			if (!succeeded)
 				storeFailureRequests.mark();
@@ -187,30 +211,43 @@ public class PistachiosClient {
      *
      * @param id        id to store as long.
      * @param events    list of events as byte []
+     * @exception       MasterNotFoundException when fail because no master found
+     * @exception       ConnectionBrokenException when fail because connection is broken in the middle
      * @return          <code>boolean</code> succeeded or not
      */
-	public boolean processBatch(long id, List<byte[]> events) {
+	public boolean processBatch(long id, List<byte[]> events) throws MasterNotFoundException, ConnectionBrokenException{
 		final Timer.Context context = processTimer.time();
 		boolean succeeded = false;
 		byte[] ret =  null;
 
         long backOffMillis =  0;
+        BackOff backoff = (new ExponentialBackOff.Builder()).setInitialIntervalMillis(initialIntervalMillis)
+            .setMaxElapsedTimeMillis(maxElapsedTimeMillis)
+            .setMaxIntervalMillis(maxIntervalMillis)
+            .build();
+
 
 		try {
-			while (!succeeded && (backOffMillis != BackOff.STOP)) {
-				if (!clientImpl.processBatch(id, events)) {
-					logger.info("failed get client, retry in {} getting client", backOffMillis);
-					try{
+			while (noMasterAutoRetry) {
+                try {
+                    succeeded = clientImpl.processBatch(id, events);
+                } catch (MasterNotFoundException | ConnectionBrokenException me) {
+                    if (me instanceof MasterNotFoundException && !noMasterAutoRetry)
+                        throw me;
+
+                    if (me instanceof ConnectionBrokenException && !connectionBrokenAutoRetry)
+                        throw me;
+                    try{
                         backOffMillis = backoff.nextBackOffMillis();
+                        if (backOffMillis == BackOff.STOP) {
+                            throw me;
+                        }
                         Thread.sleep(backOffMillis);
-					}catch(Exception e) {
-					}
-					continue;
-				} else {
-                    succeeded = true;
-                    backoff.reset();
-                    break;
+                    }catch(Exception e) {
+                    }
+                    continue;
                 }
+                break;
             }
 
             if (!succeeded) {
@@ -219,9 +256,10 @@ public class PistachiosClient {
 
 		} catch (Exception e) {
 			logger.info("exception process {} {}", id, events, e);
+            succeeded = false;
 		} finally {
 			if (!succeeded)
-				storeFailureRequests.mark();
+				processFailureRequests.mark();
 			context.stop();
 		}
         return succeeded;
@@ -262,6 +300,8 @@ public class PistachiosClient {
               System.out.println("USAGE: xxxx lookup id or xxxx store id value");
               System.exit(0);
           }
+      } catch (Exception e) {
+          System.out.println("error: "+ e);
       } finally {
           client.close();
       }

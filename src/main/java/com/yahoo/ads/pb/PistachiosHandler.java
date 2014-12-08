@@ -12,9 +12,10 @@
 package com.yahoo.ads.pb;
 
 import java.util.List;
+import com.yahoo.ads.pb.exception.*;
 
 public interface PistachiosHandler {
-    public byte[] lookup(long id, long partitionId);
+    public byte[] lookup(long id, long partitionId) throws Exception;
     public boolean store(long id, long partitionId, byte[] value);
     public boolean processBatch(long id, long partitionId, List<byte[]> events);
 }

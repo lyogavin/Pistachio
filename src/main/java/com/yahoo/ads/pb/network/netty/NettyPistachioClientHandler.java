@@ -15,6 +15,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import com.yahoo.ads.pb.network.netty.NettyPistachioProtocol.*;
+import com.yahoo.ads.pb.exception.*;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -61,7 +62,7 @@ public class NettyPistachioClientHandler extends SimpleChannelInboundHandler<Res
         super(false);
     }
 
-	public Response sendRequest(Request.Builder builder) {
+	public Response sendRequest(Request.Builder builder) throws ConnectionBrokenException {
 		//Request.Builder builder = Request.newBuilder();
         builder.setThreadId(threadAnswerQueueId.get());
         Integer requestId = nextRequestId.incrementAndGet() & 0xffff;
@@ -79,14 +80,24 @@ public class NettyPistachioClientHandler extends SimpleChannelInboundHandler<Res
 
         for (;;) {
             try {
+                //TODO: in exception caught of handler set some marker and in here can break earlier
+                // this may be tricky because can be multiple threads
                 response = answerQueues.get(threadAnswerQueueId.get()).poll(100, java.util.concurrent.TimeUnit.SECONDS);
-                if (response.getRequestId() != requestId)
+                if (response == null) {
+                    logger.debug("times out");
+
+                    // if other threads detect this and reconnect first, it dosen't matter
+                    // as we kept channel obj
+                    if (!channel.isActive() ) {
+                        logger.debug("time out because connection broken");
+                        throw new ConnectionBrokenException("time out because conn broken");
+                    }
+
+                    return null;
+                } else if (response.getRequestId() != requestId)
                 {
                     logger.debug("got response {}, but id not match {}, may be the previous timed out response.", response, requestId);
                     continue;
-                } else if (response == null) {
-                    logger.debug("times out");
-                    return null;
                 }
                 logger.debug("got response {}", response);
                 break;
@@ -117,6 +128,7 @@ public class NettyPistachioClientHandler extends SimpleChannelInboundHandler<Res
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+        //TODO: add metrics for this
         logger.info("Exception caught", cause);
         ctx.close();
     }

@@ -93,7 +93,7 @@ public class PistachiosServer {
 	private final static Timer lookupTimer = metrics.timer(MetricRegistry.name(PistachiosServer.class, "lookupTimer"));
 	private final static Timer storeTimer = metrics.timer(MetricRegistry.name(PistachiosServer.class, "storeTimer"));
 
-	static final String PROFILE_BASE_DIR = "StorageEngine.Location";
+	static final String PROFILE_BASE_DIR = "StorageEngine.Path";
 	static final String ZOOKEEPER_SERVER = "Pistachio.ZooKeeper.Server";
 	static final String PROFILE_HELIX_INSTANCE_ID = "Profile.Helix.InstanceId";
 
@@ -149,7 +149,7 @@ public class PistachiosServer {
   public static class DefaultPistachiosHandler implements PistachiosHandler{
 	String storage;
 
-    public byte[] lookup(long id, long partitionId)
+    public byte[] lookup(long id, long partitionId) throws Exception
 	{
 		lookupRequests.mark();
 		final Timer.Context context = lookupTimer.time();
@@ -160,20 +160,25 @@ public class PistachiosServer {
 
             if (storePartition == null) {
                 logger.info("error getting storePartition for partition id {}, dump map: {}.", partitionId, Joiner.on(',').withKeyValueSeparator("=").join(PistachiosServer.storePartitionMap));
-                return null;
+                throw new Exception("dont find the store partition obj");
             }
 			KeyValue toRetrun = storePartition.getWriteCache().get(id);
-			if (toRetrun != null)
+			if (toRetrun != null) {
+                logger.debug("null from cache");
 				return toRetrun.value;
+            }
 
-			if (null != PistachiosServer.getInstance().getProfileStore().get(id))
-				return PistachiosServer.getInstance().getProfileStore().get(id);
-
-			return null;
+            byte[] toRet = PistachiosServer.getInstance().getProfileStore().get(id, (int)partitionId);
+			if (null != toRet) {
+                logger.debug("got from store engine: {}", toRet);
+                return toRet;
+            }
+            logger.info("dont find value from store");
+            return null;
 		} catch (Exception e) {
 			logger.info("Exception lookup {}", id, e);
 			lookupFailureRequests.mark();
-			return null;
+            throw e;
 		} finally {
 			context.stop();
 		}
@@ -312,7 +317,7 @@ public class PistachiosServer {
 
   byte[] getUserProfileLocally(long userId) {
 	  if (profileStore != null) {
-		  return profileStore.get(userId);
+		  return profileStore.get(userId, 0);
 	  }
 
 	  return null;
@@ -329,9 +334,8 @@ public class PistachiosServer {
 			        0, 8,
 			        conf.getInt("StorageEngine.KC.RecordsPerPartition"),
 			        conf.getLong("StorageEngine.KC.MemoryPerPartition"));
-			/*
-			*/
 			//profileStore.open();
+			/*
 			/*
 			hostname = InetAddress.getLocalHost().getHostName();
 			if(conf.getBoolean("Profile.Redesign.Firstload", false)){
@@ -445,29 +449,8 @@ public class PistachiosServer {
 				sp.setStoreFactory(new TKStoreFactory());
 
 				PistachiosServer.storePartitionMap.put((long)partitionId, sp);
-		logger.info("creating partition handler........... {}", sp);
+                logger.info("creating partition handler........... {} for partition {}", sp, partitionId);
 				return sp;
-				/*
-				final int partitionId1 = partitionId;
-				return new BootstrapPartitionHandler() {
-
-					int partitionId;
-					public void selfBootstraping() {
-						logger.info("self bootstrapping {}.", partitionId1);
-					}
-					public void bootstrapingOthers() {
-						logger.info("bootstraping others {}.", partitionId1);
-					}
-
-					public void startServing() {
-						logger.info("starting serving store {}.", partitionId1);
-					}
-					public void stopServing() {
-						logger.info("stopping serving store {}.", partitionId1);
-					}
-				};
-				*/
-
 			}
 		}
 

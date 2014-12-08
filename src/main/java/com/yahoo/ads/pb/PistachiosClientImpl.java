@@ -12,10 +12,11 @@
 
 package com.yahoo.ads.pb;
 import java.util.List;
+import com.yahoo.ads.pb.exception.*;
 
 public interface PistachiosClientImpl {
-	public byte[] lookup(long id);
-	public boolean store(long id, byte[] value);
-    public boolean processBatch(long id, List<byte[]> events);
+	public byte[] lookup(long id) throws MasterNotFoundException, Exception;
+	public boolean store(long id, byte[] value) throws MasterNotFoundException, ConnectionBrokenException;
+    public boolean processBatch(long id, List<byte[]> events) throws MasterNotFoundException, ConnectionBrokenException;
     public void close();
 }

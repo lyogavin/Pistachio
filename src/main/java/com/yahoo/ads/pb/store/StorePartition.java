@@ -203,6 +203,7 @@ public class StorePartition implements BootstrapPartitionHandler, StoreChangable
 					input.close();
 
 
+                    logger.debug("adding {} offset {} to store", msg, readOffset);
 					while(!store.add(msg, readOffset) ){
 						saveTime++;
 						if(saveTime > maxTryTime){

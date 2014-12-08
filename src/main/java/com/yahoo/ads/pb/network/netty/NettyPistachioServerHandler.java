@@ -36,24 +36,35 @@ public class NettyPistachioServerHandler extends SimpleChannelInboundHandler<Req
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, Request request) throws Exception {
-        logger.debug("got request: {}", request);
+        logger.debug("got new request: {}", request);
 		Response.Builder builder = Response.newBuilder();
 		builder.setId(request.getId());
         boolean result = false;
 
         switch (request.getType()) {
             case LOOKUP: 
-                byte[] res = handler.lookup(request.getId(), request.getPartition());
-                if (res != null) 
-                    builder.setData(ByteString.copyFrom(res));
-                builder.setSucceeded(res!=null);
+                logger.debug("calling lookup");
+                try {
+                    byte[] res = handler.lookup(request.getId(), request.getPartition());
+                    builder.setSucceeded(true);
+                    logger.debug("got data: {}", res);
+                    if (res != null) {
+                        logger.debug("empty data");
+                        builder.setData(ByteString.copyFrom(res));
+                    }
+                } catch (Exception e) {
+                    logger.info("error lookup", e);
+                    builder.setSucceeded(false);
+                }
 
                 break;
             case STORE:
+                logger.debug("calling store");
                 result = handler.store(request.getId(), request.getPartition(), request.getData().toByteArray());
                 builder.setSucceeded(result);
                 break;
             case PROCESS_EVENT:
+                logger.debug("calling processs");
                 result = handler.processBatch(
                     request.getId(), 
                     request.getPartition(), 
@@ -64,6 +75,9 @@ public class NettyPistachioServerHandler extends SimpleChannelInboundHandler<Req
                                         }
                                     }));
                 builder.setSucceeded(result);
+                break;
+            default:
+                logger.debug("default branch");
                 break;
         }
 
