@@ -216,13 +216,13 @@ public class PistachiosServer {
 			KeyedMessage<String, KeyValue> message = new KeyedMessage<String, KeyValue>(partitionTopic, kv);
 			getKafkaProducerInstance().send(message);
 
-			logger.info("sent msg {} {} {}, partition current seqid {}", kv.key, kv.value, kv.seqId, PistachiosServer.storePartitionMap.get(partitionId).getSeqId());
+			logger.debug("sent msg {} {} {}, partition current seqid {}", kv.key, kv.value, kv.seqId, PistachiosServer.storePartitionMap.get(partitionId).getSeqId());
 
 			PistachiosServer.storePartitionMap.get(partitionId).getWriteCache().put(id, kv);
 
-				logger.info("waiting for change to catch up {} {} within gap 20000", PistachiosServer.storePartitionMap.get(partitionId).getSeqId() , kv.seqId);
-			while(kv.seqId - PistachiosServer.storePartitionMap.get(partitionId).getSeqId() > 20000) {
-				logger.info("waiting for change to catch up {} {} within gap 20000", PistachiosServer.storePartitionMap.get(partitionId).getSeqId() , kv.seqId);
+				logger.debug("waiting for change to catch up {} {} within gap 20000000", PistachiosServer.storePartitionMap.get(partitionId).getSeqId() , kv.seqId);
+			while(kv.seqId - PistachiosServer.storePartitionMap.get(partitionId).getSeqId() > 20000000) {
+				logger.debug("waiting for change to catch up {} {} within gap 20000000", PistachiosServer.storePartitionMap.get(partitionId).getSeqId() , kv.seqId);
 				Thread.sleep(30);
 			}
 			return true;

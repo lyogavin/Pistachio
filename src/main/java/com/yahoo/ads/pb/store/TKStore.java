@@ -39,12 +39,13 @@ import java.util.concurrent.ArrayBlockingQueue;
 import com.yahoo.ads.pb.kafka.KeyValue;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Meter;
+import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Timer;
 import com.codahale.metrics.JmxReporter;
 import com.yahoo.ads.pb.util.ConfigurationManager;
 
 
-public class TKStore implements Store {
+public class TKStore implements Store{
 	/*
 	private static final InflightCounter storeCounter= new InflightCounter(
 	        ProfileServerModule.getCountergroupname(), "Store");;
@@ -247,6 +248,19 @@ public class TKStore implements Store {
         }
 	}
 
+
+    class incomequeueSizeGauge implements Gauge<Integer>{
+        BlockingQueue queue;
+        public incomequeueSizeGauge(BlockingQueue queue) {
+            this.queue = queue;
+        }
+        @Override
+            public Integer getValue() {
+                return queue.size();
+            }
+
+    }
+
 	@Override
 	public boolean open(int partitionId) {
 		this.partitionId = partitionId;
@@ -266,7 +280,10 @@ public class TKStore implements Store {
 				incomequeues[i] = new ArrayBlockingQueue<DataOffset>(QUEUE_SIZE);
 			comsumerThreads[i] = new Consumer(i);
 			comsumerThreads[i].start();
+            metrics.register(MetricRegistry.name(TKStore.class, "TKStore incoming queue" + partitionId + "/" + i, "size"),
+                    new incomequeueSizeGauge(incomequeues[i]));
 		}
+		reporter.start();
 		return true;
 	}
 
