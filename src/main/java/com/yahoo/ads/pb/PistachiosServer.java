@@ -122,7 +122,8 @@ public class PistachiosServer {
 							//props.put("combiner.class", "com.yahoo.ads.pb.application.servlet.Combiner");
 							//props.put("serializer.class", "StringEncoder");
 							props.put("request.required.acks", ConfigurationManager.getConfiguration().getString("request.required.acks", "1"));
-							props.put("queue.buffering.max.ms", ConfigurationManager.getConfiguration().getString("queue.buffering.max.ms", "100"));
+							props.put("queue.buffering.max.ms", ConfigurationManager.getConfiguration().getString("queue.buffering.max.ms", "3100"));
+							props.put("queue.buffering.max.messages", ConfigurationManager.getConfiguration().getString("queue.buffering.max.messages", "10000"));
 							props.put("producer.type", ConfigurationManager.getConfiguration().getString("producer.type", "async"));
 							props.put("auto.create.topics.enable", "true");
 
@@ -219,9 +220,9 @@ public class PistachiosServer {
 
 			PistachiosServer.storePartitionMap.get(partitionId).getWriteCache().put(id, kv);
 
-				logger.info("waiting for change to catch up {} {} within gap 200", PistachiosServer.storePartitionMap.get(partitionId).getSeqId() , kv.seqId);
-			while(kv.seqId - PistachiosServer.storePartitionMap.get(partitionId).getSeqId() > 200) {
-				logger.info("waiting for change to catch up {} {} within gap 200", PistachiosServer.storePartitionMap.get(partitionId).getSeqId() , kv.seqId);
+				logger.info("waiting for change to catch up {} {} within gap 20000", PistachiosServer.storePartitionMap.get(partitionId).getSeqId() , kv.seqId);
+			while(kv.seqId - PistachiosServer.storePartitionMap.get(partitionId).getSeqId() > 20000) {
+				logger.info("waiting for change to catch up {} {} within gap 20000", PistachiosServer.storePartitionMap.get(partitionId).getSeqId() , kv.seqId);
 				Thread.sleep(30);
 			}
 			return true;

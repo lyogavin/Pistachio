@@ -53,9 +53,9 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
     private NettyPistachioClientHandler handler;
     private List<Channel> channelList = new ArrayList<Channel>();
 
-    private ConcurrentHashMap<String, Channel> hostChannelMap = new ConcurrentHashMap<String, Channel>();
+    static private ConcurrentHashMap<String, Channel> hostChannelMap = new ConcurrentHashMap<String, Channel>();
     private EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
-	private HelixPartitionSpectator helixPartitionSpectator;
+	static private HelixPartitionSpectator helixPartitionSpectator = null;
 	static final String ZOOKEEPER_SERVER = "Pistachio.ZooKeeper.Server";
 	static final String PROFILE_HELIX_INSTANCE_ID = "Profile.Helix.InstanceId";
 	private Configuration conf = ConfigurationManager.getConfiguration();
@@ -63,19 +63,25 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
     private String localHostAddress;
 
     public NettyPistachioClient() throws Exception{
-		try {
-			helixPartitionSpectator = new HelixPartitionSpectator(
-								conf.getString(ZOOKEEPER_SERVER), // zkAddr
-								"PistachiosCluster",
-								InetAddress.getLocalHost().getHostName() //conf.getString(PROFILE_HELIX_INSTANCE_ID) // instanceName
-								);
+        if (helixPartitionSpectator == null) {
+            synchronized(this) {
+                if (helixPartitionSpectator == null) {
+                    try {
+                        helixPartitionSpectator = new HelixPartitionSpectator(
+                                conf.getString(ZOOKEEPER_SERVER), // zkAddr
+                                "PistachiosCluster",
+                                InetAddress.getLocalHost().getHostName() //conf.getString(PROFILE_HELIX_INSTANCE_ID) // instanceName
+                                );
 
-            localHostAddress = InetAddress.getLocalHost().getHostAddress();
+                        localHostAddress = InetAddress.getLocalHost().getHostAddress();
 
-		} catch(Exception e) {
-			logger.error("Error init HelixPartitionSpectator, are zookeeper and helix installed and configured correctly?", e);
-			throw e;
-		}
+                    } catch(Exception e) {
+                        logger.error("Error init HelixPartitionSpectator, are zookeeper and helix installed and configured correctly?", e);
+                        throw e;
+                    }
+                }
+            }
+        }
     }
 
     private boolean isLocalCall(long partition) {
@@ -106,41 +112,47 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
         }
 
         if (hostChannelMap.containsKey(ip) && !hostChannelMap.get(ip).isActive()) {
-            //TODO: add JMX metrics for disconnections and reconn
-            logger.info("ip {} id {} connection not active any more reconnecting", ip, id);
-            hostChannelMap.get(ip).close();
-            hostChannelMap.remove(ip);
+            synchronized(hostChannelMap) {
+                if (hostChannelMap.containsKey(ip) && !hostChannelMap.get(ip).isActive()) {
+                    //TODO: add JMX metrics for disconnections and reconn
+                    logger.info("ip {} id {} connection not active any more reconnecting", ip, id);
+                    hostChannelMap.get(ip).close();
+                    hostChannelMap.remove(ip);
+                }
+            }
         }
         NettyPistachioClientHandler handler = null;
 
         if (!hostChannelMap.containsKey(ip)) {
             synchronized(hostChannelMap) {
-                try {
-                    // Configure SSL.
-                    final SslContext sslCtx;
-                    if (SSL) {
-                        sslCtx = SslContext.newClientContext(InsecureTrustManagerFactory.INSTANCE);
-                    } else {
-                        sslCtx = null;
+                if (!hostChannelMap.containsKey(ip)) {
+                    try {
+                        // Configure SSL.
+                        final SslContext sslCtx;
+                        if (SSL) {
+                            sslCtx = SslContext.newClientContext(InsecureTrustManagerFactory.INSTANCE);
+                        } else {
+                            sslCtx = null;
+                        }
+
+                        Bootstrap b = new Bootstrap();
+                        b.group(eventLoopGroup)
+                            .channel(NioSocketChannel.class)
+                            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, conf.getInt("Network.Netty.ClientConnectionTimeoutMillis", 10000))
+                            .handler(new NettyPistachioClientInitializer(sslCtx));
+
+                        // Make a new connection.
+                        Channel ch = b.connect(ip, PORT).sync().channel();
+                        channelList.add(ch);
+
+                        // Get the handler instance to initiate the request.
+                        handler = ch.pipeline().get(NettyPistachioClientHandler.class);
+                        hostChannelMap.put(ip, ch);
+
+                    } catch (Throwable e) {
+                        logger.info("error constructor ", e);
+                        throw new MasterNotFoundException(e.getMessage());
                     }
-
-                    Bootstrap b = new Bootstrap();
-                    b.group(eventLoopGroup)
-                        .channel(NioSocketChannel.class)
-                        .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, conf.getInt("Network.Netty.ClientConnectionTimeoutMillis", 10000))
-                        .handler(new NettyPistachioClientInitializer(sslCtx));
-
-                    // Make a new connection.
-                    Channel ch = b.connect(ip, PORT).sync().channel();
-                    channelList.add(ch);
-
-                    // Get the handler instance to initiate the request.
-                    handler = ch.pipeline().get(NettyPistachioClientHandler.class);
-                    hostChannelMap.put(ip, ch);
-
-                } catch (Throwable e) {
-                    logger.info("error constructor ", e);
-                    throw new MasterNotFoundException(e.getMessage());
                 }
             }
         } else {
