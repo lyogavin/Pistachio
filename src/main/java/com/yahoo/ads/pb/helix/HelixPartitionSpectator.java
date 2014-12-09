@@ -74,9 +74,11 @@ public class HelixPartitionSpectator {
     public long getTotalPartition(String resource) {
         if (totalParition == -1) {
             synchronized(totalParition) {
-                ZKHelixAdmin admin = new ZKHelixAdmin(zkAddress);
-                IdealState idealState = admin.getResourceIdealState(helixClusterName, resource);
-                totalParition = (long)idealState.getNumPartitions();
+                if (totalParition == -1) {
+                    ZKHelixAdmin admin = new ZKHelixAdmin(zkAddress);
+                    IdealState idealState = admin.getResourceIdealState(helixClusterName, resource);
+                    totalParition = (long)idealState.getNumPartitions();
+                }
             }
         }
 
