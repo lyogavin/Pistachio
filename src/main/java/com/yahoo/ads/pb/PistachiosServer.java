@@ -185,6 +185,9 @@ public class PistachiosServer {
 	}
 
     public boolean processBatch(long id, long partitionId, List<byte[]> events) {
+        if (ProcessorRegistry.getInstance().getProcessor() != null) {
+            ProcessorRegistry.getInstance().getProcessor().processBatch(id, partitionId, events);
+        }
         return true;
     }
     public boolean store(long id, long partitionId, byte[] value)
@@ -281,7 +284,7 @@ public class PistachiosServer {
           //simple(processor);
           NettyPistachioServer.startServer(handler);
         }
-      };      
+      };
 
       new Thread(simple).start();
     } catch (Exception x) {
@@ -334,6 +337,7 @@ public class PistachiosServer {
 			        0, 8,
 			        conf.getInt("StorageEngine.KC.RecordsPerPartition"),
 			        conf.getLong("StorageEngine.KC.MemoryPerPartition"));
+            ProcessorRegistry.getInstance().init();
 			//profileStore.open();
 			/*
 			/*

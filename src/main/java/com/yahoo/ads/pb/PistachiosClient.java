@@ -295,6 +295,16 @@ public class PistachiosClient {
               store = true;
               value = args[2];
               client.store(id, value.getBytes());
+          } else if (args.length == 3 && args[0].equals("processbatch") ) {
+              try {
+                  id = Long.parseLong(args[1]);
+              } catch (Exception e) {
+              }
+              store = true;
+              value = args[2];
+              List list = new java.util.ArrayList();
+              list.add(value.getBytes());
+              client.processBatch(id, list);
 
           } else {
               System.out.println("USAGE: xxxx lookup id or xxxx store id value");
