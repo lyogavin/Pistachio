@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 //import com.yahoo.ads.pb.exception.AdmovateException;
+import java.util.concurrent.TimeUnit;
 //import com.yahoo.ads.pb.platform.perf.IncrementCounter;
 //import com.yahoo.ads.pb.platform.perf.InflightCounter;
 //import com.yahoo.ads.pb.platform.profile.ProfileUtil;
@@ -33,7 +34,15 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.yahoo.ads.pb.store.TLongKyotoCabinetStore;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ArrayBlockingQueue;
 import com.yahoo.ads.pb.kafka.KeyValue;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.Timer;
+import com.codahale.metrics.JmxReporter;
+import com.yahoo.ads.pb.util.ConfigurationManager;
+
 
 public class TKStore implements Store {
 	/*
@@ -42,6 +51,15 @@ public class TKStore implements Store {
 			*/
 	private static Logger logger = LoggerFactory.getLogger(TKStore.class);
 	private int partitionId;
+	private volatile BlockingQueue<DataOffset>[] incomequeues;
+	private Thread[] comsumerThreads;
+	private static final int QUEUE_SIZE = 3000;
+	final static MetricRegistry metrics = new MetricRegistry();
+	final static JmxReporter reporter = JmxReporter.forRegistry(metrics).inDomain("pistachio.metrics.TKStore").build();
+	private int threadNum = ConfigurationManager.getConfiguration().getInt("Pistachio.Store.ThreadsPerPartition", 4);
+	private final static Meter tkStoreFailures = metrics.meter(MetricRegistry.name(TKStore.class, "TKStoreFailureRequests"));
+
+	private final static Timer tkStoreTimer = metrics.timer(MetricRegistry.name(TKStore.class, "TKStoreStoreTimer"));
 
 	//private static  final IncrementCounter failedStoreCounter = new IncrementCounter(
 	//        ProfileServerModule.getCountergroupname(), "FailedStore");
@@ -51,21 +69,89 @@ public class TKStore implements Store {
 		//storeCounter.register();
 		////failedStoreCounter.register();
 	}
-	@Override
-	public boolean add(byte[] msg, long offset) {
-		Kryo kryo = new Kryo();
-		Input input = new Input(msg);
 
-		KeyValue keyValue = kryo.readObject(input, KeyValue.class);
-		input.close();
-		try {
-		PistachiosServer.getInstance().getProfileStore().store(keyValue.key, partitionId, keyValue.value);
-		} catch (Exception e) {
-            logger.info("error storing into store", e);
+	class DataOffset {
+		public final KeyValue keyValue;
+		public final long offset;
+
+		public DataOffset(KeyValue keyValue, long offset) {
+			this.keyValue = keyValue;
+			this.offset = offset;
 		}
 
-        logger.info("stored {}:{}, seq id:{}", keyValue.key, keyValue.value, keyValue.seqId);
-		long st = System.currentTimeMillis();
+	}
+	class Consumer extends Thread {
+		private final int partition;
+
+		public Consumer(int i) {
+			partition = i;
+		}
+
+		@Override
+		public void run() {
+
+			logger.info("start receiveing {}, partitionId {}", partition, partitionId);
+			while (!this.isInterrupted()) {
+                try {
+                    DataOffset eventOffset = null;
+                    long offset = 0;
+                    try {
+                        eventOffset = incomequeues[partition].poll(10000, TimeUnit.MILLISECONDS);
+                    } catch (InterruptedException e) {
+                        logger.error("interrupted by stop");
+                        break;
+                    }
+                    if (eventOffset == null || eventOffset.keyValue == null) {
+                        continue;
+                    }
+                    logger.debug("got data {}/{}/{} from incoming queue", eventOffset.keyValue.key, eventOffset.keyValue.value, eventOffset.offset);
+
+                    final Timer.Context context = tkStoreTimer.time();
+
+                    try {
+                        PistachiosServer.getInstance().getProfileStore().store(eventOffset.keyValue.key, partitionId, eventOffset.keyValue.value);
+                        logger.debug("stored data {}/{}/{}/{}", eventOffset.keyValue.key, partitionId, eventOffset.keyValue.value, eventOffset.offset);
+                    } catch (Exception e) {
+                        logger.info("error storing data {}/{}/{}/{}", eventOffset.keyValue.key, partitionId, eventOffset.keyValue.value, eventOffset.offset, e);
+                        tkStoreFailures.mark();
+                    } finally {
+                        context.stop();
+                    }
+
+
+                } catch (Exception e) {
+                    // TODO Auto-generated catch block
+                    tkStoreFailures.mark();
+                    logger.error("failed to add user event", e);
+                    continue;
+                }
+            }
+		}
+	}
+
+	@Override
+	public boolean add(byte[] msg, long offset) {
+        try {
+            Kryo kryo = new Kryo();
+            Input input = new Input(msg);
+
+            KeyValue keyValue = kryo.readObject(input, KeyValue.class);
+            input.close();
+
+            int queueNum = (int) ((keyValue.key / 10771) % threadNum);
+            queueNum  = queueNum >= 0 ? queueNum : queueNum + threadNum;
+
+            try {
+                incomequeues[queueNum].put(new DataOffset(keyValue, offset));
+            } catch (InterruptedException e) {
+                logger.error("interrupte exception while add to queue, key {} value {}, offset {}", keyValue.key, keyValue.value, offset, e);
+            }
+
+
+            logger.debug("queued {}:{}, seq id:{}", keyValue.key, keyValue.value, keyValue.seqId);
+        } catch (Exception e) {
+            logger.info("error ", e);
+        }
 		//storeCounter.begin();
 		//try {
 			/*
@@ -172,12 +258,24 @@ public class TKStore implements Store {
 	       logger.error("server open error",e);
 	       return false;
         }
+		if(incomequeues == null)
+			incomequeues = new ArrayBlockingQueue[threadNum];
+		comsumerThreads = new Thread[threadNum];
+		for (int i = 0; i < threadNum; i++) {
+			if(incomequeues[i] == null)
+				incomequeues[i] = new ArrayBlockingQueue<DataOffset>(QUEUE_SIZE);
+			comsumerThreads[i] = new Consumer(i);
+			comsumerThreads[i].start();
+		}
 		return true;
 	}
 
 	@Override
 	public boolean close() {
 		profileStore.close();
+		for (Thread t : comsumerThreads) {
+			t.interrupt();
+		}
 		return true;
 	}
 

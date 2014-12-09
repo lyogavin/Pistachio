@@ -55,6 +55,7 @@ import com.yahoo.ads.pb.network.netty.NettyPistachioClient;
  * @since       1.0
  */
 public class PistachiosClient {
+	private Configuration conf = ConfigurationManager.getConfiguration();
 	private static Logger logger = LoggerFactory.getLogger(PistachiosClient.class);
 	final static MetricRegistry metrics = new MetricRegistry();
 	final static JmxReporter reporter = JmxReporter.forRegistry(metrics).inDomain("pistachio.client.metrics").build();
@@ -74,7 +75,6 @@ public class PistachiosClient {
 	static {
 		reporter.start();
 	}
-	Configuration conf = ConfigurationManager.getConfiguration();
 	private int initialIntervalMillis = conf.getInt("Pistachio.AutoRetry.BackOff.InitialIntervalMillis", 100);
 	private int maxElapsedTimeMillis = conf.getInt("Pistachio.AutoRetry.BackOff.MaxElapsedTimeMillis", 100 * 1000);
 	private int maxIntervalMillis = conf.getInt("Pistachio.AutoRetry.BackOff.MaxIntervalMillis", 5000);
