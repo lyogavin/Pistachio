@@ -22,6 +22,13 @@ import java.nio.ByteBuffer;
 
 public class KeyValueEncoder implements kafka.serializer.Encoder<KeyValue> {
 	private static Logger logger = LoggerFactory.getLogger(KeyValueEncoder.class);
+    private static final ThreadLocal<ByteBufferOutput> threadByteBuffer =
+        new ThreadLocal<ByteBufferOutput>() {
+            @Override protected ByteBufferOutput initialValue() {
+                return new ByteBufferOutput(10240);
+            }
+        };
+    Kryo kryo = new Kryo();
 
 	public KeyValueEncoder(VerifiableProperties props) {
 	}
@@ -29,14 +36,14 @@ public class KeyValueEncoder implements kafka.serializer.Encoder<KeyValue> {
 	public byte[] toBytes(KeyValue keyValue) {
 		try {
 
-			Kryo kryo = new Kryo();
-			ByteBufferOutput output = new ByteBufferOutput(ByteBuffer.allocate(1024));
+            threadByteBuffer.get().clear();
 
-			kryo.writeObject(output, keyValue);
-			output.close();
+			kryo.writeObject(threadByteBuffer.get(), keyValue);
+			//output.close();
 
 
-			return output.toBytes();
+
+			return threadByteBuffer.get().toBytes();
 		} catch (Throwable t) {
 			logger.error("Exception in encode:", t);
 			return "".getBytes();

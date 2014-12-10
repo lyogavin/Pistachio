@@ -38,6 +38,7 @@ public class PistachiosBenchmarking implements Runnable {
 	private static Logger logger = LoggerFactory.getLogger(PistachiosBenchmarking.class);
     private PistachiosClient client;
     private Random rand;
+    private static int recordAverageSize = 1024;
 
 
     public PistachiosBenchmarking() {
@@ -54,8 +55,9 @@ public class PistachiosBenchmarking implements Runnable {
         while(true) {
             try {
                 long id = rand.nextLong();
-                String value=String.valueOf(rand.nextInt()) ;
-                client.store(id, value.getBytes());
+                byte[] bytes = new byte[rand.nextInt(recordAverageSize << 1)];
+                rand.nextBytes(bytes);
+                client.store(id, bytes);
             } catch (Exception e) {
                 System.out.println("error testing"+ e);
                 System.exit(0);
@@ -71,6 +73,14 @@ public class PistachiosBenchmarking implements Runnable {
           try {
               threadCount = Integer.parseInt(args[0]);
               logger.info("parsd {} {}", args[0], threadCount);
+          } catch(Exception e) {
+              logger.info("parsing error", e);
+          }
+      }
+      if (args.length >=2) {
+          try {
+              recordAverageSize = Integer.parseInt(args[1]);
+              logger.info("parsd {} {}", args[1], recordAverageSize);
           } catch(Exception e) {
               logger.info("parsing error", e);
           }

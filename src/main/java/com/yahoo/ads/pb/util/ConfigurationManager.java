@@ -37,7 +37,9 @@ public class ConfigurationManager {
 			// system configuration will be the first in line
 			cc.addConfiguration(new SystemConfiguration());
 			
-			cc.addConfiguration(new PropertiesConfiguration("pistachios.properties"));
+            PropertiesConfiguration pc = new PropertiesConfiguration(new java.io.File(System.getProperty("configPath") + "/pistachios.properties"));
+			logger.info("setting base path to {}", System.getProperty("configPath") + "/pistachios.properties");
+			cc.addConfiguration(pc);
 		}
 		catch (ConfigurationException e) {
 			logger.error("Failed to load configuration files", e);

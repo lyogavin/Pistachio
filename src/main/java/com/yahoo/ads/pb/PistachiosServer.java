@@ -104,6 +104,8 @@ public class PistachiosServer {
 
 	private static Producer<String, byte[]> kafkaProducer = null;
 
+    private static boolean doNothing = ConfigurationManager.getConfiguration().getBoolean("Pistachio.DoNothing", false);
+
     public static boolean servingAsServer() {
         return (handler != null);
     }
@@ -156,6 +158,8 @@ public class PistachiosServer {
 		final Timer.Context context = lookupTimer.time();
 
 		try {
+            if (doNothing)
+                return null;
 			//return ByteBuffer.wrap(storage.getBytes());
             StorePartition storePartition = PistachiosServer.storePartitionMap.get(partitionId);
 
@@ -186,6 +190,8 @@ public class PistachiosServer {
 	}
 
     public boolean processBatch(long id, long partitionId, List<byte[]> events) {
+        if (doNothing)
+            return true;
         if (ProcessorRegistry.getInstance().getProcessor() != null) {
             ProcessorRegistry.getInstance().getProcessor().processBatch(id, partitionId, events);
         }
@@ -197,6 +203,8 @@ public class PistachiosServer {
 		final Timer.Context context = storeTimer.time();
 
 		try {
+            if (doNothing)
+                return true;
 			long nextSeqId = -1;
             StorePartition storePartition = PistachiosServer.storePartitionMap.get(partitionId);
 
@@ -330,6 +338,7 @@ public class PistachiosServer {
 		boolean initialized = false;
 
 		logger.info("Initializing profile server...........");
+		logger.info("do nothing setting {}", doNothing);
 		try {
 			// open profile store
 			Configuration conf = ConfigurationManager.getConfiguration();
