@@ -66,10 +66,13 @@ public class PistachiosBenchmarking implements Runnable {
 
   public static void main(String [] args) {
       int threadCount = 50;
-      if (args.length >1) {
+              logger.info("parsing error {}", args.length);
+      if (args.length >=1) {
           try {
               threadCount = Integer.parseInt(args[0]);
+              logger.info("parsd {} {}", args[0], threadCount);
           } catch(Exception e) {
+              logger.info("parsing error", e);
           }
       }
 
