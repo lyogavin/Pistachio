@@ -26,7 +26,7 @@ import java.net.URL;
 public class ProcessorRegistry implements NodeCacheListener{
 	private static Logger logger = LoggerFactory.getLogger(ProcessorRegistry.class);
 
-    private static final String PATH = "/pistachio_zk/processor_registry/info";
+    public static final String PATH = "/pistachio_zk/processor_registry/info";
 	private static final String ZOOKEEPER_SERVER = "Pistachio.ZooKeeper.Server";
     private EventProcessor processor = null;
     private CuratorFramework    client = null;

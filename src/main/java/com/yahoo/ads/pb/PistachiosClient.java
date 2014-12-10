@@ -26,6 +26,7 @@ import java.net.InetAddress;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.List;
 import org.slf4j.Logger;
+import org.apache.zookeeper.ZooKeeper;
 import org.slf4j.LoggerFactory;
 import com.google.api.client.util.ExponentialBackOff;
 
@@ -74,6 +75,23 @@ public class PistachiosClient {
 
 	static {
 		reporter.start();
+        ZooKeeper zk =  null;
+        try {
+            if (ConfigurationManager.getConfiguration().getString("Pistachio.Processor.JarPath") != null &&
+                ConfigurationManager.getConfiguration().getString("Pistachio.Processor.ClassName") != null) {
+                zk = new ZooKeeper(ConfigurationManager.getConfiguration().getString("Pistachio.ZooKeeper.Server"),40000,null);
+                zk.setData(ProcessorRegistry.PATH, (ConfigurationManager.getConfiguration().getString("Pistachio.Processor.JarPath") + ";" +
+                        ConfigurationManager.getConfiguration().getString("Pistachio.Processor.ClassName")).getBytes(), -1);
+
+            }
+        } catch (Exception e) {
+        } finally {
+            try {
+            if (zk != null)
+                zk.close();
+            } catch (Exception e) {
+            }
+        }
 	}
 	private int initialIntervalMillis = conf.getInt("Pistachio.AutoRetry.BackOff.InitialIntervalMillis", 100);
 	private int maxElapsedTimeMillis = conf.getInt("Pistachio.AutoRetry.BackOff.MaxElapsedTimeMillis", 100 * 1000);
@@ -82,6 +100,7 @@ public class PistachiosClient {
 	private Boolean connectionBrokenAutoRetry = conf.getBoolean("Pistachio.ConnectionBrokenAutoRetry", true);
 
 	public PistachiosClient() throws Exception {
+
 	}
 
     /** 
