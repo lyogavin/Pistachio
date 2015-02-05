@@ -1,0 +1,44 @@
+2015/02/04-17:13:48.242851 10ff60000 RocksDB version: 3.6.2
+2015/02/04-17:13:48.242870 10ff60000 Git sha rocksdb_build_git_sha:636e57b52dc699fee435d627470d757c09f80501
+2015/02/04-17:13:48.242873 10ff60000 Compile time 17:34:10 Nov  3 2014
+2015/02/04-17:13:48.242874 10ff60000 DB SUMMARY
+2015/02/04-17:13:48.242905 10ff60000 SST files in _not_found dir, Total Num: 0, files: 
+2015/02/04-17:13:48.242907 10ff60000 Write Ahead Log file in _not_found: 
+2015/02/04-17:13:48.242909 10ff60000          Options.error_if_exists: 0
+2015/02/04-17:13:48.242910 10ff60000        Options.create_if_missing: 0
+2015/02/04-17:13:48.242911 10ff60000          Options.paranoid_checks: 1
+2015/02/04-17:13:48.242912 10ff60000                      Options.env: 0x1219e2ba0
+2015/02/04-17:13:48.242914 10ff60000                 Options.info_log: 0x7fbe196ac470
+2015/02/04-17:13:48.242915 10ff60000           Options.max_open_files: 5000
+2015/02/04-17:13:48.242916 10ff60000       Options.max_total_wal_size: 0
+2015/02/04-17:13:48.242917 10ff60000        Options.disableDataSync: 0
+2015/02/04-17:13:48.242918 10ff60000              Options.use_fsync: 0
+2015/02/04-17:13:48.242919 10ff60000      Options.max_log_file_size: 0
+2015/02/04-17:13:48.242920 10ff60000 Options.max_manifest_file_size: 18446744073709551615
+2015/02/04-17:13:48.242921 10ff60000      Options.log_file_time_to_roll: 0
+2015/02/04-17:13:48.242922 10ff60000      Options.keep_log_file_num: 1000
+2015/02/04-17:13:48.242923 10ff60000        Options.allow_os_buffer: 1
+2015/02/04-17:13:48.242924 10ff60000       Options.allow_mmap_reads: 0
+2015/02/04-17:13:48.242925 10ff60000      Options.allow_mmap_writes: 0
+2015/02/04-17:13:48.242926 10ff60000          Options.create_missing_column_families: 0
+2015/02/04-17:13:48.242927 10ff60000                              Options.db_log_dir: 
+2015/02/04-17:13:48.242928 10ff60000                                 Options.wal_dir: _not_found
+2015/02/04-17:13:48.242930 10ff60000                Options.table_cache_numshardbits: 4
+2015/02/04-17:13:48.242931 10ff60000     Options.table_cache_remove_scan_count_limit: 16
+2015/02/04-17:13:48.242932 10ff60000     Options.delete_obsolete_files_period_micros: 21600000000
+2015/02/04-17:13:48.242933 10ff60000              Options.max_background_compactions: 1
+2015/02/04-17:13:48.242934 10ff60000                  Options.max_background_flushes: 1
+2015/02/04-17:13:48.242935 10ff60000                         Options.WAL_ttl_seconds: 0
+2015/02/04-17:13:48.242936 10ff60000                       Options.WAL_size_limit_MB: 0
+2015/02/04-17:13:48.242937 10ff60000             Options.manifest_preallocation_size: 4194304
+2015/02/04-17:13:48.242938 10ff60000                          Options.allow_os_buffer: 1
+2015/02/04-17:13:48.242939 10ff60000                         Options.allow_mmap_reads: 0
+2015/02/04-17:13:48.242939 10ff60000                        Options.allow_mmap_writes: 0
+2015/02/04-17:13:48.242940 10ff60000                      Options.is_fd_close_on_exec: 1
+2015/02/04-17:13:48.242941 10ff60000               Options.skip_log_error_on_recovery: 0
+2015/02/04-17:13:48.242942 10ff60000                    Options.stats_dump_period_sec: 3600
+2015/02/04-17:13:48.242943 10ff60000                    Options.advise_random_on_open: 1
+2015/02/04-17:13:48.242945 10ff60000          Options.access_hint_on_compaction_start: NORMAL
+2015/02/04-17:13:48.242946 10ff60000                       Options.use_adaptive_mutex: 0
+2015/02/04-17:13:48.242947 10ff60000                             Options.rate_limiter: 0x0
+2015/02/04-17:13:48.242948 10ff60000                           Options.bytes_per_sync: 1048576

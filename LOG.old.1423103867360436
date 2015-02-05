@@ -1,0 +1,172 @@
+2015/02/04-18:34:41.567032 10f751000 RocksDB version: 3.6.2
+2015/02/04-18:34:41.567080 10f751000 Git sha rocksdb_build_git_sha:636e57b52dc699fee435d627470d757c09f80501
+2015/02/04-18:34:41.567085 10f751000 Compile time 17:34:10 Nov  3 2014
+2015/02/04-18:34:41.567088 10f751000 DB SUMMARY
+2015/02/04-18:34:41.567218 10f751000 CURRENT file:  CURRENT
+2015/02/04-18:34:41.567223 10f751000 IDENTITY file:  IDENTITY
+2015/02/04-18:34:41.567234 10f751000 MANIFEST file:  MANIFEST-000061 size: 104 Bytes
+2015/02/04-18:34:41.567238 10f751000 SST files in /Users/sophiech/git/Pistachio dir, Total Num: 1, files: 000059.sst 
+2015/02/04-18:34:41.567241 10f751000 Write Ahead Log file in /Users/sophiech/git/Pistachio: 000062.log size: 113
+2015/02/04-18:34:41.567248 10f751000          Options.error_if_exists: 0
+2015/02/04-18:34:41.567250 10f751000        Options.create_if_missing: 1
+2015/02/04-18:34:41.567252 10f751000          Options.paranoid_checks: 1
+2015/02/04-18:34:41.567254 10f751000                      Options.env: 0x123134ba0
+2015/02/04-18:34:41.567257 10f751000                 Options.info_log: 0x7fe98a523bf0
+2015/02/04-18:34:41.567259 10f751000           Options.max_open_files: 5000
+2015/02/04-18:34:41.567261 10f751000       Options.max_total_wal_size: 0
+2015/02/04-18:34:41.567263 10f751000        Options.disableDataSync: 0
+2015/02/04-18:34:41.567265 10f751000              Options.use_fsync: 0
+2015/02/04-18:34:41.567267 10f751000      Options.max_log_file_size: 0
+2015/02/04-18:34:41.567269 10f751000 Options.max_manifest_file_size: 18446744073709551615
+2015/02/04-18:34:41.567271 10f751000      Options.log_file_time_to_roll: 0
+2015/02/04-18:34:41.567273 10f751000      Options.keep_log_file_num: 1000
+2015/02/04-18:34:41.567275 10f751000        Options.allow_os_buffer: 1
+2015/02/04-18:34:41.567277 10f751000       Options.allow_mmap_reads: 0
+2015/02/04-18:34:41.567279 10f751000      Options.allow_mmap_writes: 0
+2015/02/04-18:34:41.567281 10f751000          Options.create_missing_column_families: 0
+2015/02/04-18:34:41.567283 10f751000                              Options.db_log_dir: 
+2015/02/04-18:34:41.567285 10f751000                                 Options.wal_dir: /Users/sophiech/git/Pistachio
+2015/02/04-18:34:41.567287 10f751000                Options.table_cache_numshardbits: 4
+2015/02/04-18:34:41.567289 10f751000     Options.table_cache_remove_scan_count_limit: 16
+2015/02/04-18:34:41.567291 10f751000     Options.delete_obsolete_files_period_micros: 21600000000
+2015/02/04-18:34:41.567293 10f751000              Options.max_background_compactions: 1
+2015/02/04-18:34:41.567295 10f751000                  Options.max_background_flushes: 1
+2015/02/04-18:34:41.567297 10f751000                         Options.WAL_ttl_seconds: 0
+2015/02/04-18:34:41.567299 10f751000                       Options.WAL_size_limit_MB: 0
+2015/02/04-18:34:41.567301 10f751000             Options.manifest_preallocation_size: 4194304
+2015/02/04-18:34:41.567303 10f751000                          Options.allow_os_buffer: 1
+2015/02/04-18:34:41.567305 10f751000                         Options.allow_mmap_reads: 0
+2015/02/04-18:34:41.567307 10f751000                        Options.allow_mmap_writes: 0
+2015/02/04-18:34:41.567309 10f751000                      Options.is_fd_close_on_exec: 1
+2015/02/04-18:34:41.567311 10f751000               Options.skip_log_error_on_recovery: 0
+2015/02/04-18:34:41.567312 10f751000                    Options.stats_dump_period_sec: 3600
+2015/02/04-18:34:41.567315 10f751000                    Options.advise_random_on_open: 1
+2015/02/04-18:34:41.567317 10f751000          Options.access_hint_on_compaction_start: NORMAL
+2015/02/04-18:34:41.567319 10f751000                       Options.use_adaptive_mutex: 0
+2015/02/04-18:34:41.567321 10f751000                             Options.rate_limiter: 0x0
+2015/02/04-18:34:41.567323 10f751000                           Options.bytes_per_sync: 1048576
+2015/02/04-18:34:41.567413 10f751000 Recovering from manifest file: MANIFEST-000061
+2015/02/04-18:34:41.567447 10f751000 Options for column family "default":
+2015/02/04-18:34:41.567450 10f751000          Options.error_if_exists: 0
+2015/02/04-18:34:41.567452 10f751000        Options.create_if_missing: 1
+2015/02/04-18:34:41.567454 10f751000          Options.paranoid_checks: 1
+2015/02/04-18:34:41.567456 10f751000                      Options.env: 0x123134ba0
+2015/02/04-18:34:41.567458 10f751000                 Options.info_log: 0x7fe98a523bf0
+2015/02/04-18:34:41.567460 10f751000           Options.max_open_files: 5000
+2015/02/04-18:34:41.567462 10f751000       Options.max_total_wal_size: 0
+2015/02/04-18:34:41.567464 10f751000        Options.disableDataSync: 0
+2015/02/04-18:34:41.567466 10f751000              Options.use_fsync: 0
+2015/02/04-18:34:41.567468 10f751000      Options.max_log_file_size: 0
+2015/02/04-18:34:41.567470 10f751000 Options.max_manifest_file_size: 18446744073709551615
+2015/02/04-18:34:41.567472 10f751000      Options.log_file_time_to_roll: 0
+2015/02/04-18:34:41.567474 10f751000      Options.keep_log_file_num: 1000
+2015/02/04-18:34:41.567476 10f751000        Options.allow_os_buffer: 1
+2015/02/04-18:34:41.567478 10f751000       Options.allow_mmap_reads: 0
+2015/02/04-18:34:41.567480 10f751000      Options.allow_mmap_writes: 0
+2015/02/04-18:34:41.567482 10f751000          Options.create_missing_column_families: 0
+2015/02/04-18:34:41.567484 10f751000                              Options.db_log_dir: 
+2015/02/04-18:34:41.567486 10f751000                                 Options.wal_dir: /Users/sophiech/git/Pistachio
+2015/02/04-18:34:41.567488 10f751000                Options.table_cache_numshardbits: 4
+2015/02/04-18:34:41.567490 10f751000     Options.table_cache_remove_scan_count_limit: 16
+2015/02/04-18:34:41.567492 10f751000     Options.delete_obsolete_files_period_micros: 21600000000
+2015/02/04-18:34:41.567494 10f751000              Options.max_background_compactions: 1
+2015/02/04-18:34:41.567496 10f751000                  Options.max_background_flushes: 1
+2015/02/04-18:34:41.567498 10f751000                         Options.WAL_ttl_seconds: 0
+2015/02/04-18:34:41.567500 10f751000                       Options.WAL_size_limit_MB: 0
+2015/02/04-18:34:41.567502 10f751000             Options.manifest_preallocation_size: 4194304
+2015/02/04-18:34:41.567504 10f751000                          Options.allow_os_buffer: 1
+2015/02/04-18:34:41.567505 10f751000                         Options.allow_mmap_reads: 0
+2015/02/04-18:34:41.567507 10f751000                        Options.allow_mmap_writes: 0
+2015/02/04-18:34:41.567509 10f751000                      Options.is_fd_close_on_exec: 1
+2015/02/04-18:34:41.567511 10f751000               Options.skip_log_error_on_recovery: 0
+2015/02/04-18:34:41.567513 10f751000                    Options.stats_dump_period_sec: 3600
+2015/02/04-18:34:41.567515 10f751000                    Options.advise_random_on_open: 1
+2015/02/04-18:34:41.567517 10f751000          Options.access_hint_on_compaction_start: NORMAL
+2015/02/04-18:34:41.567519 10f751000                       Options.use_adaptive_mutex: 0
+2015/02/04-18:34:41.567521 10f751000                             Options.rate_limiter: 0x0
+2015/02/04-18:34:41.567523 10f751000                           Options.bytes_per_sync: 1048576
+2015/02/04-18:34:41.567525 10f751000               Options.comparator: rocksdb.InternalKeyComparator:leveldb.BytewiseComparator
+2015/02/04-18:34:41.567527 10f751000           Options.merge_operator: None
+2015/02/04-18:34:41.567529 10f751000        Options.compaction_filter: None
+2015/02/04-18:34:41.567531 10f751000        Options.compaction_filter_factory: DefaultCompactionFilterFactory
+2015/02/04-18:34:41.567534 10f751000        Options.compaction_filter_factory_v2: DefaultCompactionFilterFactoryV2
+2015/02/04-18:34:41.567536 10f751000         Options.memtable_factory: SkipListFactory
+2015/02/04-18:34:41.567538 10f751000            Options.table_factory: BlockBasedTable
+2015/02/04-18:34:41.567549 10f751000            table_factory options:   flush_block_policy_factory: FlushBlockBySizePolicyFactory (0x7fe98a42a390)
+  cache_index_and_filter_blocks: 0
+  index_type: 0
+  hash_index_allow_collision: 1
+  checksum: 1
+  no_block_cache: 0
+  block_cache: 0x7fe98a42a4e8
+  block_cache_size: 8388608
+  block_cache_compressed: 0x0
+  block_size: 4096
+  block_size_deviation: 10
+  block_restart_interval: 16
+  filter_policy: nullptr
+  whole_key_filtering: 1
+2015/02/04-18:34:41.567581 10f751000        Options.write_buffer_size: 4194304
+2015/02/04-18:34:41.567584 10f751000  Options.max_write_buffer_number: 2
+2015/02/04-18:34:41.567586 10f751000          Options.compression: 1
+2015/02/04-18:34:41.567588 10f751000       Options.prefix_extractor: nullptr
+2015/02/04-18:34:41.567590 10f751000             Options.num_levels: 7
+2015/02/04-18:34:41.567592 10f751000        Options.min_write_buffer_number_to_merge: 1
+2015/02/04-18:34:41.567594 10f751000         Options.purge_redundant_kvs_while_flush: 1
+2015/02/04-18:34:41.567596 10f751000            Options.compression_opts.window_bits: -14
+2015/02/04-18:34:41.567598 10f751000                  Options.compression_opts.level: -1
+2015/02/04-18:34:41.567600 10f751000               Options.compression_opts.strategy: 0
+2015/02/04-18:34:41.567602 10f751000      Options.level0_file_num_compaction_trigger: 4
+2015/02/04-18:34:41.567604 10f751000          Options.level0_slowdown_writes_trigger: 20
+2015/02/04-18:34:41.567606 10f751000              Options.level0_stop_writes_trigger: 24
+2015/02/04-18:34:41.567608 10f751000                Options.max_mem_compaction_level: 2
+2015/02/04-18:34:41.567610 10f751000                   Options.target_file_size_base: 2097152
+2015/02/04-18:34:41.567612 10f751000             Options.target_file_size_multiplier: 1
+2015/02/04-18:34:41.567614 10f751000                Options.max_bytes_for_level_base: 10485760
+2015/02/04-18:34:41.567616 10f751000          Options.max_bytes_for_level_multiplier: 10
+2015/02/04-18:34:41.567618 10f751000 Options.max_bytes_for_level_multiplier_addtl[0]: 1
+2015/02/04-18:34:41.567620 10f751000 Options.max_bytes_for_level_multiplier_addtl[1]: 1
+2015/02/04-18:34:41.567622 10f751000 Options.max_bytes_for_level_multiplier_addtl[2]: 1
+2015/02/04-18:34:41.567624 10f751000 Options.max_bytes_for_level_multiplier_addtl[3]: 1
+2015/02/04-18:34:41.567626 10f751000 Options.max_bytes_for_level_multiplier_addtl[4]: 1
+2015/02/04-18:34:41.567628 10f751000 Options.max_bytes_for_level_multiplier_addtl[5]: 1
+2015/02/04-18:34:41.567630 10f751000 Options.max_bytes_for_level_multiplier_addtl[6]: 1
+2015/02/04-18:34:41.567632 10f751000       Options.max_sequential_skip_in_iterations: 8
+2015/02/04-18:34:41.567634 10f751000              Options.expanded_compaction_factor: 25
+2015/02/04-18:34:41.567636 10f751000                Options.source_compaction_factor: 1
+2015/02/04-18:34:41.567638 10f751000          Options.max_grandparent_overlap_factor: 10
+2015/02/04-18:34:41.567640 10f751000                        Options.arena_block_size: 419430
+2015/02/04-18:34:41.567642 10f751000                       Options.soft_rate_limit: 0.00
+2015/02/04-18:34:41.567646 10f751000                       Options.hard_rate_limit: 0.00
+2015/02/04-18:34:41.567648 10f751000       Options.rate_limit_delay_max_milliseconds: 1000
+2015/02/04-18:34:41.567650 10f751000                Options.disable_auto_compactions: 0
+2015/02/04-18:34:41.567652 10f751000          Options.purge_redundant_kvs_while_flush: 1
+2015/02/04-18:34:41.567654 10f751000                           Options.filter_deletes: 0
+2015/02/04-18:34:41.567656 10f751000           Options.verify_checksums_in_compaction: 1
+2015/02/04-18:34:41.567658 10f751000                         Options.compaction_style: 0
+2015/02/04-18:34:41.567659 10f751000  Options.compaction_options_universal.size_ratio: 1
+2015/02/04-18:34:41.567661 10f751000 Options.compaction_options_universal.min_merge_width: 2
+2015/02/04-18:34:41.567663 10f751000 Options.compaction_options_universal.max_merge_width: 4294967295
+2015/02/04-18:34:41.567665 10f751000 Options.compaction_options_universal.max_size_amplification_percent: 200
+2015/02/04-18:34:41.567677 10f751000 Options.compaction_options_universal.compression_size_percent: -1
+2015/02/04-18:34:41.567679 10f751000 Options.compaction_options_fifo.max_table_files_size: 1073741824
+2015/02/04-18:34:41.567682 10f751000                   Options.table_properties_collectors: InternalKeyPropertiesCollectorFactory; 
+2015/02/04-18:34:41.567684 10f751000                   Options.inplace_update_support: 0
+2015/02/04-18:34:41.567686 10f751000                 Options.inplace_update_num_locks: 10000
+2015/02/04-18:34:41.567689 10f751000               Options.min_partial_merge_operands: 2
+2015/02/04-18:34:41.567691 10f751000               Options.memtable_prefix_bloom_bits: 0
+2015/02/04-18:34:41.567692 10f751000             Options.memtable_prefix_bloom_probes: 6
+2015/02/04-18:34:41.567694 10f751000   Options.memtable_prefix_bloom_huge_page_tlb_size: 0
+2015/02/04-18:34:41.567696 10f751000                           Options.bloom_locality: 0
+2015/02/04-18:34:41.567708 10f751000                    Options.max_successive_merges: 0
+2015/02/04-18:34:41.567783 10f751000 Recovered from manifest file:/Users/sophiech/git/Pistachio/MANIFEST-000061 succeeded,manifest_file_number is 61, next_file_number is 63, last_sequence is 19, log_number is 0,prev_log_number is 0,max_column_family is 0
+2015/02/04-18:34:41.567787 10f751000 Column family [default] (ID 0), log number is 59
+2015/02/04-18:34:41.567861 10f751000 Recovering log #62
+2015/02/04-18:34:41.567880 10f751000 [default] Level-0 table #63: started
+2015/02/04-18:34:41.568050 10f751000 Table was constructed:
+  [basic properties]: # data blocks=1; # entries=3; raw key size=52; raw average key size=17.333333; raw value size=19; raw average value size=6.333333; data block size=86; index block size=35; filter block size=0; (estimated) table size=121; filter policy name=N/A; 
+  [user collected properties]: kDeletedKeys=0; 
+2015/02/04-18:34:41.568783 10f751000 [default] Level-0 table #63: 538 bytes OK
+2015/02/04-18:34:41.568800 10f751000 Creating manifest 64
+2015/02/04-18:34:41.569466 10f751000 Deleting manifest 61 current manifest 64
+2015/02/04-18:34:41.569796 10f751000 Delete /Users/sophiech/git/Pistachio//000062.log type=0 #62 -- OK

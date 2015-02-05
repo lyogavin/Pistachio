@@ -250,7 +250,7 @@ public class TLongKyotoCabinetStore {
 	}
 	
 	/**
-	 * Go through all the records in the single store with visistor
+	 * Go through all the records in the single store with visitor
 	 * 
 	 * @param visitor
 	 * @param index
