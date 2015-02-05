@@ -48,7 +48,7 @@ public class BootstrapOnlineOfflineStateModel extends StateModel{
 	public void onBecomeSlaveFromOffline(Message message, NotificationContext context) {
 		logger.info("becomes SLAVE from OFFLINE for {}", partitionId);
 		//handler.compareAndSet(null, (BootstrapPartitionHandler)handlerFactory.createParitionHandler(partitionId));
-		if (handler.compareAndSet(null, (BootstrapPartitionHandler)handlerFactory.createParitionHandler(partitionId))) {
+		if (handler.compareAndSet(null, (BootstrapPartitionHandler)handlerFactory.createParitionHandler(partitionId,0))) {
 			//handler.get().selfBootstraping();
 		if (handler.get() != null) {
 		logger.info("start serving {}", partitionId);
