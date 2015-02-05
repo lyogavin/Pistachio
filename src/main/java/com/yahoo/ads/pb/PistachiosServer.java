@@ -19,30 +19,24 @@ import org.apache.thrift.transport.TSSLTransportFactory;
 import org.apache.thrift.transport.TServerSocket;
 import org.apache.thrift.transport.TServerTransport;
 import org.apache.thrift.transport.TSSLTransportFactory.TSSLTransportParameters;
-
 import java.nio.ByteBuffer;
-
 import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;
 import kafka.producer.ProducerConfig;
 
-import com.yahoo.ads.pb.store.RDStoreFactory;
 import com.yahoo.ads.pb.store.StorePartition;
-
 import java.util.concurrent.TimeUnit;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-
 import com.yahoo.ads.pb.store.TKStoreFactory;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.Timer;
 import com.codahale.metrics.JmxReporter;
 
-import java.net.InetAddress;
 
+import java.net.InetAddress;
 import com.yahoo.ads.pb.store.TLongKyotoCabinetStore;
-import com.yahoo.ads.pb.store.RocksDBStore;
 import com.yahoo.ads.pb.kafka.KeyValue;
 import com.yahoo.ads.pb.helix.PartitionHandler;
 import com.yahoo.ads.pb.helix.PartitionHandlerFactory;
@@ -52,30 +46,25 @@ import com.yahoo.ads.pb.helix.BootstrapPartitionHandler;
 import com.yahoo.ads.pb.helix.HelixPartitionManager;
 import com.yahoo.ads.pb.helix.HelixPartitionSpectator;
 import com.yahoo.ads.pb.network.netty.NettyPistachioServer;
-
 import org.apache.helix.HelixManagerFactory;
 import org.apache.helix.HelixManager;
 import org.apache.helix.InstanceType;
 import org.apache.helix.controller.GenericHelixController;
 
 
-
 //import com.yahoo.ads.pb.platform.perf.IncrementCounter;
 //import com.yahoo.ads.pb.platform.perf.InflightCounter;
 import com.yahoo.ads.pb.util.ConfigurationManager;
 import com.yahoo.ads.pb.util.NativeUtils;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.configuration.Configuration;
-
 import com.google.common.base.Joiner.MapJoiner;
 import com.google.common.base.Joiner;
 
 
 
 // Generated code
-
 
 import java.util.HashMap;
 import java.util.Properties;
@@ -111,9 +100,7 @@ public class PistachiosServer {
 	private HelixPartitionManager<BootstrapOnlineOfflineStateModel> manager; // for partition management
 	private static HelixPartitionSpectator helixPartitionSpectator;
 
-	private TLongKyotoCabinetStore TKprofileStore;
-	
-	private RocksDBStore RDprofilestore;
+	private TLongKyotoCabinetStore profileStore;
 
 	private static Producer<String, byte[]> kafkaProducer = null;
 
@@ -186,7 +173,7 @@ public class PistachiosServer {
 				return toRetrun.value;
             }
 
-            byte[] toRet = PistachiosServer.getInstance().getTKProfileStore().get(id, (int)partitionId);
+            byte[] toRet = PistachiosServer.getInstance().getProfileStore().get(id, (int)partitionId);
 			if (null != toRet) {
                 logger.debug("got from store engine: {}", toRet);
                 return toRet;
@@ -336,17 +323,13 @@ public class PistachiosServer {
     }
   }
 
-  public RocksDBStore getRDProfileStore() {
-	  return RDprofilestore;
-  }
-  
-  public TLongKyotoCabinetStore getTKProfileStore() {
-	  return TKprofileStore;
+  public TLongKyotoCabinetStore getProfileStore() {
+	  return profileStore;
   }
 
   byte[] getUserProfileLocally(long userId) {
-	  if (TKprofileStore != null) {
-		  return TKprofileStore.get(userId, 0);
+	  if (profileStore != null) {
+		  return profileStore.get(userId, 0);
 	  }
 
 	  return null;
@@ -359,7 +342,7 @@ public class PistachiosServer {
 		try {
 			// open profile store
 			Configuration conf = ConfigurationManager.getConfiguration();
-			TKprofileStore = new TLongKyotoCabinetStore(
+			profileStore = new TLongKyotoCabinetStore(
 			        conf.getString(PROFILE_BASE_DIR),
 			        0, 8,
 			        conf.getInt("StorageEngine.KC.RecordsPerPartition"),
@@ -475,20 +458,15 @@ public class PistachiosServer {
 
 		class StorePartitionHandlerFactory implements PartitionHandlerFactory {
 
-			public PartitionHandler createParitionHandler(int partitionId, int DBchoice) {
+			public PartitionHandler createParitionHandler(int partitionId) {
 				StorePartition sp = new StorePartition(partitionId);
-				if(DBchoice == 1){
-				    sp.setStoreFactory(new RDStoreFactory());
-				}else{
-					sp.setStoreFactory(new TKStoreFactory());
-				}
+				sp.setStoreFactory(new TKStoreFactory());
 
 				PistachiosServer.storePartitionMap.put((long)partitionId, sp);
                 logger.info("creating partition handler........... {} for partition {}", sp, partitionId);
 				return sp;
 			}
 		}
-
 
 
 }

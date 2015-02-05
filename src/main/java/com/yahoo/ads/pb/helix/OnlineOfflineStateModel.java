@@ -43,7 +43,7 @@ public class OnlineOfflineStateModel extends StateModel {
 	@Transition(to = "ONLINE", from = "OFFLINE")
 	public void onBecomeOnlineFromOffline(Message message, NotificationContext context) {
 		logger.info("becomes ONLINE from OFFLINE for {}", partitionId);
-		if (handler.compareAndSet(null, handlerFactory.createParitionHandler(partitionId,0))) {
+		if (handler.compareAndSet(null, handlerFactory.createParitionHandler(partitionId))) {
 			handler.get().startServing();
 		}
 	}

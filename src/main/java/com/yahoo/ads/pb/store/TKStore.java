@@ -11,7 +11,6 @@
 
 package com.yahoo.ads.pb.store;
 
-
 import com.yahoo.ads.pb.PistachiosServer;
 import java.io.IOException;
 
@@ -26,7 +25,12 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 //import com.yahoo.ads.pb.exception.AdmovateException;
 import java.util.concurrent.TimeUnit;
-
+//import com.yahoo.ads.pb.platform.perf.IncrementCounter;
+//import com.yahoo.ads.pb.platform.perf.InflightCounter;
+//import com.yahoo.ads.pb.platform.profile.ProfileUtil;
+//import com.yahoo.ads.pb.platform.profile.RuntimeUserProfile;
+//import com.yahoo.ads.pb.platform.profile.UserEventProtos.UserEvent;
+//import com.yahoo.ads.pb.util.Convert;
 import com.yahoo.ads.pb.store.TLongKyotoCabinetStore;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
@@ -106,7 +110,7 @@ public class TKStore implements Store{
                     final Timer.Context context = tkStoreTimer.time();
 
                     try {
-                        PistachiosServer.getInstance().getTKProfileStore().store(eventOffset.keyValue.key, partitionId, eventOffset.keyValue.value);
+                        PistachiosServer.getInstance().getProfileStore().store(eventOffset.keyValue.key, partitionId, eventOffset.keyValue.value);
                         logger.debug("stored data {}/{}/{}/{}", eventOffset.keyValue.key, partitionId, eventOffset.keyValue.value, eventOffset.offset);
                     } catch (Exception e) {
                         logger.info("error storing data {}/{}/{}/{}", eventOffset.keyValue.key, partitionId, eventOffset.keyValue.value, eventOffset.offset, e);
@@ -260,7 +264,7 @@ public class TKStore implements Store{
 	@Override
 	public boolean open(int partitionId) {
 		this.partitionId = partitionId;
-		profileStore = PistachiosServer.getInstance().getTKProfileStore();
+		profileStore = PistachiosServer.getInstance().getProfileStore();
 		try {
 	       logger.debug("open store for partition {}",partitionId);
 	        profileStore.open(partitionId);
