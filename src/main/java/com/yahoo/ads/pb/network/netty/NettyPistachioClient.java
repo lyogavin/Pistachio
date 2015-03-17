@@ -19,20 +19,35 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.channel.ChannelOption;
 
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import com.yahoo.ads.pb.network.netty.NettyPistachioProtocol.*;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Function;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import com.google.protobuf.ByteString;
+
 import org.apache.commons.configuration.Configuration;
+
 import com.yahoo.ads.pb.util.ConfigurationManager;
 import com.yahoo.ads.pb.helix.HelixPartitionSpectator;
-
 import com.yahoo.ads.pb.PistachiosClientImpl;
+
 import java.net.InetAddress;
+
 import com.yahoo.ads.pb.Partitioner;
 import com.yahoo.ads.pb.exception.*;
 import com.yahoo.ads.pb.PistachiosServer;
@@ -62,8 +77,10 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
 	private Configuration conf = ConfigurationManager.getConfiguration();
     private Partitioner partitioner = new DefaultPartitioner();
     private String localHostAddress;
-
+    
     public NettyPistachioClient() throws Exception{
+        localHostAddress = InetAddress.getLocalHost().getHostAddress();
+
         if (helixPartitionSpectator == null) {
             synchronized(this) {
                 if (helixPartitionSpectator == null) {
@@ -73,9 +90,6 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
                                 "PistachiosCluster",
                                 InetAddress.getLocalHost().getHostName() //conf.getString(PROFILE_HELIX_INSTANCE_ID) // instanceName
                                 );
-
-                        localHostAddress = InetAddress.getLocalHost().getHostAddress();
-
                     } catch(Exception e) {
                         logger.error("Error init HelixPartitionSpectator, are zookeeper and helix installed and configured correctly?", e);
                         throw e;
@@ -90,6 +104,9 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
         String ip = helixPartitionSpectator.getOneInstanceForPartition("PistachiosResource", (int)partition, "MASTER");
 
         try {
+           	logger.debug("islocal {}, ip {}, localAddr {}, serving {}",
+           			partition, ip, localHostAddress, PistachiosServer.servingAsServer());
+            
             if ((ip != null) && ip.equals(localHostAddress) && PistachiosServer.servingAsServer()) {
                 directLocalCall = true;
             }
@@ -103,20 +120,25 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
     private NettyPistachioClientHandler getHandler(byte[] id)  throws MasterNotFoundException, Exception {
 
         long partition = partitioner.getPartition(id, helixPartitionSpectator.getTotalPartition("PistachiosResource"));
+        logger.debug("get partition {} for id {}", partition, id);
+        return getHandlerForPartition(partition);
+    }
+    
+    private NettyPistachioClientHandler getHandlerForPartition(long partition)  throws MasterNotFoundException, Exception {
 
         String ip = helixPartitionSpectator.getOneInstanceForPartition("PistachiosResource", (int)partition, "MASTER");
-        logger.debug("ip {} found for id {} partition {}", ip, DefaultDataInterpreter.getDataInterpreter().interpretId(id), partition);
+        logger.debug("ip {} found for partition {}", ip, partition);
 
         if (ip == null) {
-            logger.info("partition master not found for id {} partition{}", DefaultDataInterpreter.getDataInterpreter().interpretId(id), partition);
-            throw new MasterNotFoundException("master partition not found for " + DefaultDataInterpreter.getDataInterpreter().interpretId(id));
+            logger.info("partition master not found for partition{}", partition);
+            throw new MasterNotFoundException("master partition not found");
         }
 
         if (hostChannelMap.containsKey(ip) && !hostChannelMap.get(ip).isActive()) {
             synchronized(hostChannelMap) {
                 if (hostChannelMap.containsKey(ip) && !hostChannelMap.get(ip).isActive()) {
                     //TODO: add JMX metrics for disconnections and reconn
-                    logger.info("ip {} id {} connection not active any more reconnecting", ip, DefaultDataInterpreter.getDataInterpreter().interpretId(id));
+                    logger.info("ip {} , partition {} connection not active any more reconnecting", ip, partition);
                     hostChannelMap.get(ip).close();
                     hostChannelMap.remove(ip);
                 }
@@ -139,7 +161,9 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
                         Bootstrap b = new Bootstrap();
                         b.group(eventLoopGroup)
                             .channel(NioSocketChannel.class)
-                            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, conf.getInt("Network.Netty.ClientConnectionTimeoutMillis", 10000))
+                            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, conf.getInt("Network.Netty.ClientConnectionTimeoutMillis", 100000))
+                            .option(ChannelOption.SO_SNDBUF, 1048576)
+                            .option(ChannelOption.SO_RCVBUF, 1048576)
                             .handler(new NettyPistachioClientInitializer(sslCtx));
 
                         // Make a new connection.
@@ -156,9 +180,8 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
                     }
                 }
             }
-        } else {
-            handler = hostChannelMap.get(ip).pipeline().get(NettyPistachioClientHandler.class);
         }
+        handler = hostChannelMap.get(ip).pipeline().get(NettyPistachioClientHandler.class);
         return handler;
     }
 
@@ -167,6 +190,7 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
             channel.close();
         }
         eventLoopGroup.shutdownGracefully();
+        logger.info("close called");
     }
 
 	public byte[] lookup(byte[] id)  throws MasterNotFoundException, Exception {
@@ -217,6 +241,7 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
         }
         return res.getSucceeded();
     }
+
     public boolean processBatch(byte[] id, List<byte[]> events)  throws MasterNotFoundException, ConnectionBrokenException {
         NettyPistachioClientHandler handler = null;
         try {
@@ -241,10 +266,189 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
             builder.setJarServerUrl(conf.getString("pistachio.process.jar.server.url"));
             builder.setProcessClass(conf.getString("pistachio.process.class"));
         }
+
         Response res = handler.sendRequest(builder);
         return res.getSucceeded();
     }
+    
+    @Override
+    public Map<byte[], byte[]> multiLookup(List<byte[]> ids) throws Exception {
+    	Map<byte[], ListenableFuture<byte[]>> res = multiLookupAsync(ids);
+    	Map<byte[], byte[]> ret = new HashMap<>(res.size());
+    	
+    	long timeoutMs = System.currentTimeMillis() + 100 * 1000L;
+    	for (Map.Entry<byte[], ListenableFuture<byte[]>> entry: res.entrySet()) {
+    		try {
+    			ret.put(entry.getKey(), entry.getValue().get(timeoutMs - System.currentTimeMillis(), TimeUnit.MILLISECONDS));
+    		} catch (Exception e) {
+    			logger.warn("lookup {} failure ", DefaultDataInterpreter.getDataInterpreter().interpretId(entry.getKey()), e);
+    		}
+    	}
+		
+	    return ret;
+    }
+    
+    Function<Response, Map<byte[], byte[]>> MultiLookupResponseTransformFunction =
+  		  new Function<Response, Map<byte[], byte[]>>() {
+				@Override
+				public Map<byte[], byte[]> apply(Response response) {
+					Map<byte[], byte[]> res = new HashMap<>(response.getResponsesCount());
+					for (Response re: response.getResponsesList()) {
+						res.put(re.getId().toByteArray(), re.getData().toByteArray());
+					}
+					return res;
+				}
+  	};
+    
+    @Override
+    public Map<byte[], ListenableFuture<byte[]>> multiLookupAsync(List<byte[]> ids) {
+        Map<Long, List<byte[]>> partition2ids = new HashMap<>();
+    	for (byte[] id : ids) {
+	        long partition = partitioner.getPartition(id, helixPartitionSpectator.getTotalPartition("PistachiosResource"));
+	        List<byte[]> partitionIds = partition2ids.get(partition);
+	        if (partitionIds == null) {
+	        	partitionIds = new ArrayList<>();
+	        	partition2ids.put(partition, partitionIds);
+	        }
+	        partitionIds.add(id);
+    	}
+    	// TODO: change to request per partition, right now request per handler
+    	Map<NettyPistachioClientHandler, Request.Builder> handler2reqs = new HashMap<>();
+    	for (Map.Entry<Long, List<byte[]>> entry: partition2ids.entrySet()) {
+			NettyPistachioClientHandler handler = null;
+			try {
+				handler = getHandlerForPartition(entry.getKey());
+			} catch (Exception e) {
+				logger.info("error getting handler", e);
+			}
+			if (handler == null) {
+				logger.debug("fail to look up {} because of empty handler", entry.getKey());
+				continue;
+			}
+			Request.Builder builder = handler2reqs.get(handler);
+			if (builder == null) {
+				builder = Request.newBuilder().setType(RequestType.MULTI_LOOKUP);
+				handler2reqs.put(handler, builder);
+			}
+			Request.Builder innerRequest = Request.newBuilder().setPartition(entry.getKey());
+			for (byte[] value: entry.getValue()) {
+				builder.addIds(ByteString.copyFrom(value));
+			}
+			builder.addRequests(innerRequest);
+    	}
+    	
+    	final Map<byte[], ListenableFuture<byte[]>> futures = new HashMap<>(ids.size());
+    	for (final Map.Entry<NettyPistachioClientHandler, Request.Builder> entry: handler2reqs.entrySet()) {
+    		NettyPistachioClientHandler handler = entry.getKey();
+    		ListenableFuture<Response> future = handler.sendRequestAsync(entry.getValue());
+    		ListenableFuture<Map<byte[], byte[]>> tFuture = Futures.transform(future, MultiLookupResponseTransformFunction);
+    		for (final ByteString id: entry.getValue().getIdsList()) {
+    			futures.put(id.toByteArray(), Futures.transform(tFuture, new Function<Map<byte[], byte[]>, byte[]>() {
+					@Override
+					public byte[] apply(Map<byte[], byte[]> arg0) {
+						// TODO Auto-generated method stub
+						return arg0.get(id.toByteArray());
+					}
+    			}));
+    		}
+    	}
+    	
+    	return futures;
+    }
+    
+    private ListenableFuture<Boolean> createBooleanValueFuture(boolean value) {
+    	SettableFuture<Boolean> future = SettableFuture.create();
+    	future.set(value);
+    	return future;
+    }
+    
+    @Override
+	public ListenableFuture<Boolean> storeAsync(byte[] id, byte[] value) {
+        long partition = partitioner.getPartition(id, helixPartitionSpectator.getTotalPartition("PistachiosResource"));
+        if (isLocalCall(partition)) {
+            return createBooleanValueFuture(PistachiosServer.handler.store(id, partition, value, false));
+        }
+        NettyPistachioClientHandler handler = null;
+        try {
+            handler = getHandler(id);
+        } catch (Exception e) {
+            logger.info("error getting handler", e);
+            return createBooleanValueFuture(false);
+        }
+        if (handler == null) {
+            logger.debug("fail to look up {} because of empty handler", id);
+            return createBooleanValueFuture(false);
+        }
+        Request.Builder builder = Request.newBuilder();
+        ListenableFuture<Response> res = handler.sendRequestAsync(
+        		builder.setId(ByteString.copyFrom(id))
+        			.setType(RequestType.STORE)
+        			.setPartition(partition)
+        			.setData(ByteString.copyFrom(value)
+        		)
+        	);
+        
+        return Futures.transform(res, BooleanResponseTransformFunction);
+    }
+    
+    Function<Response, Boolean> BooleanResponseTransformFunction =
+    		  new Function<Response, Boolean>() {
+				@Override
+				public Boolean apply(Response response) {
+					return response.getSucceeded();
+				}
+    	};
 
+    @Override
+    public Map<byte[], ListenableFuture<Boolean>> multiProcessAsync(Map<byte[], byte[]> events){
+    	Map<Long, Request.Builder> partition2reqs = new HashMap<>();
+    	for (Map.Entry<byte[], byte[]> entry: events.entrySet()) {
+    		byte[] id = entry.getKey();
+	        long partition = partitioner.getPartition(id, helixPartitionSpectator.getTotalPartition("PistachiosResource"));
+			Request.Builder pBuilder = partition2reqs.get(partition);
+			if (pBuilder == null) {
+				pBuilder = Request.newBuilder().setPartition(partition);
+				partition2reqs.put(partition, pBuilder);
+			}
+			pBuilder.addIds(ByteString.copyFrom(id)).addEvents(ByteString.copyFrom(entry.getValue()));
+    	}
+    	
+    	Map<NettyPistachioClientHandler, Request.Builder> handler2reqs = new HashMap<>();
+    	for (Map.Entry<Long, Request.Builder> entry: partition2reqs.entrySet()) {
+			NettyPistachioClientHandler handler = null;
+			try {
+				handler = getHandlerForPartition(entry.getValue().getPartition());
+			} catch (Exception e) {
+				logger.info("error getting handler", e);
+			}
+			if (handler == null) {
+				logger.debug("fail to look up {} because of empty handler", entry.getKey());
+				continue;
+			}				
+			Request.Builder builder = handler2reqs.get(handler);
+			if (builder == null) {
+				builder = Request.newBuilder().setType(RequestType.MULTI_PROCESS_EVENT);
+				handler2reqs.put(handler, builder);
+			}
+			builder.addRequests(entry.getValue());    		
+    	}
+    	   	
+    	Map<byte[], ListenableFuture<Boolean>> ret = new HashMap<>(handler2reqs.size());
+    	for (Map.Entry<NettyPistachioClientHandler, Request.Builder> entry: handler2reqs.entrySet()) {
+			NettyPistachioClientHandler handler = entry.getKey();
+    		ListenableFuture<Response> future = handler.sendRequestAsync(entry.getValue());
+    		for (Request req: entry.getValue().getRequestsList()) {
+	    		for (ByteString id: req.getIdsList()) {
+	    			ret.put(id.toByteArray(), Futures.transform(future, BooleanResponseTransformFunction));
+	    		}
+    		}
+    	}
+    	if (logger.isDebugEnabled()) {
+    		logger.debug("result of multi-process {}", ret);
+    	}
+        return ret;
+    }
+    
     static private class TestRunnable extends Thread {
         private java.util.Random rand = new java.util.Random();
         private NettyPistachioClientHandler handler;
@@ -265,9 +469,8 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
                     System.out.println("Thread #" + Thread.currentThread().getId() + ", correct result: " + l );
                 }
             } catch (Exception e) {
-                    System.out.println("error: " + e);
+            	System.out.println("error: " + e);
             }
-
         }
     }
 

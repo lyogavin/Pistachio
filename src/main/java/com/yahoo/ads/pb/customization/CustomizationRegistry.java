@@ -24,13 +24,14 @@ import java.net.URLClassLoader;
 import java.net.URL;
 
 public class CustomizationRegistry<T> implements NodeCacheListener{
-	private static Logger logger = LoggerFactory.getLogger(CustomizationRegistry.class);
+    private static Logger logger = LoggerFactory.getLogger(CustomizationRegistry.class);
 
     public static final String PATH = "/pistachio_zk/processor_registry/info";
-	private static final String ZOOKEEPER_SERVER = "Pistachio.ZooKeeper.Server";
+    private static final String ZOOKEEPER_SERVER = "Pistachio.ZooKeeper.Server";
     protected T processor = null;
     private CuratorFramework    client = null;
     private NodeCache   cache = null;
+    private String lastData = null;
 
     public CustomizationRegistry() {
     }
@@ -105,9 +106,11 @@ public class CustomizationRegistry<T> implements NodeCacheListener{
 
         if (data != null && data.getData() != null) {
             String strData = new String(data.getData());
-            logger.info("got data {} from path {}", strData, PATH);
-
-            loadFromRegistry(strData);
+            logger.info("got data {} from path {}, lastData {}", strData, PATH, lastData);
+            if (lastData == null || !lastData.equals(strData)) {
+                lastData = strData;
+                loadFromRegistry(strData);
+            }
         } else {
         logger.info("empty data in path {}", PATH);
         }
