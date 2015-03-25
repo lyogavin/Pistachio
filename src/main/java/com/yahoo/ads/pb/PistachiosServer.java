@@ -152,7 +152,7 @@ public class PistachiosServer {
   public static class DefaultPistachiosHandler implements PistachiosHandler{
 	String storage;
 
-    public byte[] lookup(long id, long partitionId) throws Exception
+    public byte[] lookup(byte[] id, long partitionId) throws Exception
 	{
 		lookupRequests.mark();
 		final Timer.Context context = lookupTimer.time();
@@ -181,7 +181,7 @@ public class PistachiosServer {
             logger.info("dont find value from store");
             return null;
 		} catch (Exception e) {
-			logger.info("Exception lookup {}", id, e);
+			logger.info("Exception lookup {}", DefaultDataInterpreter.getDataInterpreter().interpretId(id), e);
 			lookupFailureRequests.mark();
             throw e;
 		} finally {
@@ -189,7 +189,7 @@ public class PistachiosServer {
 		}
 	}
 
-    public boolean processBatch(long id, long partitionId, List<byte[]> events) {
+    public boolean processBatch(byte[] id, long partitionId, List<byte[]> events) {
         if (doNothing)
             return true;
         if (ProcessorRegistry.getInstance().getProcessor() != null) {
@@ -197,7 +197,7 @@ public class PistachiosServer {
         }
         return true;
     }
-    public boolean store(long id, long partitionId, byte[] value)
+    public boolean store(byte[] id, long partitionId, byte[] value)
 	{
 		storeRequests.mark();
 		final Timer.Context context = storeTimer.time();
@@ -237,7 +237,9 @@ public class PistachiosServer {
 
 			//PistachiosServer.getInstance().getProfileStore().store(id, value.array());
 		} catch (Exception e) {
-			logger.info("error storing {} {}", id, value, e);
+			logger.info("error storing {} {}", 
+                DefaultDataInterpreter.getDataInterpreter().interpretId(id), 
+                DefaultDataInterpreter.getDataInterpreter().interpretData(value), e);
 			storeFailureRequests.mark();
 			return false;
 		} finally {
@@ -327,7 +329,7 @@ public class PistachiosServer {
 	  return profileStore;
   }
 
-  byte[] getUserProfileLocally(long userId) {
+  byte[] getUserProfileLocally(byte[] userId) {
 	  if (profileStore != null) {
 		  return profileStore.get(userId, 0);
 	  }

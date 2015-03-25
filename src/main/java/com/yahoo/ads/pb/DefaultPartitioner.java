@@ -10,7 +10,7 @@ public class DefaultPartitioner implements Partitioner {
     Partitioner customizedPartitioner = null;
     boolean checkedCustomizedPartitioner = false;
 
-    public long getPartition(long id, long totalParition) {
+    public long getPartition(byte[] id, long totalParition) {
 
         String customizedPartitionerClassName = ConfigurationManager.getConfiguration().getString("pistachio.partitioner");
         logger.debug("found customized partitioner {}",customizedPartitionerClassName);
@@ -29,7 +29,7 @@ public class DefaultPartitioner implements Partitioner {
         }
 
 
-        long shard = id % totalParition;
+        long shard = id.hashCode() % totalParition;
         shard = shard < 0 ? shard + totalParition: shard;
         return shard;
     }

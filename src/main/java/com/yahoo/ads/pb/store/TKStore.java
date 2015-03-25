@@ -43,6 +43,7 @@ import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Timer;
 import com.codahale.metrics.JmxReporter;
 import com.yahoo.ads.pb.util.ConfigurationManager;
+import com.yahoo.ads.pb.DefaultDataInterpreter;
 
 
 public class TKStore implements Store{
@@ -105,15 +106,25 @@ public class TKStore implements Store{
                     if (eventOffset == null || eventOffset.keyValue == null) {
                         continue;
                     }
-                    logger.debug("got data {}/{}/{} from incoming queue", eventOffset.keyValue.key, eventOffset.keyValue.value, eventOffset.offset);
+                    logger.debug("got data {}/{}/{} from incoming queue", 
+                        DefaultDataInterpreter.getDataInterpreter().interpretId(eventOffset.keyValue.key), 
+                        DefaultDataInterpreter.getDataInterpreter().interpretData(eventOffset.keyValue.value),
+                        eventOffset.offset);
 
                     final Timer.Context context = tkStoreTimer.time();
 
                     try {
                         PistachiosServer.getInstance().getProfileStore().store(eventOffset.keyValue.key, partitionId, eventOffset.keyValue.value);
-                        logger.debug("stored data {}/{}/{}/{}", eventOffset.keyValue.key, partitionId, eventOffset.keyValue.value, eventOffset.offset);
+                        logger.debug("stored data {}/{}/{}/{}", 
+                            DefaultDataInterpreter.getDataInterpreter().interpretId(eventOffset.keyValue.key), 
+                            DefaultDataInterpreter.getDataInterpreter().interpretData(eventOffset.keyValue.value),
+                            eventOffset.offset);
                     } catch (Exception e) {
-                        logger.info("error storing data {}/{}/{}/{}", eventOffset.keyValue.key, partitionId, eventOffset.keyValue.value, eventOffset.offset, e);
+                        logger.info("error storing data {}/{}/{}/{}", 
+                            DefaultDataInterpreter.getDataInterpreter().interpretId(eventOffset.keyValue.key), 
+                            partitionId,
+                            DefaultDataInterpreter.getDataInterpreter().interpretData(eventOffset.keyValue.value),
+                            eventOffset.offset, e);
                         tkStoreFailures.mark();
                     } finally {
                         context.stop();
@@ -139,17 +150,23 @@ public class TKStore implements Store{
             KeyValue keyValue = kryo.readObject(input, KeyValue.class);
             input.close();
 
-            int queueNum = (int) ((keyValue.key / 10771) % threadNum);
+            int queueNum = (int) ((keyValue.key.hashCode()) % threadNum);
             queueNum  = queueNum >= 0 ? queueNum : queueNum + threadNum;
 
             try {
                 incomequeues[queueNum].put(new DataOffset(keyValue, offset));
             } catch (InterruptedException e) {
-                logger.error("interrupte exception while add to queue, key {} value {}, offset {}", keyValue.key, keyValue.value, offset, e);
+                logger.error("interrupte exception while add to queue, key {} value {}, offset {}", 
+                    DefaultDataInterpreter.getDataInterpreter().interpretId(keyValue.key), 
+                    DefaultDataInterpreter.getDataInterpreter().interpretData(keyValue.value),
+                    offset, e);
             }
 
 
-            logger.debug("queued {}:{}, seq id:{}", keyValue.key, keyValue.value, keyValue.seqId);
+            logger.debug("queued {}:{}, seq id:{}", 
+                DefaultDataInterpreter.getDataInterpreter().interpretId(keyValue.key), 
+                DefaultDataInterpreter.getDataInterpreter().interpretData(keyValue.value),
+                keyValue.seqId);
         } catch (Exception e) {
             logger.info("error ", e);
         }

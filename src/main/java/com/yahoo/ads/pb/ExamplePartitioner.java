@@ -8,9 +8,9 @@ public class ExamplePartitioner implements Partitioner {
 	private Configuration conf = ConfigurationManager.getConfiguration();
 	private static Logger logger = LoggerFactory.getLogger(ExamplePartitioner.class);
 
-    public long getPartition(long id, long totalParition) {
+    public long getPartition(byte[] id, long totalParition) {
 
-        long shard = id  % totalParition;
+        long shard = id.hashCode()  % totalParition;
         shard = shard < 0 ? shard + totalParition: shard;
         logger.debug("example partitioner shard id {} into parittion {}", id, shard);
         return shard;

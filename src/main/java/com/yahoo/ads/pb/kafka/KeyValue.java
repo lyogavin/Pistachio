@@ -16,7 +16,7 @@ import java.util.Arrays;
 
 public class KeyValue {
 
-	public long key;
+	public byte[] key;
 	public long seqId;
 	public byte[] value;
 

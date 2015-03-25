@@ -9,10 +9,12 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-
 package com.yahoo.ads.pb;
-import java.util.List;
 
-public interface EventProcessor {
-    public void processBatch(byte[] id, long partitionId, List<byte[]> events);
+import java.util.List;
+import com.yahoo.ads.pb.exception.*;
+
+public interface PistachioDataInterpreter{
+    public String interpretId(byte[] id);
+    public String interpretData(byte[] data);
 }

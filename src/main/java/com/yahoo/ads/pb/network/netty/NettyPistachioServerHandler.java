@@ -45,7 +45,7 @@ public class NettyPistachioServerHandler extends SimpleChannelInboundHandler<Req
             case LOOKUP: 
                 logger.debug("calling lookup");
                 try {
-                    byte[] res = handler.lookup(request.getId(), request.getPartition());
+                    byte[] res = handler.lookup(request.getId().toByteArray(), request.getPartition());
                     builder.setSucceeded(true);
                     logger.debug("got data: {}", res);
                     if (res != null) {
@@ -60,13 +60,13 @@ public class NettyPistachioServerHandler extends SimpleChannelInboundHandler<Req
                 break;
             case STORE:
                 logger.debug("calling store");
-                result = handler.store(request.getId(), request.getPartition(), request.getData().toByteArray());
+                result = handler.store(request.getId().toByteArray(), request.getPartition(), request.getData().toByteArray());
                 builder.setSucceeded(result);
                 break;
             case PROCESS_EVENT:
                 logger.debug("calling processs");
                 result = handler.processBatch(
-                    request.getId(), 
+                    request.getId().toByteArray(), 
                     request.getPartition(), 
                     Lists.transform(request.getEventsList(), 
                                     new Function<ByteString, byte[]>() {

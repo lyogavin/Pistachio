@@ -106,13 +106,13 @@ public class PistachiosClient {
     /** 
      * To lookup the value of an id. Given the id return the value as a byte array.
      *
-     * @param id        id to look up as long.
+     * @param id        id to look up as byte[].
      * @return          <code>byte array</code> return in byte array, null if key not found
      * @exception       MasterNotFoundException when fail because no master found
      * @exception       ConnectionBrokenException when fail because connection is broken in the middle
      * @exception       Exception other errors indicating failure
      */
-	public byte[] lookup(long id) throws MasterNotFoundException, Exception{
+	public byte[] lookup(byte[] id) throws MasterNotFoundException, Exception{
 
 		final Timer.Context context = lookupTimer.time();
 		byte[] ret =  null;
@@ -164,13 +164,13 @@ public class PistachiosClient {
     /** 
      * To store the key value.
      *
-     * @param id        id to store as long.
+     * @param id        id to store as byte[].
      * @param value     value to store as byte array
      * @exception       MasterNotFoundException when fail because no master found
      * @exception       ConnectionBrokenException when fail because connection is broken in the middle
      * @return          <code>boolean</code> succeeded or not
      */
-	public boolean store(long id, byte[] value)  throws MasterNotFoundException, ConnectionBrokenException{
+	public boolean store(byte[] id, byte[] value)  throws MasterNotFoundException, ConnectionBrokenException{
 		final Timer.Context context = storeTimer.time();
 		boolean succeeded = false;
         long backOffMillis =  0;
@@ -228,13 +228,13 @@ public class PistachiosClient {
     /** 
      * To process a batch of events
      *
-     * @param id        id to store as long.
+     * @param id        id to store as byte[].
      * @param events    list of events as byte []
      * @exception       MasterNotFoundException when fail because no master found
      * @exception       ConnectionBrokenException when fail because connection is broken in the middle
      * @return          <code>boolean</code> succeeded or not
      */
-	public boolean processBatch(long id, List<byte[]> events) throws MasterNotFoundException, ConnectionBrokenException{
+	public boolean processBatch(byte[] id, List<byte[]> events) throws MasterNotFoundException, ConnectionBrokenException{
 		final Timer.Context context = processTimer.time();
 		boolean succeeded = false;
 		byte[] ret =  null;
@@ -297,33 +297,24 @@ public class PistachiosClient {
 
       try {
 
-          long id = 0;
+          String id = "";
           boolean store = false;
           String value="" ;
           if (args.length ==2 && args[0].equals("lookup") ) {
-              try {
-                  id = Long.parseLong(args[1]);
-                  System.out.println("client.lookup(" + id + ")" + new String(client.lookup(id)));
-              } catch (Exception e) {
-              }
+              id = args[1];
+              System.out.println("client.lookup(" + id + ")" + new String(client.lookup(id.getBytes())));
           } else if (args.length == 3 && args[0].equals("store") ) {
-              try {
-                  id = Long.parseLong(args[1]);
-              } catch (Exception e) {
-              }
+              id = args[1];
               store = true;
               value = args[2];
-              client.store(id, value.getBytes());
+              client.store(id.getBytes(), value.getBytes());
           } else if (args.length == 3 && args[0].equals("processbatch") ) {
-              try {
-                  id = Long.parseLong(args[1]);
-              } catch (Exception e) {
-              }
+                  id = (args[1]);
               store = true;
               value = args[2];
               List list = new java.util.ArrayList();
               list.add(value.getBytes());
-              client.processBatch(id, list);
+              client.processBatch(id.getBytes(), list);
 
           } else {
               System.out.println("USAGE: xxxx lookup id or xxxx store id value");

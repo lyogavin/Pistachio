@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.File;
 
+import com.yahoo.ads.pb.DefaultDataInterpreter;
 import com.google.common.base.Preconditions;
 //import com.yahoo.ads.pb.platform.profile.ProfileUtil;
 
@@ -110,13 +111,8 @@ public class TLongKyotoCabinetStore {
 	 * @param key
 	 * @return
 	 */
-	private int getDbIndex(long key) {
-		if(numStores == 0){
-			return (int) (key % 256 >= 0 ? key % 256 : 256+key % 256);
-		}else{
-			return (int) (key / 1000L % numStores);
-		}
-		
+	protected int getDbIndex(byte[] key) {
+			return (int) (key.hashCode() % numStores);
 	}
 
 	/**
@@ -138,7 +134,7 @@ public class TLongKyotoCabinetStore {
 	 * @param key
 	 * @param value
 	 */
-	public void store(long key, long partition, byte[] value) throws Exception {
+	public void store(byte[] key, long partition, byte[] value) throws Exception {
 		int dbIndex = (int)partition;
         /*
 		int dbIndex = getDbIndex(key);
@@ -176,7 +172,7 @@ public class TLongKyotoCabinetStore {
 	 * @param key
 	 * @return
 	 */
-	public byte[] get(long key, int partitionId) {
+	public byte[] get(byte[] key, int partitionId) {
 		int dbIndex = partitionId;//getDbIndex(key);
 		if(stores[dbIndex] != null)
 			return stores[dbIndex].get(key);
@@ -190,7 +186,7 @@ public class TLongKyotoCabinetStore {
 	 * @param key
 	 * @return
 	 */
-	public boolean delete(long key) {
+	public boolean delete(byte[] key) {
 		int dbIndex = getDbIndex(key);
 		if(stores[dbIndex] != null)
 			return stores[dbIndex].delete(key);
@@ -268,8 +264,8 @@ public class TLongKyotoCabinetStore {
 		private final int dbIndex;
 		private final DB hDb;
 
-		private volatile ConcurrentHashMap<Long, byte[]> prevMap;
-		private volatile ConcurrentHashMap<Long, byte[]> currentMap;
+		private volatile ConcurrentHashMap<byte[], byte[]> prevMap;
+		private volatile ConcurrentHashMap<byte[], byte[]> currentMap;
 		private volatile ConcurrentHashMap<byte[], byte[]> offsetMap;
 		private volatile boolean isClosing;
 		private volatile boolean forceFlush;
@@ -288,7 +284,7 @@ public class TLongKyotoCabinetStore {
 
 			// use TLINEAR
 			hDb = new DB(2);
-			currentMap = new ConcurrentHashMap<Long, byte[]>(2 * writeBufferSize);
+			currentMap = new ConcurrentHashMap<byte[], byte[]>(2 * writeBufferSize);
 			offsetMap = new ConcurrentHashMap<byte[], byte[]>(); 
 			flushCounter = new AtomicInteger(0);
 			forceFlush = false;
@@ -398,7 +394,7 @@ public class TLongKyotoCabinetStore {
 		 * @param key
 		 * @param value
 		 */
-		public void store(long key, byte[] value) throws Exception {
+		public void store(byte[] key, byte[] value) throws Exception {
 			if (ArrayUtils.isEmpty(value)) {
 				return;
 			}
@@ -438,14 +434,14 @@ public class TLongKyotoCabinetStore {
 		 * @param key
 		 * @return
 		 */
-		public byte[] get(long key) {
+		public byte[] get(byte[] key) {
 			byte[] result = currentMap.get(key);
 			if (result == null && prevMap != null) {
 				result = prevMap.get(key);
 			}
 
 			if (result == null) {
-				result = hDb.get(Convert.longToBytes(key));
+				result = hDb.get(key);
 			}
 
 			return result;
@@ -468,13 +464,13 @@ public class TLongKyotoCabinetStore {
 		 * @param key
 		 * @return
 		 */
-		public boolean delete(long key) {
+		public boolean delete(byte[] key) {
 			currentMap.remove(key);
 			if (prevMap != null) {
 				prevMap.remove(key);
 			}
 
-			return hDb.remove(Convert.longToBytes(key));
+			return hDb.remove(key);
 		}
 
 		/**
@@ -551,15 +547,15 @@ public class TLongKyotoCabinetStore {
 			if (currentMap.size() > 0 || isClosing || forceFlush) {
 				
 				prevMap = currentMap;
-				currentMap = new ConcurrentHashMap<Long, byte[]>(2 * writeBufferSize);
+				currentMap = new ConcurrentHashMap<byte[], byte[]>(2 * writeBufferSize);
 
 				long st = System.currentTimeMillis();
 				hDb.begin_transaction(false);
-				for (Entry<Long, byte[]> item : prevMap.entrySet()) {
-					long key = item.getKey();
+				for (Entry<byte[], byte[]> item : prevMap.entrySet()) {
+					byte[] key = item.getKey();
 					byte[] value = item.getValue();
-					if (!hDb.set(Convert.longToBytes(key), value)) {
-						logger.error("Failed to store for {}, Error: {}", key, hDb.error());
+					if (!hDb.set(key, value)) {
+						logger.error("Failed to store for {}, Error: {}", DefaultDataInterpreter.getDataInterpreter().interpretId(key), hDb.error());
 					}
 				}
 				if(numStores == 0 &&(flushCounter.addAndGet(1) % PER_OFFSET_FLUSH == 0 || isClosing || forceFlush))

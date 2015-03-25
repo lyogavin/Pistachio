@@ -58,10 +58,10 @@ public class StorePartition implements BootstrapPartitionHandler, StoreChangable
 
 	private AtomicLong seqId = new AtomicLong(0);
 	private AtomicLong nextSeqId = new AtomicLong(-1);
-	ConcurrentHashMap<Long, KeyValue> writeCache = new ConcurrentHashMap<Long, KeyValue>();
+	ConcurrentHashMap<byte[], KeyValue> writeCache = new ConcurrentHashMap<byte[], KeyValue>();
 
 
-	public ConcurrentHashMap<Long, KeyValue> getWriteCache() { return writeCache; }
+	public ConcurrentHashMap<byte[], KeyValue> getWriteCache() { return writeCache; }
 	public void setSeqId(long id) {
 		seqId.set(id);
 	}
@@ -80,15 +80,6 @@ public class StorePartition implements BootstrapPartitionHandler, StoreChangable
 
 	public StorePartition(int partitionId) {
 		this.partitionId = partitionId;
-		/*
-		try {
-			ModuleManager.registerMBean(
-					this,
-					new ObjectName("com.yahoo.ads.pb.platform.profile:name=ProfileServerStorePartition" + partitionId));
-		} catch (Exception e) {
-			logger.info("Exception regiestering mbean", e);
-		}
-		*/
 	}
 
 	@Override
@@ -277,30 +268,6 @@ public class StorePartition implements BootstrapPartitionHandler, StoreChangable
 		this.storeFactory = sf;
 	}
 	
-	public void receiveTransfer(String serverIp, String port, int priority) {
-		/*
-		logger.info("start receiving partition transfer, serverIp={}, port={}, priority={}", serverIp, port, priority);
-		
-		RecoveryDataReceiver receiver = RecoveryDataReceiver.getInstance();
-		receiver.setServerIp(serverIp)
-			.setPort(port)
-			.setPriority(priority)
-			.start();
-		
-		long offset = 0;
-		
-		if (receiver.isDone()) {
-			offset = receiver.getOffset();
-		}
-		*/
-	}
-	
-	public void receiveTransfer(String serverIp, String port) {
-		/*
-		receiveTransfer(serverIp, port, Thread.NORM_PRIORITY);
-		*/
-	}
-	
 	@Override
 	public void selfBootstraping(){
 		//s = storeFactory.getInstance();
@@ -351,38 +318,5 @@ public class StorePartition implements BootstrapPartitionHandler, StoreChangable
 
 	@Override
     public void bootstrapingOthers() {
-		/*
-		try{
-			isTransfering = true;
-			transferFinish = false;
-			while (receiveData) {
-				try {
-					Thread.sleep(100000L);
-				} catch (InterruptedException e) {
-				}
-			}
-			ZMQ.Context context = ZMQ.context(1);
-	
-			// Socket to send messages on
-			ZMQ.Socket sender = context.socket(ZMQ.PUSH);
-			sender.setHWM(1000L);
-			sender.bind("tcp://*:" + conf.getString("Store.TransferPort"));
-			sender.setSendTimeOut(transferTimeOutThreshHold);
-			if (s == null) {
-				logger.error("we should not expect a null store");
-			} else {
-				s.transfer(sender);
-				sender.send(ByteBuffer.allocate(4).putInt(0).array(), 0);
-				sender.send(ByteBuffer.allocate(8).putLong(currentOffset).array(),
-				        0);
-			}
-			sender.close();
-		
-		}catch(Exception e){
-			logger.error("transfer error partition num :"+partitionId, e);
-		}finally{
-			isTransfering = false;
-		}
-		*/
     }
 }
