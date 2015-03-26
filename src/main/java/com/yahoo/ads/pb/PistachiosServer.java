@@ -56,6 +56,7 @@ import org.apache.helix.controller.GenericHelixController;
 //import com.yahoo.ads.pb.platform.perf.InflightCounter;
 import com.yahoo.ads.pb.util.ConfigurationManager;
 import com.yahoo.ads.pb.util.NativeUtils;
+import com.yahoo.ads.pb.customization.CustomizationRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.configuration.Configuration;
