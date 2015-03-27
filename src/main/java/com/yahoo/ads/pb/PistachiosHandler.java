@@ -16,6 +16,6 @@ import com.yahoo.ads.pb.exception.*;
 
 public interface PistachiosHandler {
     public byte[] lookup(byte[] id, long partitionId) throws Exception;
-    public boolean store(byte[] id, long partitionId, byte[] value);
+    public boolean store(byte[] id, long partitionId, byte[] value, boolean callback);
     public boolean processBatch(byte[] id, long partitionId, List<byte[]> events);
 }

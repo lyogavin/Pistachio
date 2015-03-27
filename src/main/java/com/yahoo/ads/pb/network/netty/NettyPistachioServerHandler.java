@@ -60,7 +60,7 @@ public class NettyPistachioServerHandler extends SimpleChannelInboundHandler<Req
                 break;
             case STORE:
                 logger.debug("calling store");
-                result = handler.store(request.getId().toByteArray(), request.getPartition(), request.getData().toByteArray());
+                result = handler.store(request.getId().toByteArray(), request.getPartition(), request.getData().toByteArray(), request.getCallback());
                 builder.setSucceeded(result);
                 break;
             case PROCESS_EVENT:

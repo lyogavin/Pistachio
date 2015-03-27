@@ -162,7 +162,7 @@ public class PistachiosClient {
 	}
 
     /** 
-     * To store the key value.
+     * To store the key value without calling callback.
      *
      * @param id        id to store as byte[].
      * @param value     value to store as byte array
@@ -171,6 +171,20 @@ public class PistachiosClient {
      * @return          <code>boolean</code> succeeded or not
      */
 	public boolean store(byte[] id, byte[] value)  throws MasterNotFoundException, ConnectionBrokenException{
+        return store(id, value, true);
+    }
+
+    /** 
+     * To store the key value.
+     *
+     * @param id        id to store as byte[].
+     * @param value     value to store as byte array
+     * @param callback  does the registered callback need to be triggered
+     * @exception       MasterNotFoundException when fail because no master found
+     * @exception       ConnectionBrokenException when fail because connection is broken in the middle
+     * @return          <code>boolean</code> succeeded or not
+     */
+	public boolean store(byte[] id, byte[] value, boolean callback)  throws MasterNotFoundException, ConnectionBrokenException{
 		final Timer.Context context = storeTimer.time();
 		boolean succeeded = false;
         long backOffMillis =  0;
@@ -183,7 +197,7 @@ public class PistachiosClient {
 		try {
 			while (true) {
                 try {
-                    succeeded = clientImpl.store(id, value);
+                    succeeded = clientImpl.store(id, value, callback);
                 } catch (MasterNotFoundException | ConnectionBrokenException me) {
                     if (me instanceof MasterNotFoundException && !noMasterAutoRetry)
                         throw me;

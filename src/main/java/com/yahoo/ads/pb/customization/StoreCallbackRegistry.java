@@ -35,6 +35,7 @@ public class StoreCallbackRegistry extends CustomizationRegistry<StoreCallback> 
     public static synchronized StoreCallbackRegistry getInstance() {
         if (instance == null) {
             instance = new StoreCallbackRegistry();
+            instance.processor = new DefaultStoreCallback();
         }
         return instance;
     }

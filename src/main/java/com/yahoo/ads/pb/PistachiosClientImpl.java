@@ -16,7 +16,7 @@ import com.yahoo.ads.pb.exception.*;
 
 public interface PistachiosClientImpl {
 	public byte[] lookup(byte[] id) throws MasterNotFoundException, Exception;
-	public boolean store(byte[] id, byte[] value) throws MasterNotFoundException, ConnectionBrokenException;
+	public boolean store(byte[] id, byte[] value, boolean callback) throws MasterNotFoundException, ConnectionBrokenException;
     public boolean processBatch(byte[] id, List<byte[]> events) throws MasterNotFoundException, ConnectionBrokenException;
     public void close();
 }

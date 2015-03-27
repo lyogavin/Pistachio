@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import com.yahoo.ads.pb.store.TLongKyotoCabinetStore;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.ByteBufferOutput;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ArrayBlockingQueue;
 import com.yahoo.ads.pb.kafka.KeyValue;
@@ -44,6 +45,7 @@ import com.codahale.metrics.Timer;
 import com.codahale.metrics.JmxReporter;
 import com.yahoo.ads.pb.util.ConfigurationManager;
 import com.yahoo.ads.pb.DefaultDataInterpreter;
+import com.yahoo.ads.pb.customization.StoreCallbackRegistry;
 
 
 public class TKStore implements Store{
@@ -66,6 +68,7 @@ public class TKStore implements Store{
 	//private static  final IncrementCounter failedStoreCounter = new IncrementCounter(
 	//        ProfileServerModule.getCountergroupname(), "FailedStore");
 	private TLongKyotoCabinetStore profileStore;
+
 	
 	static {
 		//storeCounter.register();
@@ -91,6 +94,9 @@ public class TKStore implements Store{
 
 		@Override
 		public void run() {
+            ValueOffset valueOffset = new ValueOffset();
+            Kryo kryo = new Kryo();
+            ByteBufferOutput byteBufferOutput = new ByteBufferOutput(10240);
 
 			logger.info("start receiveing {}, partitionId {}", partition, partitionId);
 			while (!this.isInterrupted()) {
@@ -114,11 +120,49 @@ public class TKStore implements Store{
                     final Timer.Context context = tkStoreTimer.time();
 
                     try {
-                        PistachiosServer.getInstance().getProfileStore().store(eventOffset.keyValue.key, partitionId, eventOffset.keyValue.value);
+                        valueOffset.value = eventOffset.keyValue.value;
+                        valueOffset.offset = eventOffset.offset;
+                        byteBufferOutput.clear();
+
+                        // read old value
+                        byte[] oldValueOffsetBytes = PistachiosServer.getInstance().getProfileStore().get(eventOffset.keyValue.key, partitionId);
+                        if (oldValueOffsetBytes != null) {
+                            Input input = new Input(oldValueOffsetBytes);
+
+                            ValueOffset oldValueOffset = kryo.readObject(input, ValueOffset.class);
+                            input.close();
+                            //dedup first
+                            if (oldValueOffset.offset == eventOffset.offset) {
+                                logger.debug("dup offset found in data {}/{}/{}/{}", 
+                                        DefaultDataInterpreter.getDataInterpreter().interpretId(eventOffset.keyValue.key), 
+                                        DefaultDataInterpreter.getDataInterpreter().interpretData(eventOffset.keyValue.value),
+                                        eventOffset.offset);
+                                continue;
+                            }
+                            if (eventOffset.keyValue.callback && StoreCallbackRegistry.getInstance().getStoreCallback().needCallback()) {
+                                    valueOffset.value = StoreCallbackRegistry.getInstance().getStoreCallback().onStore(eventOffset.keyValue.key,
+                                        oldValueOffset.value, eventOffset.keyValue.value);
+                            }
+                        }
+
+                        kryo.writeObject(byteBufferOutput, valueOffset);
+
+                        PistachiosServer.getInstance().getProfileStore().store(eventOffset.keyValue.key, partitionId, byteBufferOutput.toBytes());
+
                         logger.debug("stored data {}/{}/{}/{}", 
                             DefaultDataInterpreter.getDataInterpreter().interpretId(eventOffset.keyValue.key), 
                             DefaultDataInterpreter.getDataInterpreter().interpretData(eventOffset.keyValue.value),
                             eventOffset.offset);
+
+                        // remove cache
+                        StorePartition storePartition = PistachiosServer.storePartitionMap.get(partitionId);
+
+                        if (storePartition == null) {
+                            logger.info("error getting storePartition for partition id {}.", partitionId);
+                        }
+
+                        storePartition.removeIteamFromCacheAccordingToSeqId(eventOffset.keyValue.key, eventOffset.keyValue.seqId);
+
                     } catch (Exception e) {
                         logger.info("error storing data {}/{}/{}/{}", 
                             DefaultDataInterpreter.getDataInterpreter().interpretId(eventOffset.keyValue.key), 

@@ -192,10 +192,10 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
         return res.getData().toByteArray();
     }
 
-	public boolean store(byte[] id, byte[] value) throws MasterNotFoundException, ConnectionBrokenException {
+	public boolean store(byte[] id, byte[] value, boolean callback) throws MasterNotFoundException, ConnectionBrokenException {
         long partition = partitioner.getPartition(id, helixPartitionSpectator.getTotalPartition("PistachiosResource"));
         if (isLocalCall(partition)) {
-            return PistachiosServer.handler.store(id, partition, value);
+            return PistachiosServer.handler.store(id, partition, value, callback);
         }
         NettyPistachioClientHandler handler = null;
         try {
@@ -209,7 +209,7 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
             return false;
         }
         Request.Builder builder = Request.newBuilder();
-        Response res = handler.sendRequest(builder.setId(ByteString.copyFrom(id)).setType(RequestType.STORE).setPartition(partition).setData(ByteString.copyFrom(value)));
+        Response res = handler.sendRequest(builder.setId(ByteString.copyFrom(id)).setType(RequestType.STORE).setPartition(partition).setData(ByteString.copyFrom(value)).setCallback(callback));
 
         if (res == null) {
             logger.debug("fail");

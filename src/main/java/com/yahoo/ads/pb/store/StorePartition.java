@@ -60,8 +60,28 @@ public class StorePartition implements BootstrapPartitionHandler, StoreChangable
 	private AtomicLong nextSeqId = new AtomicLong(-1);
 	ConcurrentHashMap<byte[], KeyValue> writeCache = new ConcurrentHashMap<byte[], KeyValue>();
 
+    public static Integer[] keyLocks = new Integer[1024];
+
+    static {
+        for (int i =0; i<1024;i++) {
+            keyLocks[i] = i;
+        }
+    }
+
+    public Integer getKeyLock(int key) {
+        return keyLocks[key];
+    }
+
+
 
 	public ConcurrentHashMap<byte[], KeyValue> getWriteCache() { return writeCache; }
+    public void removeIteamFromCacheAccordingToSeqId(byte[] key, long seqId) {
+        KeyValue keyValueInCache;
+        if (writeCache.containsKey(key) &&
+            (keyValueInCache = writeCache.get(key)).seqId == seqId) {
+            writeCache.remove(key, keyValueInCache);
+        }
+    }
 	public void setSeqId(long id) {
 		seqId.set(id);
 	}
@@ -204,7 +224,7 @@ public class StorePartition implements BootstrapPartitionHandler, StoreChangable
 					if (keyValue.seqId <= readOffset)
 						setSeqId(keyValue.seqId);
 
-					writeCache.remove(keyValue.key, keyValue);
+					//writeCache.remove(keyValue.key, keyValue);
 
 
 					saveTime = 0;

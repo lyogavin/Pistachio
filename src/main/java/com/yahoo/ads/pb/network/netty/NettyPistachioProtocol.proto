@@ -37,6 +37,7 @@ message Request {
   repeated bytes events = 7;
   optional string jar_server_url = 8;
   optional string process_class = 9;
+  optional bool callback = 10;
 
 }
 

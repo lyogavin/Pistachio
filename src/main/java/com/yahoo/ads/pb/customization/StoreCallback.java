@@ -15,6 +15,6 @@ import java.util.List;
 
 public interface StoreCallback {
 
-    public boolean needCurrentValue();
-    public byte[] onStore(byte[] key, byte[] currentValue);
+    public boolean needCallback();
+    public byte[] onStore(byte[] key, byte[] currentValue, byte[] toStore);
 }
