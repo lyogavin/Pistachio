@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.yahoo.ads.pb.kafka.KeyValue;
+import com.ibm.icu.util.ByteArrayWrapper;
 
 
 public class StorePartition implements BootstrapPartitionHandler, StoreChangable, StorePartitionMBean{
@@ -58,9 +59,16 @@ public class StorePartition implements BootstrapPartitionHandler, StoreChangable
 
 	private AtomicLong seqId = new AtomicLong(0);
 	private AtomicLong nextSeqId = new AtomicLong(-1);
-	ConcurrentHashMap<byte[], KeyValue> writeCache = new ConcurrentHashMap<byte[], KeyValue>();
+	ConcurrentHashMap<ByteArrayWrapper, KeyValue> writeCache = new ConcurrentHashMap<ByteArrayWrapper, KeyValue>();
 
     public static Integer[] keyLocks = new Integer[1024];
+    private final ThreadLocal<ByteArrayWrapper> byteArrayWrapperForGetKey =
+        new ThreadLocal<ByteArrayWrapper>() {
+            @Override protected ByteArrayWrapper initialValue() {
+                return new ByteArrayWrapper(new byte[100], 100);
+            }
+        };
+
 
     static {
         for (int i =0; i<1024;i++) {
@@ -74,12 +82,17 @@ public class StorePartition implements BootstrapPartitionHandler, StoreChangable
 
 
 
-	public ConcurrentHashMap<byte[], KeyValue> getWriteCache() { return writeCache; }
+	public ConcurrentHashMap<ByteArrayWrapper, KeyValue> getWriteCache() { return writeCache; }
+    public KeyValue getFromWriteCache(byte[] key) {
+            byteArrayWrapperForGetKey.get().set(key, 0, key.length);
+            return writeCache.get(byteArrayWrapperForGetKey.get());
+    }
     public void removeIteamFromCacheAccordingToSeqId(byte[] key, long seqId) {
+        byteArrayWrapperForGetKey.get().set(key, 0, key.length);
         KeyValue keyValueInCache;
-        if (writeCache.containsKey(key) &&
-            (keyValueInCache = writeCache.get(key)).seqId == seqId) {
-            writeCache.remove(key, keyValueInCache);
+        if (writeCache.containsKey(byteArrayWrapperForGetKey.get()) &&
+            (keyValueInCache = writeCache.get(byteArrayWrapperForGetKey.get())).seqId == seqId) {
+            writeCache.remove(byteArrayWrapperForGetKey.get(), keyValueInCache);
         }
     }
 	public void setSeqId(long id) {

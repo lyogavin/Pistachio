@@ -25,6 +25,7 @@ import kafka.producer.KeyedMessage;
 import kafka.producer.ProducerConfig;
 
 import com.yahoo.ads.pb.store.StorePartition;
+import com.ibm.icu.util.ByteArrayWrapper;
 import java.util.concurrent.TimeUnit;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -64,7 +65,8 @@ import org.apache.commons.configuration.Configuration;
 import com.google.common.base.Joiner.MapJoiner;
 import com.google.common.base.Joiner;
 import com.yahoo.ads.pb.customization.StoreCallbackRegistry;
-
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Input;
 
 
 // Generated code
@@ -81,7 +83,25 @@ public class PistachiosServer {
 		} catch (Exception e) {	 
 			e.printStackTrace(); // This is probably not the best way to handle exception :-)	 
 		}	 
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+                @Override
+                public void run() {
+                    if (instance != null) 
+                        instance.shutdown();
+                }
+            });
 	}
+
+    void shutdown() {
+
+        manager.stop();
+        BootstrapOnlineOfflineStateModel.awaitAllResetThreads();
+
+        // close profile store
+        logger.info("closing physical stores");
+        profileStore.close();
+        profileStore = null;
+    }
 
 
 	private static Logger logger = LoggerFactory.getLogger(PistachiosServer.class);
@@ -153,6 +173,8 @@ public class PistachiosServer {
 
   //public static class PistachiosHandler implements Pistachios.Iface{
   public static class DefaultPistachiosHandler implements PistachiosHandler{
+    Kryo kryo = new Kryo();
+
 	String storage;
 
     public byte[] lookup(byte[] id, long partitionId) throws Exception
@@ -170,7 +192,7 @@ public class PistachiosServer {
                 logger.info("error getting storePartition for partition id {}, dump map: {}.", partitionId, Joiner.on(',').withKeyValueSeparator("=").join(PistachiosServer.storePartitionMap));
                 throw new Exception("dont find the store partition obj");
             }
-			KeyValue toRetrun = storePartition.getWriteCache().get(id);
+			KeyValue toRetrun = storePartition.getFromWriteCache(id);
 			if (toRetrun != null) {
                 logger.debug("null from cache");
 				return toRetrun.value;
@@ -178,8 +200,12 @@ public class PistachiosServer {
 
             byte[] toRet = PistachiosServer.getInstance().getProfileStore().get(id, (int)partitionId);
 			if (null != toRet) {
-                logger.debug("got from store engine: {}", toRet);
-                return toRet;
+                Input input = new Input(toRet);
+
+                ValueOffset valueOffset = kryo.readObject(input, ValueOffset.class);
+                input.close();
+                logger.debug("got from store engine: {} parsed as {}", toRet, valueOffset);
+                return valueOffset.value;
             }
             logger.info("dont find value from store");
             return null;
@@ -233,13 +259,14 @@ public class PistachiosServer {
                 synchronized(storePartition.getKeyLock((int)lockKey)) {
 
                     logger.debug("sent msg {} {} {}, partition current seqid {}", 
-                        kv.key, kv.value, kv.seqId, PistachiosServer.storePartitionMap.get(partitionId).getSeqId());
+                        kv.key, kv.value, kv.seqId, 
+                        storePartition.getSeqId());
 
-                    byte[] currentValue = PistachiosServer.storePartitionMap.get(partitionId).getWriteCache().get(id).value;
+                    byte[] currentValue = (storePartition.getFromWriteCache(id) != null) ? storePartition.getFromWriteCache(id).value : null;
                     kv.value = StoreCallbackRegistry.getInstance().getStoreCallback().onStore(id, currentValue, value);
 
                     if (kv.value != null) {
-                        PistachiosServer.storePartitionMap.get(partitionId).getWriteCache().putIfAbsent(id, kv);
+                        PistachiosServer.storePartitionMap.get(partitionId).getWriteCache().putIfAbsent(new ByteArrayWrapper(id, id.length), kv);
                     }
                     KeyedMessage<String, KeyValue> message = new KeyedMessage<String, KeyValue>(partitionTopic, kv);
                     getKafkaProducerInstance().send(message);
@@ -249,7 +276,7 @@ public class PistachiosServer {
                     logger.debug("sent msg {} {} {}, partition current seqid {}", 
                         kv.key, kv.value, kv.seqId, PistachiosServer.storePartitionMap.get(partitionId).getSeqId());
 
-                    PistachiosServer.storePartitionMap.get(partitionId).getWriteCache().put(id, kv);
+                    PistachiosServer.storePartitionMap.get(partitionId).getWriteCache().put(new ByteArrayWrapper(id, id.length), kv);
 
                     KeyedMessage<String, KeyValue> message = new KeyedMessage<String, KeyValue>(partitionTopic, kv);
                     getKafkaProducerInstance().send(message);

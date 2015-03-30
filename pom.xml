@@ -17,6 +17,12 @@
 
 
     <dependencies>
+    <dependency>
+        <groupId>com.ibm.icu</groupId>
+            <artifactId>icu4j</artifactId>
+                <version>54.1.1</version>
+                </dependency>
+
         <dependency>
             <groupId>org.apache.curator</groupId>
             <artifactId>curator-x-discovery</artifactId>

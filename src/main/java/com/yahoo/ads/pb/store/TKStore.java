@@ -155,13 +155,14 @@ public class TKStore implements Store{
                             eventOffset.offset);
 
                         // remove cache
-                        StorePartition storePartition = PistachiosServer.storePartitionMap.get(partitionId);
+                        StorePartition storePartition = PistachiosServer.storePartitionMap.get((long)partitionId);
 
                         if (storePartition == null) {
-                            logger.info("error getting storePartition for partition id {}.", partitionId);
+                            logger.info("error getting storePartition for partition id {}. dump store partition map {}", partitionId,
+                                PistachiosServer.storePartitionMap.toString());
                         }
-
-                        storePartition.removeIteamFromCacheAccordingToSeqId(eventOffset.keyValue.key, eventOffset.keyValue.seqId);
+                        else 
+                            storePartition.removeIteamFromCacheAccordingToSeqId(eventOffset.keyValue.key, eventOffset.keyValue.seqId);
 
                     } catch (Exception e) {
                         logger.info("error storing data {}/{}/{}/{}", 
@@ -350,7 +351,8 @@ public class TKStore implements Store{
 
 	@Override
 	public boolean close() {
-		profileStore.close();
+        // close only when exiting or dropping
+		//profileStore.close();
 		for (Thread t : comsumerThreads) {
 			t.interrupt();
 		}

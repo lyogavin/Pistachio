@@ -12,6 +12,7 @@
 package com.yahoo.ads.pb.store;
 
 import com.yahoo.ads.pb.util.Convert;
+import com.ibm.icu.util.ByteArrayWrapper;
 
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -104,6 +105,16 @@ public class TLongKyotoCabinetStore {
 				store.close();
 		}
 	}
+    /**
+     * Close all database.
+     */
+    public void close(int partitionId) {
+            if(stores[partitionId] != null){
+                stores[partitionId].close();
+                stores[partitionId] = null;
+            }
+                
+    }
 	
 	/**
 	 * Get database index based on input key.
@@ -264,9 +275,9 @@ public class TLongKyotoCabinetStore {
 		private final int dbIndex;
 		private final DB hDb;
 
-		private volatile ConcurrentHashMap<byte[], byte[]> prevMap;
-		private volatile ConcurrentHashMap<byte[], byte[]> currentMap;
-		private volatile ConcurrentHashMap<byte[], byte[]> offsetMap;
+		private volatile ConcurrentHashMap<ByteArrayWrapper, byte[]> prevMap;
+		private volatile ConcurrentHashMap<ByteArrayWrapper, byte[]> currentMap;
+		private volatile ConcurrentHashMap<ByteArrayWrapper, byte[]> offsetMap;
 		private volatile boolean isClosing;
 		private volatile boolean forceFlush;
 		private Thread profileWriter;
@@ -278,14 +289,20 @@ public class TLongKyotoCabinetStore {
 		private java.util.Random rand = new java.util.Random();
 		private static final int maxQueuingCount = 200000;
 		private volatile int queuingSize = 0;
+        private final ThreadLocal<ByteArrayWrapper> byteArrayWrapperForGetKey =
+            new ThreadLocal<ByteArrayWrapper>() {
+                @Override protected ByteArrayWrapper initialValue() {
+                    return new ByteArrayWrapper(new byte[100], 100);
+                }
+            };
 
 		public Store(int dbIndex) {
 			this.dbIndex = dbIndex;
 
 			// use TLINEAR
 			hDb = new DB(2);
-			currentMap = new ConcurrentHashMap<byte[], byte[]>(2 * writeBufferSize);
-			offsetMap = new ConcurrentHashMap<byte[], byte[]>(); 
+			currentMap = new ConcurrentHashMap<ByteArrayWrapper, byte[]>(2 * writeBufferSize);
+			offsetMap = new ConcurrentHashMap<ByteArrayWrapper, byte[]>(); 
 			flushCounter = new AtomicInteger(0);
 			forceFlush = false;
 		}
@@ -410,7 +427,7 @@ public class TLongKyotoCabinetStore {
 				}
 			}
 
-			currentMap.put(key, value);
+			currentMap.put(new ByteArrayWrapper(key, key.length), value);
 		}
 		
 		/**
@@ -435,7 +452,8 @@ public class TLongKyotoCabinetStore {
 		 * @return
 		 */
 		public byte[] get(byte[] key) {
-			byte[] result = currentMap.get(key);
+            byteArrayWrapperForGetKey.get().set(key, 0, key.length);
+			byte[] result = currentMap.get(byteArrayWrapperForGetKey.get());
 			if (result == null && prevMap != null) {
 				result = prevMap.get(key);
 			}
@@ -465,7 +483,8 @@ public class TLongKyotoCabinetStore {
 		 * @return
 		 */
 		public boolean delete(byte[] key) {
-			currentMap.remove(key);
+            byteArrayWrapperForGetKey.get().set(key, 0, key.length);
+			currentMap.remove(byteArrayWrapperForGetKey.get());
 			if (prevMap != null) {
 				prevMap.remove(key);
 			}
@@ -547,15 +566,15 @@ public class TLongKyotoCabinetStore {
 			if (currentMap.size() > 0 || isClosing || forceFlush) {
 				
 				prevMap = currentMap;
-				currentMap = new ConcurrentHashMap<byte[], byte[]>(2 * writeBufferSize);
+				currentMap = new ConcurrentHashMap<ByteArrayWrapper, byte[]>(2 * writeBufferSize);
 
 				long st = System.currentTimeMillis();
 				hDb.begin_transaction(false);
-				for (Entry<byte[], byte[]> item : prevMap.entrySet()) {
-					byte[] key = item.getKey();
+				for (Entry<ByteArrayWrapper, byte[]> item : prevMap.entrySet()) {
+					ByteArrayWrapper key = item.getKey();
 					byte[] value = item.getValue();
-					if (!hDb.set(key, value)) {
-						logger.error("Failed to store for {}, Error: {}", DefaultDataInterpreter.getDataInterpreter().interpretId(key), hDb.error());
+					if (!hDb.set(key.bytes, value)) {
+						logger.error("Failed to store for {}, Error: {}", DefaultDataInterpreter.getDataInterpreter().interpretId(key.bytes), hDb.error());
 					}
 				}
 				if(numStores == 0 &&(flushCounter.addAndGet(1) % PER_OFFSET_FLUSH == 0 || isClosing || forceFlush))
