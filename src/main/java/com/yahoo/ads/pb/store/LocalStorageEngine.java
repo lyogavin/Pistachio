@@ -71,19 +71,8 @@ public class LocalStorageEngine {
 		this.totalRecords = totalRecords;
 		this.mappedMemorySize = mappedMemorySize;
 		this.isReadOnly = isReadOnly;
-        this.numStores = numStores;
-        /*
-		if (numStores == 0) {
-			this.numStores = 0;
-			stores = new StoreEngine[256];
-		} else {
 			this.numStores = numStores;
-			stores = new KCStoreEngine[numStores];
-			for (int i = 0; i < numStores; i++) {
-				stores[i] = new StoreEngine(i);
-			}
-		}
-        */
+			stores = new StoreEngine[numStores];
 	}
 
 	/**
