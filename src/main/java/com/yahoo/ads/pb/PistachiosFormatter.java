@@ -29,7 +29,6 @@ import com.yahoo.ads.pb.store.TKStoreFactory;
 
 
 import org.apache.helix.model.StateModelDefinition;
-import com.yahoo.ads.pb.store.TLongKyotoCabinetStore;
 import com.yahoo.ads.pb.kafka.KeyValue;
 import com.yahoo.ads.pb.helix.PartitionHandler;
 import com.yahoo.ads.pb.helix.PartitionHandlerFactory;

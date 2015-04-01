@@ -37,7 +37,7 @@ import com.codahale.metrics.JmxReporter;
 
 
 import java.net.InetAddress;
-import com.yahoo.ads.pb.store.TLongKyotoCabinetStore;
+import com.yahoo.ads.pb.store.LocalStorageEngine;
 import com.yahoo.ads.pb.kafka.KeyValue;
 import com.yahoo.ads.pb.helix.PartitionHandler;
 import com.yahoo.ads.pb.helix.PartitionHandlerFactory;
@@ -123,7 +123,7 @@ public class PistachiosServer {
 	private HelixPartitionManager<BootstrapOnlineOfflineStateModel> manager; // for partition management
 	private static HelixPartitionSpectator helixPartitionSpectator;
 
-	private TLongKyotoCabinetStore profileStore;
+	private LocalStorageEngine profileStore;
 
 	private static Producer<String, byte[]> kafkaProducer = null;
 
@@ -198,7 +198,7 @@ public class PistachiosServer {
 				return toRetrun.value;
             }
 
-            byte[] toRet = PistachiosServer.getInstance().getProfileStore().get(id, (int)partitionId);
+            byte[] toRet = PistachiosServer.getInstance().getLocalStorageEngine().get(id, (int)partitionId);
 			if (null != toRet) {
                 Input input = new Input(toRet);
 
@@ -289,7 +289,7 @@ public class PistachiosServer {
 			}
 			return true;
 
-			//PistachiosServer.getInstance().getProfileStore().store(id, value.array());
+			//PistachiosServer.getInstance().getLocalStorageEngine().store(id, value.array());
 		} catch (Exception e) {
 			logger.info("error storing {} {}", 
                 DefaultDataInterpreter.getDataInterpreter().interpretId(id), 
@@ -379,7 +379,7 @@ public class PistachiosServer {
     }
   }
 
-  public TLongKyotoCabinetStore getProfileStore() {
+  public LocalStorageEngine getLocalStorageEngine() {
 	  return profileStore;
   }
 
@@ -398,7 +398,7 @@ public class PistachiosServer {
 		try {
 			// open profile store
 			Configuration conf = ConfigurationManager.getConfiguration();
-			profileStore = new TLongKyotoCabinetStore(
+			profileStore = new LocalStorageEngine(
 			        conf.getString(PROFILE_BASE_DIR),
 			        0, 8,
 			        conf.getInt("StorageEngine.KC.RecordsPerPartition"),

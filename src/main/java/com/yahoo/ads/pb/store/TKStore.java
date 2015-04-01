@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 //import com.yahoo.ads.pb.platform.profile.RuntimeUserProfile;
 //import com.yahoo.ads.pb.platform.profile.UserEventProtos.UserEvent;
 //import com.yahoo.ads.pb.util.Convert;
-import com.yahoo.ads.pb.store.TLongKyotoCabinetStore;
+import com.yahoo.ads.pb.store.LocalStorageEngine;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.ByteBufferOutput;
@@ -67,7 +67,7 @@ public class TKStore implements Store{
 
 	//private static  final IncrementCounter failedStoreCounter = new IncrementCounter(
 	//        ProfileServerModule.getCountergroupname(), "FailedStore");
-	private TLongKyotoCabinetStore profileStore;
+	private LocalStorageEngine profileStore;
 
 	
 	static {
@@ -125,7 +125,7 @@ public class TKStore implements Store{
                         byteBufferOutput.clear();
 
                         // read old value
-                        byte[] oldValueOffsetBytes = PistachiosServer.getInstance().getProfileStore().get(eventOffset.keyValue.key, partitionId);
+                        byte[] oldValueOffsetBytes = PistachiosServer.getInstance().getLocalStorageEngine().get(eventOffset.keyValue.key, partitionId);
                         if (oldValueOffsetBytes != null) {
                             Input input = new Input(oldValueOffsetBytes);
 
@@ -147,7 +147,7 @@ public class TKStore implements Store{
 
                         kryo.writeObject(byteBufferOutput, valueOffset);
 
-                        PistachiosServer.getInstance().getProfileStore().store(eventOffset.keyValue.key, partitionId, byteBufferOutput.toBytes());
+                        PistachiosServer.getInstance().getLocalStorageEngine().store(eventOffset.keyValue.key, partitionId, byteBufferOutput.toBytes());
 
                         logger.debug("stored data {}/{}/{}/{}", 
                             DefaultDataInterpreter.getDataInterpreter().interpretId(eventOffset.keyValue.key), 
@@ -326,7 +326,7 @@ public class TKStore implements Store{
 	@Override
 	public boolean open(int partitionId) {
 		this.partitionId = partitionId;
-		profileStore = PistachiosServer.getInstance().getProfileStore();
+		profileStore = PistachiosServer.getInstance().getLocalStorageEngine();
 		try {
 	       logger.debug("open store for partition {}",partitionId);
 	        profileStore.open(partitionId);

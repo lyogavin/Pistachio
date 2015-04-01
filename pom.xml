@@ -17,6 +17,11 @@
 
 
     <dependencies>
+        <dependency>
+			<groupId>org.rocksdb</groupId>
+			<artifactId>rocksdbjni</artifactId>
+			<version>3.6.2</version>
+		</dependency>
     <dependency>
         <groupId>com.ibm.icu</groupId>
             <artifactId>icu4j</artifactId>

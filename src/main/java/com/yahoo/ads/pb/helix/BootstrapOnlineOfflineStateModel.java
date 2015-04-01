@@ -123,7 +123,7 @@ public class BootstrapOnlineOfflineStateModel extends StateModel{
 		//stop();
 
         //TODO: avoid calling static func
-        PistachiosServer.getInstance().getProfileStore().close(partitionId);
+        PistachiosServer.getInstance().getLocalStorageEngine().close(partitionId);
 	}
 	
 	@Transition(to = "OFFLINE", from = "ERROR")
