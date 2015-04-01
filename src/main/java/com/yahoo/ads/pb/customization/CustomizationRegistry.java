@@ -9,7 +9,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-package com.yahoo.ads.pb;
+package com.yahoo.ads.pb.customization;
 import com.yahoo.ads.pb.util.ConfigurationManager;
 import org.apache.curator.utils.CloseableUtils;
 import org.apache.curator.framework.CuratorFramework;
@@ -23,17 +23,21 @@ import org.slf4j.LoggerFactory;
 import java.net.URLClassLoader;
 import java.net.URL;
 
-public class ProcessorRegistry implements NodeCacheListener{
-	private static Logger logger = LoggerFactory.getLogger(ProcessorRegistry.class);
+public class CustomizationRegistry<T> implements NodeCacheListener{
+    private static Logger logger = LoggerFactory.getLogger(CustomizationRegistry.class);
 
     public static final String PATH = "/pistachio_zk/processor_registry/info";
-	private static final String ZOOKEEPER_SERVER = "Pistachio.ZooKeeper.Server";
-    private EventProcessor processor = null;
+    private static final String ZOOKEEPER_SERVER = "Pistachio.ZooKeeper.Server";
+    protected T processor = null;
     private CuratorFramework    client = null;
     private NodeCache   cache = null;
-    private static ProcessorRegistry instance = null;
+    private String lastData = null;
 
-    public ProcessorRegistry() {
+    public CustomizationRegistry() {
+    }
+
+    protected String getZKPath() {
+        return PATH;
     }
 
     public void init() {
@@ -65,14 +69,16 @@ public class ProcessorRegistry implements NodeCacheListener{
         */
     }
 
-    public static synchronized ProcessorRegistry getInstance() {
+    /*
+    public static synchronized CustomizationRegistry getInstance() {
         if (instance == null) {
-            instance = new ProcessorRegistry();
+            instance = new CustomizationRegistry();
         }
         return instance;
     }
+    */
 
-    public EventProcessor getProcessor() {
+    public T getCustomization() {
         return processor;
     }
 
@@ -88,7 +94,7 @@ public class ProcessorRegistry implements NodeCacheListener{
             URLClassLoader child = new URLClassLoader(uRLArray, this.getClass().getClassLoader());
             Class classToLoad = Class.forName (className, true, child);
             Object instance = classToLoad.newInstance ();
-            processor = (EventProcessor) instance;
+            processor = (T) instance;
             logger.info("created processor instance based on jar: {} and class: {}", classURL, className);
         } catch (Exception e) {
             logger.info("error loadFromRegistry ", e);
@@ -100,9 +106,11 @@ public class ProcessorRegistry implements NodeCacheListener{
 
         if (data != null && data.getData() != null) {
             String strData = new String(data.getData());
-            logger.info("got data {} from path {}", strData, PATH);
-
-            loadFromRegistry(strData);
+            logger.info("got data {} from path {}, lastData {}", strData, PATH, lastData);
+            if (lastData == null || !lastData.equals(strData)) {
+                lastData = strData;
+                loadFromRegistry(strData);
+            }
         } else {
         logger.info("empty data in path {}", PATH);
         }

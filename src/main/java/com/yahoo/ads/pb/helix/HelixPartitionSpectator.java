@@ -16,7 +16,6 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -68,6 +67,12 @@ public class HelixPartitionSpectator {
 				manager.disconnect();
 			}
 			throw new RuntimeException("init HelixPartitionSpectator failure");
+		}
+	}
+	
+	public void close() {
+		if (manager != null) {
+			manager.disconnect();
 		}
 	}
 

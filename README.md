@@ -1,12 +1,23 @@
 Pistachio
 ==========
-The biggest cost of distributed computing is the disk and network IO overhead. Data locality is often key to the performance of distributed computing. The existing commonly used systems like Hadoop and Storm are not designed for improving data locality, so they have bottlenecks to achieve the best performance. Also memeory and SSD drives become cheaper and cheaper. Keeping data in memory or SSD reliably can often significantly improve performance of distributed compute. Pistachio is designed for addressing those problems to make distributed computing 10x faster.
+### Low latency, Strong consistency, Fault tolerant
 
-Pistachio is originally designed for low latency, strong consistency user data storage in ad serving in Yahoo. In our use case, it stores data for billions of users, supporting millions of reads and writes QPS with very low latency. It guarantees strong consistency and can achieve great fault-tolerance, availability and scalability. We then extended it to do distribted compute to leverage the low latency. Previously we used thousands of Hadoop servers to process 10s TB data daily in 4 hours. With Pistachio, we can achieve realtime streaming processing with around hundred servers.
+Pistachio is a distributed key value store system. Data can be replicated with n replicas with strong consistency gurantees. Up to (n-1) failures can be tolerated.
 
-A solid and reliable storage layer is critical for distributed compute system. Like in Hadoop's case, the stability of HDFS is the foundation of Map Reduce's succeess. Lack of a stable and efficient enough storage layer is also often the pain point of using storm. Pistachio is firstly a succeessful storage system, then the distributed compute is all designed around Pistachio.
+### Proven in massive scale production 
 
-Pistachio colocates the compute and data as much as possible thus can avoid data transfer round trips and gaurantee the best data locality. If the memory is big enough, it can reliably store all the data in memory to reduce the latency.
+Pistachio is being used as the user profile storage for massive scale ad serving products in Yahoo. 10+ billions of user profiles are being stored with ~2 million reads QPS and ~0.5 million writes QPS. It guarantees strong consistency and fault-tolerance. We have hundres of servers in 8 data centers all over the globe.
+
+### Re-invent the storage system for big data cloud compute
+
+Data locality is the key to the performance of cloud computing. Run time can have 100x difference to process the same data with different data locality. HDFS is a very reliable storage system and mostly commonly used in large scale cloud computing. But it's too slow already. We've successfully used Pistachio to achieve 100x faster cloud compute. Storage can no longer be a external system to the compute. Compute can be embedded to the storage. Best compute performacne can be achieved this way.
+
+### Flexible interfaces to embed compute logic to data storage
+Traditional pattern to access storage system is to access from a client lib, you read the data, do some compute, then write it back. There can be lots of round trip overhead. Pistachio supports lots of flexible interfaces for the client to embed callbacks or processing logics to the storage server side to avoid the round trips.
+
+### Flexible local storage engine plugin
+Different use case may need different durability. In some cases the storage is only used for short term compute, then it'll be persisted to HDFS. Then you want to have memory only storage with replications only for fault tolerance. In some cases, when you have many random read/write, and using SSD as the local storage may give you the best performacne. Pistachio supports flexible local storage engines in-mem, Kyoto Cabinet(best for SSD) and Rocks DB.
+
 
 http://lyogavin.github.io/Pistachio/
 

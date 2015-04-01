@@ -9,24 +9,20 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-package com.yahoo.ads.pb.kafka;
+package com.yahoo.ads.pb.store;
 
-import java.util.Arrays;
+public class ValueOffset {
 
-
-public class KeyValue {
-
-	public byte[] key;
-	public long seqId;
 	public byte[] value;
-    public boolean callback;
+	public long offset;
 
 	public boolean equals(Object obj) {
 		if (this == obj) return true;
-		if (! (obj instanceof KeyValue)) return false;
+		if (! (obj instanceof ValueOffset)) return false;
 
-		KeyValue that = (KeyValue)obj;
+		ValueOffset that = (ValueOffset)obj;
 
-		return Arrays.equals(key,that.key) && (seqId == that.seqId) && Arrays.equals(value, that.value) && (callback == that.callback);
+		return (value == that.value) && (offset == that.offset);
 	}
 }
+

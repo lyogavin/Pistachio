@@ -13,18 +13,17 @@ package com.yahoo.ads.pb.network.netty;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+
 import com.yahoo.ads.pb.network.netty.NettyPistachioProtocol.*;
 import com.google.protobuf.ByteString;
 import com.google.common.collect.Lists;
 import com.google.common.base.Function;
 import com.yahoo.ads.pb.PistachiosHandler;
 
-import java.util.Calendar;
-import java.util.TimeZone;
+import java.util.Collections;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static java.util.Calendar.*;
 
 public class NettyPistachioServerHandler extends SimpleChannelInboundHandler<Request> {
 	private static Logger logger = LoggerFactory.getLogger(NettyPistachioServerHandler.class);
@@ -60,7 +59,7 @@ public class NettyPistachioServerHandler extends SimpleChannelInboundHandler<Req
                 break;
             case STORE:
                 logger.debug("calling store");
-                result = handler.store(request.getId().toByteArray(), request.getPartition(), request.getData().toByteArray());
+                result = handler.store(request.getId().toByteArray(), request.getPartition(), request.getData().toByteArray(), request.getCallback());
                 builder.setSucceeded(result);
                 break;
             case PROCESS_EVENT:
@@ -76,12 +75,46 @@ public class NettyPistachioServerHandler extends SimpleChannelInboundHandler<Req
                                     }));
                 builder.setSucceeded(result);
                 break;
+            case MULTI_LOOKUP:
+            	logger.debug("calling multi lookup");
+				for (Request req : request.getRequestsList()) {
+					long partitionId = req.getPartition();
+					for (ByteString id : req.getIdsList()) {
+						try {
+							byte[] res = handler.lookup(id.toByteArray(), partitionId);
+							builder.addResponses(Response.newBuilder().setId(id)
+									.setSucceeded(true)
+									.setData(ByteString.copyFrom(res)).build());
+						} catch (Exception e) {
+							builder.addResponses(Response.newBuilder().setId(id)
+									.setSucceeded(false).build());
+						}
+					}
+				}
+				break;
+            case MULTI_PROCESS_EVENT:
+            	logger.debug("calling multi process");
+            	for (Request req: request.getRequestsList()) {
+            		long partitionId = req.getPartition();
+            		int n = req.getIdsCount();
+            		for (int i = 0; i < n; i++) {
+            			boolean ret = false;
+            			try {
+            				ret = handler.processBatch(req.getIds(i).toByteArray(), partitionId, Collections.singletonList(req.getEvents(i).toByteArray()));
+            			} catch (Exception e) {
+            				ret = false;
+            			}
+        				builder.addResponses(Response.newBuilder().setId(req.getIds(i))
+        						.setSucceeded(ret).build()
+        						);
+            		}
+            	}
             default:
                 logger.debug("default branch");
                 break;
         }
 
-        builder.setThreadId(request.getThreadId());
+        if (request.hasThreadId()) builder.setThreadId(request.getThreadId());
         builder.setRequestId(request.getRequestId());
 
 

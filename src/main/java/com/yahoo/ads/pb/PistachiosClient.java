@@ -18,18 +18,27 @@ import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TSSLTransportFactory.TSSLTransportParameters;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
+
 import java.nio.ByteBuffer;
+
 import com.yahoo.ads.pb.helix.HelixPartitionSpectator;
 import com.yahoo.ads.pb.util.ConfigurationManager;
+
 import org.apache.commons.configuration.Configuration;
+
 import java.net.InetAddress;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Future;
+
 import org.slf4j.Logger;
 import org.apache.zookeeper.ZooKeeper;
 import org.slf4j.LoggerFactory;
-import com.google.api.client.util.ExponentialBackOff;
 
+import com.google.api.client.util.ExponentialBackOff;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.Timer;
@@ -38,6 +47,7 @@ import com.google.api.client.util.ExponentialBackOff;
 import com.google.api.client.util.BackOff;
 import com.yahoo.ads.pb.PistachiosClientImpl;
 import com.yahoo.ads.pb.PistachiosServer;
+import com.yahoo.ads.pb.customization.ProcessorRegistry;
 import com.yahoo.ads.pb.exception.*;
 import com.yahoo.ads.pb.network.netty.NettyPistachioClient;
 
@@ -64,10 +74,12 @@ public class PistachiosClient {
 	private final static Meter lookupFailureRequests = metrics.meter(MetricRegistry.name(PistachiosServer.class, "lookupFailureRequests"));
 	private final static Meter storeFailureRequests = metrics.meter(MetricRegistry.name(PistachiosServer.class, "storeFailureRequests"));
 	private final static Meter processFailureRequests = metrics.meter(MetricRegistry.name(PistachiosServer.class, "processFailureRequests"));
+	private final static Meter mutliLookupFailureRequests = metrics.meter(MetricRegistry.name(PistachiosServer.class, "multiLookupFailureRequests"));	
 
 	private final static Timer lookupTimer = metrics.timer(MetricRegistry.name(PistachiosServer.class, "lookupTimer"));
 	private final static Timer storeTimer = metrics.timer(MetricRegistry.name(PistachiosServer.class, "storeTimer"));
 	private final static Timer processTimer = metrics.timer(MetricRegistry.name(PistachiosServer.class, "processTimer"));
+	private final static Timer multiLookupTimer = metrics.timer(MetricRegistry.name(PistachiosServer.class, "multiLookupTimer"));
 
     private PistachiosClientImpl clientImpl = new NettyPistachioClient();
 
@@ -160,9 +172,60 @@ public class PistachiosClient {
 		}
 
 	}
+	
+	public Map<byte[], byte[]> multiLookUp(List<byte[]> ids) throws MasterNotFoundException, Exception {
+		final Timer.Context context = multiLookupTimer.time();
+		Map<byte[], byte[]> ret =  null;
+        long backOffMillis =  0;
+        boolean succeeded = false;
+        BackOff backoff = (new ExponentialBackOff.Builder()).setInitialIntervalMillis(initialIntervalMillis)
+            .setMaxElapsedTimeMillis(maxElapsedTimeMillis)
+            .setMaxIntervalMillis(maxIntervalMillis)
+            .build();
+
+
+		try {
+			while (true) {
+                try {
+                    ret = clientImpl.multiLookup(ids);
+                } catch (MasterNotFoundException | ConnectionBrokenException me) {
+                    if (me instanceof MasterNotFoundException && !noMasterAutoRetry)
+                        throw me;
+
+                    if (me instanceof ConnectionBrokenException && !connectionBrokenAutoRetry)
+                        throw me;
+
+                    try{
+                        backOffMillis = backoff.nextBackOffMillis();
+                        if (backOffMillis == BackOff.STOP) {
+                            throw me;
+                        }
+                        logger.debug("no master found, auto retry after sleeping {} ms", backOffMillis);
+                        Thread.sleep(backOffMillis);
+                    }catch(Exception e) {
+                    }
+                    continue;
+                } catch (Exception e) {
+                    throw e;
+                }
+
+                succeeded = true;
+                return ret;
+            }
+
+		} finally {
+			if (!succeeded)
+				mutliLookupFailureRequests.mark();
+			context.stop();
+		}		
+	}
+	
+	public Map<byte[], Future<byte[]>> multiLookUpAsync(List<byte[]> ids) {
+		return clientImpl.multiLookupAsync(ids);
+	}
 
     /** 
-     * To store the key value.
+     * To store the key value without calling callback.
      *
      * @param id        id to store as byte[].
      * @param value     value to store as byte array
@@ -171,6 +234,20 @@ public class PistachiosClient {
      * @return          <code>boolean</code> succeeded or not
      */
 	public boolean store(byte[] id, byte[] value)  throws MasterNotFoundException, ConnectionBrokenException{
+        return store(id, value, true);
+    }
+
+    /** 
+     * To store the key value.
+     *
+     * @param id        id to store as byte[].
+     * @param value     value to store as byte array
+     * @param callback  does the registered callback need to be triggered
+     * @exception       MasterNotFoundException when fail because no master found
+     * @exception       ConnectionBrokenException when fail because connection is broken in the middle
+     * @return          <code>boolean</code> succeeded or not
+     */
+	public boolean store(byte[] id, byte[] value, boolean callback)  throws MasterNotFoundException, ConnectionBrokenException{
 		final Timer.Context context = storeTimer.time();
 		boolean succeeded = false;
         long backOffMillis =  0;
@@ -183,7 +260,7 @@ public class PistachiosClient {
 		try {
 			while (true) {
                 try {
-                    succeeded = clientImpl.store(id, value);
+                    succeeded = clientImpl.store(id, value, callback);
                 } catch (MasterNotFoundException | ConnectionBrokenException me) {
                     if (me instanceof MasterNotFoundException && !noMasterAutoRetry)
                         throw me;
@@ -283,6 +360,27 @@ public class PistachiosClient {
 		}
         return succeeded;
 	}
+	
+    /** 
+     * To process a batch of events
+     *
+     * @param events    Mapping keeps id (byte[]) -> event (byte[])
+     * @return          <code>List<Future<Boolean>></code> succeeded or not
+     */
+	public Map<byte[], Future<Boolean>> multiProcessAsync(Map<byte[], byte[]> events)  {
+		return clientImpl.multiProcessAsync(events);
+	}
+	
+    /** 
+     * To store the key value.
+     *
+     * @param id        id to store as byte[].
+     * @param value     value to store as byte array
+     * @return          <code>boolean</code> succeeded or not
+     */
+	public Future<Boolean> storeAsync(byte[] id, byte[] value) {
+		return clientImpl.storeAsync(id, value);
+	}
 
   public static void main(String [] args) {
 	  PistachiosClient client = null;
@@ -315,7 +413,6 @@ public class PistachiosClient {
               List list = new java.util.ArrayList();
               list.add(value.getBytes());
               client.processBatch(id.getBytes(), list);
-
           } else {
               System.out.println("USAGE: xxxx lookup id or xxxx store id value");
               System.exit(0);

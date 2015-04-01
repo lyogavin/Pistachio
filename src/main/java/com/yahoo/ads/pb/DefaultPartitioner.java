@@ -3,6 +3,7 @@ import org.apache.commons.configuration.Configuration;
 import com.yahoo.ads.pb.util.ConfigurationManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.util.Arrays;
 
 public class DefaultPartitioner implements Partitioner {
 	private Configuration conf = ConfigurationManager.getConfiguration();
@@ -29,8 +30,12 @@ public class DefaultPartitioner implements Partitioner {
         }
 
 
-        long shard = id.hashCode() % totalParition;
+        long shard = Arrays.hashCode(id) % totalParition;
         shard = shard < 0 ? shard + totalParition: shard;
+
+        if (logger.isDebugEnabled())
+            logger.debug("id {} hash code {} partition {}", id, Arrays.hashCode(id), shard);
+
         return shard;
     }
 }

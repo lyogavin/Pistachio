@@ -14,6 +14,14 @@ package com.yahoo.ads.pb.network.netty;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.RemovalListener;
+import com.google.common.cache.RemovalNotification;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
+import com.yahoo.ads.pb.network.netty.NettyPistachioProtocol.Response;
 import com.yahoo.ads.pb.network.netty.NettyPistachioProtocol.*;
 import com.yahoo.ads.pb.exception.*;
 
@@ -24,10 +32,10 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
-
 import java.util.regex.Pattern;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +47,23 @@ public class NettyPistachioClientHandler extends SimpleChannelInboundHandler<Res
     // Stateful properties
     private volatile Channel channel;
     private final ArrayList<LinkedBlockingQueue<Response>> answerQueues = new ArrayList<LinkedBlockingQueue<Response>>(20);
+    
+    // map requestId -> Future, 
+    private final Cache<Integer, SettableFuture<Response>> req2futures = CacheBuilder.newBuilder()
+    		.expireAfterWrite(100, TimeUnit.SECONDS)
+    		.removalListener(new RemovalListener<Integer, SettableFuture<Response>>() {
+
+				@Override
+				public void onRemoval(
+						RemovalNotification<Integer, SettableFuture<Response>> arg0) {
+					if (arg0.wasEvicted()) {
+						SettableFuture<Response> response = arg0.getValue();
+						logger.warn("request id {} timeout", arg0.getKey());
+						response.setException(new RequestTimeoutException("request timeout"));
+					}
+				}
+			})
+    		.build();
 
     private AtomicInteger nextRequestId = new AtomicInteger();
 
@@ -113,6 +138,22 @@ public class NettyPistachioClientHandler extends SimpleChannelInboundHandler<Res
 		return response;
 
 	}
+	
+	public ListenableFuture<Response> sendRequestAsync(Request.Builder builder) {
+        Integer requestId = nextRequestId.incrementAndGet() & 0xffff;
+        builder.setRequestId(requestId);
+        builder.clearThreadId();
+
+        Request request = builder.build();
+
+        SettableFuture<Response> future = SettableFuture.create();
+        req2futures.put(requestId, future);
+        
+        channel.writeAndFlush(request);
+        logger.debug("request constructed: {} and sent.", request);
+
+        return future;
+	}
 
 
     @Override
@@ -123,7 +164,17 @@ public class NettyPistachioClientHandler extends SimpleChannelInboundHandler<Res
     @Override
     public void channelRead0(ChannelHandlerContext ctx, Response response) throws Exception {
         logger.debug("got response {} in channelRead0", response);
-        answerQueues.get(response.getThreadId()).add(response);
+        if (response.hasThreadId()) {
+        	answerQueues.get(response.getThreadId()).add(response);
+        } else {
+        	SettableFuture<Response> future = req2futures.asMap().remove(Integer.valueOf(response.getRequestId()));
+        	if (future != null) {
+        		future.set(response);
+        	} else {
+        		// TODO: may need to change once support cancel for future
+        		logger.error("response for req {} comes back, but can not find corresponding future", response.getRequestId());
+        	}
+        }
     }
 
     @Override
