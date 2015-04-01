@@ -19,22 +19,25 @@ import org.apache.thrift.transport.TSSLTransportFactory;
 import org.apache.thrift.transport.TServerSocket;
 import org.apache.thrift.transport.TServerTransport;
 import org.apache.thrift.transport.TSSLTransportFactory.TSSLTransportParameters;
+
 import java.nio.ByteBuffer;
+
 import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;
 import kafka.producer.ProducerConfig;
 
 import com.yahoo.ads.pb.store.StorePartition;
 import com.ibm.icu.util.ByteArrayWrapper;
+
 import java.util.concurrent.TimeUnit;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+
 import com.yahoo.ads.pb.store.TKStoreFactory;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.Timer;
 import com.codahale.metrics.JmxReporter;
-
 
 import java.net.InetAddress;
 import com.yahoo.ads.pb.store.LocalStorageEngine;
@@ -47,10 +50,12 @@ import com.yahoo.ads.pb.helix.BootstrapPartitionHandler;
 import com.yahoo.ads.pb.helix.HelixPartitionManager;
 import com.yahoo.ads.pb.helix.HelixPartitionSpectator;
 import com.yahoo.ads.pb.network.netty.NettyPistachioServer;
+
 import org.apache.helix.HelixManagerFactory;
 import org.apache.helix.HelixManager;
 import org.apache.helix.InstanceType;
 import org.apache.helix.controller.GenericHelixController;
+
 
 
 //import com.yahoo.ads.pb.platform.perf.IncrementCounter;
@@ -59,9 +64,12 @@ import com.yahoo.ads.pb.util.ConfigurationManager;
 import com.yahoo.ads.pb.util.NativeUtils;
 import com.yahoo.ads.pb.store.ValueOffset;
 import com.yahoo.ads.pb.customization.CustomizationRegistry;
+import com.yahoo.ads.pb.customization.ProcessorRegistry;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.configuration.Configuration;
+
 import com.google.common.base.Joiner.MapJoiner;
 import com.google.common.base.Joiner;
 import com.yahoo.ads.pb.customization.StoreCallbackRegistry;
@@ -70,6 +78,7 @@ import com.esotericsoftware.kryo.io.Input;
 
 
 // Generated code
+
 
 import java.util.HashMap;
 import java.util.Properties;
@@ -125,20 +134,23 @@ public class PistachiosServer {
 
 	private LocalStorageEngine profileStore;
 
-	private static Producer<String, byte[]> kafkaProducer = null;
+	private static ConcurrentHashMap<Long, Producer<String, byte[]>> kafkaProducers = new ConcurrentHashMap<>();
 
     private static boolean doNothing = ConfigurationManager.getConfiguration().getBoolean("Pistachio.DoNothing", false);
+    
+    private static final String KAFKA_TOPIC_PREFIX = ConfigurationManager.getConfiguration().getString("Profile.Kafka.TopicPrefix");
 
     public static boolean servingAsServer() {
         return (handler != null);
     }
 
-	public static Producer getKafkaProducerInstance() {
+	public static Producer getKafkaProducerInstance(long partitionId) {
+		Producer<String, byte[]> kafkaProducer = kafkaProducers.get(partitionId);
 		try {
 			if (kafkaProducer == null) {
 				synchronized (logger) {
 					if (kafkaProducer == null) {
-						logger.debug("first time using kafka producer, creating it");
+						logger.info("first time using kafka producer, creating it {}", partitionId);
 						try {
 							Properties props = new Properties();
 							props.put("metadata.broker.list",
@@ -149,12 +161,15 @@ public class PistachiosServer {
 							props.put("request.required.acks", ConfigurationManager.getConfiguration().getString("request.required.acks", "1"));
 							props.put("queue.buffering.max.ms", ConfigurationManager.getConfiguration().getString("queue.buffering.max.ms", "3100"));
 							props.put("queue.buffering.max.messages", ConfigurationManager.getConfiguration().getString("queue.buffering.max.messages", "10000"));
+							props.put("batch.num.messages", ConfigurationManager.getConfiguration().getString("batch.num.messages", "8000"));
+							props.put("send.buffer.bytes", ConfigurationManager.getConfiguration().getString("send.buffer.bytes", "4194304"));
 							props.put("producer.type", ConfigurationManager.getConfiguration().getString("producer.type", "async"));
 							props.put("auto.create.topics.enable", "true");
 
 							ProducerConfig kafkaConf = new ProducerConfig(props);
 
 							kafkaProducer = new Producer<String, byte[]>(kafkaConf);
+							kafkaProducers.put(partitionId, kafkaProducer);
 						} catch (Throwable t) {
 							logger.error("Exception in creating Producer:", t);
 						}
@@ -207,7 +222,7 @@ public class PistachiosServer {
                 logger.debug("got from store engine: {} parsed as {}", toRet, valueOffset);
                 return valueOffset.value;
             }
-            logger.info("dont find value from store");
+            logger.info("dont find value from store {}", id);
             return null;
 		} catch (Exception e) {
 			logger.info("Exception lookup {}", DefaultDataInterpreter.getDataInterpreter().interpretId(id), e);
@@ -245,7 +260,7 @@ public class PistachiosServer {
 				return false;
 			}
 
-			String partitionTopic = ConfigurationManager.getConfiguration().getString("Profile.Kafka.TopicPrefix") + partitionId;
+			String partitionTopic = KAFKA_TOPIC_PREFIX + partitionId;
 			KeyValue kv = new KeyValue();
 			kv.key = id;
 			kv.seqId = nextSeqId;
@@ -269,7 +284,7 @@ public class PistachiosServer {
                         PistachiosServer.storePartitionMap.get(partitionId).getWriteCache().putIfAbsent(new ByteArrayWrapper(id, id.length), kv);
                     }
                     KeyedMessage<String, KeyValue> message = new KeyedMessage<String, KeyValue>(partitionTopic, kv);
-                    getKafkaProducerInstance().send(message);
+                    getKafkaProducerInstance(partitionId).send(message);
                 }
             } else {
 
@@ -279,7 +294,7 @@ public class PistachiosServer {
                     PistachiosServer.storePartitionMap.get(partitionId).getWriteCache().put(new ByteArrayWrapper(id, id.length), kv);
 
                     KeyedMessage<String, KeyValue> message = new KeyedMessage<String, KeyValue>(partitionTopic, kv);
-                    getKafkaProducerInstance().send(message);
+                    getKafkaProducerInstance(partitionId).send(message);
             }
 
 				logger.debug("waiting for change to catch up {} {} within gap 20000000", PistachiosServer.storePartitionMap.get(partitionId).getSeqId() , kv.seqId);
@@ -287,6 +302,7 @@ public class PistachiosServer {
 				logger.debug("waiting for change to catch up {} {} within gap 20000000", PistachiosServer.storePartitionMap.get(partitionId).getSeqId() , kv.seqId);
 				Thread.sleep(30);
 			}
+
 			return true;
 
 			//PistachiosServer.getInstance().getLocalStorageEngine().store(id, value.array());
@@ -304,7 +320,7 @@ public class PistachiosServer {
 
   public static PistachiosHandler handler = null;
 
-  public static Pistachios.Processor processor;
+  // public static Pistachios.Processor processor;
 
   private static PistachiosServer instance;
 
@@ -357,6 +373,7 @@ public class PistachiosServer {
     }
   }
 
+	/*
   public static void simple(Pistachios.Processor processor) {
     try {
       TServerTransport serverTransport = new TServerSocket(9090);
@@ -378,6 +395,7 @@ public class PistachiosServer {
       e.printStackTrace();
     }
   }
+	*/
 
   public LocalStorageEngine getLocalStorageEngine() {
 	  return profileStore;

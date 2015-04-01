@@ -12,6 +12,9 @@
 
 package com.yahoo.ads.pb;
 import java.util.List;
+import java.util.Map;
+
+import com.google.common.util.concurrent.ListenableFuture;
 import com.yahoo.ads.pb.exception.*;
 
 public interface PistachiosClientImpl {
@@ -19,4 +22,10 @@ public interface PistachiosClientImpl {
 	public boolean store(byte[] id, byte[] value, boolean callback) throws MasterNotFoundException, ConnectionBrokenException;
     public boolean processBatch(byte[] id, List<byte[]> events) throws MasterNotFoundException, ConnectionBrokenException;
     public void close();
+    
+	public Map<byte[], byte[]> multiLookup(List<byte[]> ids) throws Exception;
+	
+	public Map<byte[], ListenableFuture<byte[]>> multiLookupAsync(List<byte[]> ids);
+	public Map<byte[], ListenableFuture<Boolean>> multiProcessAsync(Map<byte[], byte[]> events);
+	public ListenableFuture<Boolean> storeAsync(byte[] id, byte[] value);
 }
