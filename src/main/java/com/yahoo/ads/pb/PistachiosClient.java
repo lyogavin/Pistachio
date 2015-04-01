@@ -32,6 +32,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Future;
 
 import org.slf4j.Logger;
 import org.apache.zookeeper.ZooKeeper;
@@ -44,7 +45,6 @@ import com.codahale.metrics.Timer;
 import com.codahale.metrics.JmxReporter;
 import com.google.api.client.util.ExponentialBackOff;
 import com.google.api.client.util.BackOff;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.yahoo.ads.pb.PistachiosClientImpl;
 import com.yahoo.ads.pb.PistachiosServer;
 import com.yahoo.ads.pb.customization.ProcessorRegistry;
@@ -220,7 +220,7 @@ public class PistachiosClient {
 		}		
 	}
 	
-	public Map<byte[], ListenableFuture<byte[]>> multiLookUpAsync(List<byte[]> ids) {
+	public Map<byte[], Future<byte[]>> multiLookUpAsync(List<byte[]> ids) {
 		return clientImpl.multiLookupAsync(ids);
 	}
 
@@ -365,9 +365,9 @@ public class PistachiosClient {
      * To process a batch of events
      *
      * @param events    Mapping keeps id (byte[]) -> event (byte[])
-     * @return          <code>List<ListenableFuture<Boolean>></code> succeeded or not
+     * @return          <code>List<Future<Boolean>></code> succeeded or not
      */
-	public Map<byte[], ListenableFuture<Boolean>> multiProcessAsync(Map<byte[], byte[]> events)  {
+	public Map<byte[], Future<Boolean>> multiProcessAsync(Map<byte[], byte[]> events)  {
 		return clientImpl.multiProcessAsync(events);
 	}
 	
@@ -378,7 +378,7 @@ public class PistachiosClient {
      * @param value     value to store as byte array
      * @return          <code>boolean</code> succeeded or not
      */
-	public ListenableFuture<Boolean> storeAsync(byte[] id, byte[] value) {
+	public Future<Boolean> storeAsync(byte[] id, byte[] value) {
 		return clientImpl.storeAsync(id, value);
 	}
 

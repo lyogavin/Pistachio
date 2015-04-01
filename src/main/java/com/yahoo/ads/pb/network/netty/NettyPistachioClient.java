@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.yahoo.ads.pb.network.netty.NettyPistachioProtocol.*;
@@ -273,11 +274,11 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
     
     @Override
     public Map<byte[], byte[]> multiLookup(List<byte[]> ids) throws Exception {
-    	Map<byte[], ListenableFuture<byte[]>> res = multiLookupAsync(ids);
+    	Map<byte[], Future<byte[]>> res = multiLookupAsync(ids);
     	Map<byte[], byte[]> ret = new HashMap<>(res.size());
     	
     	long timeoutMs = System.currentTimeMillis() + 100 * 1000L;
-    	for (Map.Entry<byte[], ListenableFuture<byte[]>> entry: res.entrySet()) {
+    	for (Map.Entry<byte[], Future<byte[]>> entry: res.entrySet()) {
     		try {
     			ret.put(entry.getKey(), entry.getValue().get(timeoutMs - System.currentTimeMillis(), TimeUnit.MILLISECONDS));
     		} catch (Exception e) {
@@ -301,7 +302,7 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
   	};
     
     @Override
-    public Map<byte[], ListenableFuture<byte[]>> multiLookupAsync(List<byte[]> ids) {
+    public Map<byte[], Future<byte[]>> multiLookupAsync(List<byte[]> ids) {
         Map<Long, List<byte[]>> partition2ids = new HashMap<>();
     	for (byte[] id : ids) {
 	        long partition = partitioner.getPartition(id, helixPartitionSpectator.getTotalPartition("PistachiosResource"));
@@ -337,7 +338,7 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
 			builder.addRequests(innerRequest);
     	}
     	
-    	final Map<byte[], ListenableFuture<byte[]>> futures = new HashMap<>(ids.size());
+    	final Map<byte[], Future<byte[]>> futures = new HashMap<>(ids.size());
     	for (final Map.Entry<NettyPistachioClientHandler, Request.Builder> entry: handler2reqs.entrySet()) {
     		NettyPistachioClientHandler handler = entry.getKey();
     		ListenableFuture<Response> future = handler.sendRequestAsync(entry.getValue());
@@ -363,7 +364,7 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
     }
     
     @Override
-	public ListenableFuture<Boolean> storeAsync(byte[] id, byte[] value) {
+	public Future<Boolean> storeAsync(byte[] id, byte[] value) {
         long partition = partitioner.getPartition(id, helixPartitionSpectator.getTotalPartition("PistachiosResource"));
         if (isLocalCall(partition)) {
             return createBooleanValueFuture(PistachiosServer.handler.store(id, partition, value, false));
@@ -400,7 +401,7 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
     	};
 
     @Override
-    public Map<byte[], ListenableFuture<Boolean>> multiProcessAsync(Map<byte[], byte[]> events){
+    public Map<byte[], Future<Boolean>> multiProcessAsync(Map<byte[], byte[]> events){
     	Map<Long, Request.Builder> partition2reqs = new HashMap<>();
     	for (Map.Entry<byte[], byte[]> entry: events.entrySet()) {
     		byte[] id = entry.getKey();
@@ -433,7 +434,7 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
 			builder.addRequests(entry.getValue());    		
     	}
     	   	
-    	Map<byte[], ListenableFuture<Boolean>> ret = new HashMap<>(handler2reqs.size());
+    	Map<byte[], Future<Boolean>> ret = new HashMap<>(handler2reqs.size());
     	for (Map.Entry<NettyPistachioClientHandler, Request.Builder> entry: handler2reqs.entrySet()) {
 			NettyPistachioClientHandler handler = entry.getKey();
     		ListenableFuture<Response> future = handler.sendRequestAsync(entry.getValue());

@@ -14,7 +14,7 @@ package com.yahoo.ads.pb;
 import java.util.List;
 import java.util.Map;
 
-import com.google.common.util.concurrent.ListenableFuture;
+import java.util.concurrent.Future;
 import com.yahoo.ads.pb.exception.*;
 
 public interface PistachiosClientImpl {
@@ -25,7 +25,7 @@ public interface PistachiosClientImpl {
     
 	public Map<byte[], byte[]> multiLookup(List<byte[]> ids) throws Exception;
 	
-	public Map<byte[], ListenableFuture<byte[]>> multiLookupAsync(List<byte[]> ids);
-	public Map<byte[], ListenableFuture<Boolean>> multiProcessAsync(Map<byte[], byte[]> events);
-	public ListenableFuture<Boolean> storeAsync(byte[] id, byte[] value);
+	public Map<byte[], Future<byte[]>> multiLookupAsync(List<byte[]> ids);
+	public Map<byte[], Future<Boolean>> multiProcessAsync(Map<byte[], byte[]> events);
+	public Future<Boolean> storeAsync(byte[] id, byte[] value);
 }
