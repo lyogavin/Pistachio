@@ -55,6 +55,8 @@ import org.apache.helix.HelixManagerFactory;
 import org.apache.helix.HelixManager;
 import org.apache.helix.InstanceType;
 import org.apache.helix.controller.GenericHelixController;
+import org.apache.helix.model.IdealState;
+import org.apache.helix.manager.zk.ZKHelixAdmin;
 
 
 
@@ -416,9 +418,12 @@ public class PistachiosServer {
 		try {
 			// open profile store
 			Configuration conf = ConfigurationManager.getConfiguration();
+			        ZKHelixAdmin admin = new ZKHelixAdmin(conf.getString(ZOOKEEPER_SERVER));
+        IdealState idealState = admin.getResourceIdealState("PistachiosCluster", "PistachiosResource");
+        long totalParition = (long)idealState.getNumPartitions();
 			profileStore = new LocalStorageEngine(
 			        conf.getString(PROFILE_BASE_DIR),
-			        0, 8,
+			        (int)totalParition, 8,
 			        conf.getInt("StorageEngine.KC.RecordsPerPartition"),
 			        conf.getLong("StorageEngine.KC.MemoryPerPartition"));
             ProcessorRegistry.getInstance().init();
