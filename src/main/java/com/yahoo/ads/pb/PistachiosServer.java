@@ -336,7 +336,7 @@ public class PistachiosServer {
       public boolean delete(byte[] id, long partitionId) {
   		deleteRequests.mark();
   		final Timer.Context context = storeTimer.time();
-  
+  logger.info("enter delete");
   		try {
               if (doNothing)
                   return true;
@@ -347,7 +347,7 @@ public class PistachiosServer {
                   logger.info("error getting storePartition for partition id {}.", partitionId);
                   return false;
               }
-  
+              logger.info("after delete checking");
  			String partitionTopic = ConfigurationManager.getConfiguration().getString("Profile.Kafka.TopicPrefix") + partitionId;
   			KeyValue kv = new KeyValue();
   			kv.key = id;
