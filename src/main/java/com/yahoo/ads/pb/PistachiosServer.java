@@ -218,11 +218,11 @@ public class PistachiosServer {
                 throw new Exception("dont find the store partition obj");
             }
 			KeyValue toRetrun = storePartition.getFromWriteCache(id);
-				if (toRetrun.op != Operator.DELETE) {
+				if (toRetrun != null && toRetrun.op != Operator.DELETE) {
 					logger.debug("message is deleted");
 					return null;
 				}
-				if (toRetrun != null) {
+				else if (toRetrun != null) {
 					logger.debug("null from cache");
 					return toRetrun.value;
 				}
