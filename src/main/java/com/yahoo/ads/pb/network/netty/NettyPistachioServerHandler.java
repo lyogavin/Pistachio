@@ -109,6 +109,11 @@ public class NettyPistachioServerHandler extends SimpleChannelInboundHandler<Req
         						);
             		}
             	}
+            case DELETE:
+            	logger.debug("calling delete");
+                result = handler.delete(request.getId().toByteArray(), request.getPartition());
+                builder.setSucceeded(result);
+                break;
             default:
                 logger.debug("default branch");
                 break;
