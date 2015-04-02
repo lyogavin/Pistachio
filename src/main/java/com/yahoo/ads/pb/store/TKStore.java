@@ -164,9 +164,8 @@ public class TKStore implements Store{
                                     eventOffset.offset);
                     	}else if(eventOffset.keyValue.op == Operator.DELETE){
                     		PistachiosServer.getInstance().getLocalStorageEngine().delete(eventOffset.keyValue.key, partitionId);
-                    		logger.debug("delete data {}/{}/{}/{}", 
+                    		logger.debug("delete data {}/{}", 
                                     DefaultDataInterpreter.getDataInterpreter().interpretId(eventOffset.keyValue.key), 
-                                    DefaultDataInterpreter.getDataInterpreter().interpretData(eventOffset.keyValue.value),
                                     eventOffset.offset);
                     	}
 

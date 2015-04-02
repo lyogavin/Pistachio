@@ -335,21 +335,21 @@ public class PistachiosServer {
   @Override
       public boolean delete(byte[] id, long partitionId) {
 	  
-	  logger.info("enter delete 111");
   		deleteRequests.mark();
   		final Timer.Context context = storeTimer.time();
-  logger.info("enter delete");
   		try {
               if (doNothing)
                   return true;
-  			long nextSeqId = -1;
-              StorePartition storePartition = PistachiosServer.storePartitionMap.get(partitionId);
-  
-              if (storePartition == null) {
-                  logger.info("error getting storePartition for partition id {}.", partitionId);
-                  return false;
-              }
-              logger.info("after delete checking");
+				long nextSeqId = -1;
+				StorePartition storePartition = PistachiosServer.storePartitionMap
+				        .get(partitionId);
+
+				if (storePartition == null) {
+					logger.info(
+					        "error getting storePartition for partition id {}.",
+					        partitionId);
+					return false;
+				}
  			String partitionTopic = ConfigurationManager.getConfiguration().getString("Profile.Kafka.TopicPrefix") + partitionId;
   			KeyValue kv = new KeyValue();
   			kv.key = id;
