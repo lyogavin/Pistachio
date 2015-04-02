@@ -32,7 +32,7 @@
       <section>
         <div id="title">
           <h1>Pistachio</h1>
-          <p>Lightning fast, strong consistency distributed key value store system</p>
+          <p>Low latency, strong consistency, fault tolerant distributed key value store. Colocate data and compute to achieve best performance cloud compute.</p>
           <hr>
           <span class="credits left">Project maintained by <a href="https://github.com/lyogavin">lyogavin</a></span>
           <span class="credits right">Hosted on GitHub Pages &mdash; Theme by <a href="https://twitter.com/michigangraham">mattgraham</a></span>
@@ -65,6 +65,9 @@
 <a id="flexible-local-storage-engine-plugin" class="anchor" href="#flexible-local-storage-engine-plugin" aria-hidden="true"><span class="octicon octicon-link"></span></a>Flexible local storage engine plugin</h3>
 
 <p>Different use case may need different durability. In some cases the storage is only used for short term compute, then it'll be persisted to HDFS. Then you want to have memory only storage with replications only for fault tolerance. In some cases, when you have many random read/write, and using SSD as the local storage may give you the best performacne. Pistachio supports flexible local storage engines in-mem, Kyoto Cabinet(best for SSD) and Rocks DB.</p>
+
+<p><a href="https://github.com/lyogavin/Pistachio/wiki">Wiki for more details...</a></p>
+
 
 <p><a href="http://lyogavin.github.io/Pistachio/">http://lyogavin.github.io/Pistachio/</a></p>
 
