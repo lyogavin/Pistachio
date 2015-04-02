@@ -27,6 +27,7 @@ import java.net.URL;
 
 public class ProcessorRegistry extends CustomizationRegistry<EventProcessor> {
     private static ProcessorRegistry instance = null;
+    static public String processorRegistryPath = "/pistachio_zk/processor_registry/info";
 
     protected String getZKPath() {
         return "/pistachio_zk/processor_registry/info";

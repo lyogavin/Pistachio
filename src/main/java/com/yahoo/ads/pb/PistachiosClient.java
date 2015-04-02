@@ -50,6 +50,8 @@ import com.yahoo.ads.pb.PistachiosServer;
 import com.yahoo.ads.pb.customization.ProcessorRegistry;
 import com.yahoo.ads.pb.exception.*;
 import com.yahoo.ads.pb.network.netty.NettyPistachioClient;
+import org.apache.zookeeper.ZooKeeper;
+import com.yahoo.ads.pb.customization.StoreCallbackRegistry;
 
 /**
  * Main Pistachio Client Class
@@ -92,13 +94,16 @@ public class PistachiosClient {
 		reporter.start();
         ZooKeeper zk =  null;
         try {
-            if (ConfigurationManager.getConfiguration().getString("Pistachio.Processor.JarPath") != null &&
-                ConfigurationManager.getConfiguration().getString("Pistachio.Processor.ClassName") != null) {
-                zk = new ZooKeeper(ConfigurationManager.getConfiguration().getString("Pistachio.ZooKeeper.Server"),40000,null);
-                zk.setData(ProcessorRegistry.PATH, (ConfigurationManager.getConfiguration().getString("Pistachio.Processor.JarPath") + ";" +
-                        ConfigurationManager.getConfiguration().getString("Pistachio.Processor.ClassName")).getBytes(), -1);
+            zk = new ZooKeeper(ConfigurationManager.getConfiguration().getString("Pistachio.ZooKeeper.Server"),40000,null);
+            setZkRegistryData(ConfigurationManager.getConfiguration().getString("Pistachio.Processor.JarPath"),
+                              ConfigurationManager.getConfiguration().getString("Pistachio.Processor.ClassName"),
+                              ProcessorRegistry.processorRegistryPath, 
+                              zk);
+            setZkRegistryData(ConfigurationManager.getConfiguration().getString("Pistachio.StoreCallback.JarPath"),
+                              ConfigurationManager.getConfiguration().getString("Pistachio.StoreCallback.ClassName"),
+                              StoreCallbackRegistry.storeCallbackPath, 
+                              zk);
 
-            }
         } catch (Exception e) {
         } finally {
             try {
@@ -108,6 +113,16 @@ public class PistachiosClient {
             }
         }
 	}
+
+    private static void setZkRegistryData(String jarPath, String className, String zkPath, ZooKeeper zk){
+        try {
+            if (jarPath != null && className != null) {
+                zk.create(zkPath, (jarPath + ";" + className).getBytes(), null, org.apache.zookeeper.CreateMode.PERSISTENT);
+                zk.setData(zkPath, (jarPath + ";" + className).getBytes(), -1);
+            }
+        } catch (Exception e) {
+        }
+    }
 	private int initialIntervalMillis = conf.getInt("Pistachio.AutoRetry.BackOff.InitialIntervalMillis", 100);
 	private int maxElapsedTimeMillis = conf.getInt("Pistachio.AutoRetry.BackOff.MaxElapsedTimeMillis", 100 * 1000);
 	private int maxIntervalMillis = conf.getInt("Pistachio.AutoRetry.BackOff.MaxIntervalMillis", 5000);

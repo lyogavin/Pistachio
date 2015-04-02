@@ -25,10 +25,11 @@ import java.net.URLClassLoader;
 import java.net.URL;
 
 public class StoreCallbackRegistry extends CustomizationRegistry<StoreCallback> {
+    static public String storeCallbackPath = "/pistachio_zk/storecallback_registry/info";
     private static StoreCallbackRegistry instance = null;
 
     protected String getZKPath() {
-        return "/pistachio_zk/storecallback_registry/info";
+        return storeCallbackPath;
     }
 
 
