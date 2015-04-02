@@ -185,7 +185,34 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
         handler = hostChannelMap.get(ip).pipeline().get(NettyPistachioClientHandler.class);
         return handler;
     }
+    
+    @Override
+    public boolean delete(byte[] id) throws MasterNotFoundException, ConnectionBrokenException{
+		long partition = partitioner.getPartition(id, helixPartitionSpectator.getTotalPartition("PistachiosResource"));
+        if (isLocalCall(partition)) {
+           return PistachiosServer.handler.delete(id, partition);
+        }
+        NettyPistachioClientHandler handler = null;
+        try {
+            handler = getHandler(id);
+        } catch (Exception e) {
+            logger.info("error getting handler", e);
+            return false;
+        }
+        if (handler == null) {
+            logger.debug("fail to look up {} because of empty handler", id);
+            return false;
+        }
+        Request.Builder builder = Request.newBuilder();
+        Response res = handler.sendRequest(builder.setId(ByteString.copyFrom(id)).setType(RequestType.DELETE).setPartition(partition));
 
+        if (res == null) {
+            logger.debug("fail");
+            return false;
+        }
+        return res.getSucceeded();
+    }
+    
     public void close() {
         for (Channel channel: channelList) {
             channel.close();

@@ -40,8 +40,10 @@ import com.codahale.metrics.Timer;
 import com.codahale.metrics.JmxReporter;
 
 import java.net.InetAddress;
+
 import com.yahoo.ads.pb.store.LocalStorageEngine;
 import com.yahoo.ads.pb.kafka.KeyValue;
+import com.yahoo.ads.pb.kafka.Operator;
 import com.yahoo.ads.pb.helix.PartitionHandler;
 import com.yahoo.ads.pb.helix.PartitionHandlerFactory;
 import com.yahoo.ads.pb.helix.BootstrapOnlineOfflineStateModel;
@@ -57,6 +59,7 @@ import org.apache.helix.InstanceType;
 import org.apache.helix.controller.GenericHelixController;
 import org.apache.helix.model.IdealState;
 import org.apache.helix.manager.zk.ZKHelixAdmin;
+
 
 
 
@@ -80,6 +83,7 @@ import com.esotericsoftware.kryo.io.Input;
 
 
 // Generated code
+
 
 
 import java.util.HashMap;
@@ -127,6 +131,10 @@ public class PistachiosServer {
 	private final static Timer lookupTimer = metrics.timer(MetricRegistry.name(PistachiosServer.class, "lookupTimer"));
 	private final static Timer storeTimer = metrics.timer(MetricRegistry.name(PistachiosServer.class, "storeTimer"));
 
+	private final static Meter deleteRequests = metrics.meter(MetricRegistry.name(PistachiosServer.class, "deleteRequests"));
+	private final static Meter deleteFailureRequests = metrics.meter(MetricRegistry.name(PistachiosServer.class, "deleteFailureRequests"));
+	private final static Timer deleteTimer = metrics.timer(MetricRegistry.name(PistachiosServer.class, "deleteTimer"));
+	 
 	static final String PROFILE_BASE_DIR = "StorageEngine.Path";
 	static final String ZOOKEEPER_SERVER = "Pistachio.ZooKeeper.Server";
 	static final String PROFILE_HELIX_INSTANCE_ID = "Profile.Helix.InstanceId";
@@ -210,10 +218,15 @@ public class PistachiosServer {
                 throw new Exception("dont find the store partition obj");
             }
 			KeyValue toRetrun = storePartition.getFromWriteCache(id);
-			if (toRetrun != null) {
-                logger.debug("null from cache");
-				return toRetrun.value;
-            }
+				if (toRetrun.op != Operator.DELETE) {
+					logger.debug("message is deleted");
+					return null;
+				}
+				if (toRetrun != null) {
+					logger.debug("null from cache");
+					return toRetrun.value;
+				}
+			
 
             byte[] toRet = PistachiosServer.getInstance().getLocalStorageEngine().get(id, (int)partitionId);
 			if (null != toRet) {
@@ -268,7 +281,7 @@ public class PistachiosServer {
 			kv.seqId = nextSeqId;
 			kv.value = value;
             kv.callback = callback;
-
+            kv.op = Operator.ADD;
             long lockKey = (id.hashCode() * 7 + 11) % 1024;
             lockKey = lockKey >= 0 ? lockKey : lockKey + 1024;
 
@@ -318,8 +331,56 @@ public class PistachiosServer {
 			context.stop();
 		}
 	}
+  
+  @Override
+      public boolean delete(byte[] id, long partitionId) {
+  		deleteRequests.mark();
+  		final Timer.Context context = storeTimer.time();
+  
+  		try {
+              if (doNothing)
+                  return true;
+  			long nextSeqId = -1;
+              StorePartition storePartition = PistachiosServer.storePartitionMap.get(partitionId);
+  
+              if (storePartition == null) {
+                  logger.info("error getting storePartition for partition id {}.", partitionId);
+                  return false;
+              }
+  
+ 			String partitionTopic = ConfigurationManager.getConfiguration().getString("Profile.Kafka.TopicPrefix") + partitionId;
+  			KeyValue kv = new KeyValue();
+  			kv.key = id;
+  			kv.op = Operator.DELETE;
+  			long lockKey = (id.hashCode() * 7 + 11) % 1024;
+            lockKey = lockKey >= 0 ? lockKey : lockKey + 1024;
+  			synchronized(storePartition.getKeyLock((int)lockKey)) {
+  				if ((nextSeqId = storePartition.getNextSeqId()) == -1) {
+  					return false;
+  				}
+  					kv.seqId = nextSeqId;
+  					KeyedMessage<String, KeyValue> message = new KeyedMessage<String, KeyValue>(partitionTopic, kv);
+  					getKafkaProducerInstance(partitionId).send(message);
+  					logger.debug("sent msg {} {} {}, partition current seqid {}", kv.key, kv.value, kv.seqId, PistachiosServer.storePartitionMap.get(partitionId).getSeqId());
+  				}
+  				PistachiosServer.storePartitionMap.get(partitionId).getWriteCache().put(new ByteArrayWrapper(id, id.length), kv);
+  			logger.debug("waiting for change to catch up {} {} within gap 20000000", PistachiosServer.storePartitionMap.get(partitionId).getSeqId() , kv.seqId);
+  			while(kv.seqId - PistachiosServer.storePartitionMap.get(partitionId).getSeqId() > 20000000) {
+  				logger.debug("waiting for change to catch up {} {} within gap 20000000", PistachiosServer.storePartitionMap.get(partitionId).getSeqId() , kv.seqId);
+  				Thread.sleep(30);
+  			}
+  			return true;
+  
+ 			//PistachiosServer.getInstance().getProfileStore().store(id, value.array());
+  		} catch (Exception e) {
+  			logger.info("error deleting {}", id, e);
+  			deleteFailureRequests.mark();
+  			return false;
+  		} finally {
+  			context.stop();
+  		}
+  	}
   }
-
   public static PistachiosHandler handler = null;
 
   // public static Pistachios.Processor processor;

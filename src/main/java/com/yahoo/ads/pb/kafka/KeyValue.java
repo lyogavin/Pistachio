@@ -20,6 +20,7 @@ public class KeyValue {
 	public long seqId;
 	public byte[] value;
     public boolean callback;
+    public Operator op = Operator.ADD;
 
 	public boolean equals(Object obj) {
 		if (this == obj) return true;

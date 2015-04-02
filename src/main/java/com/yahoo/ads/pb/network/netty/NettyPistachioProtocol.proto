@@ -27,6 +27,7 @@ enum RequestType {
 	PROCESS_EVENT = 3;
 	MULTI_LOOKUP = 4;
 	MULTI_PROCESS_EVENT = 5;
+	DELETE = 6;
 }
 
 message Request {

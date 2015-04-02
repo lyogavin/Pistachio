@@ -382,6 +382,11 @@ public class PistachiosClient {
 		return clientImpl.storeAsync(id, value);
 	}
 
+	public boolean delete(byte[] key) throws MasterNotFoundException,
+	        ConnectionBrokenException {
+		return clientImpl.delete(key);
+	}
+	
   public static void main(String [] args) {
 	  PistachiosClient client = null;
       try {
@@ -413,8 +418,14 @@ public class PistachiosClient {
               List list = new java.util.ArrayList();
               list.add(value.getBytes());
               client.processBatch(id.getBytes(), list);
-          } else {
-              System.out.println("USAGE: xxxx lookup id or xxxx store id value");
+			} else if (args.length == 2 && args[0].equals("delete")) {
+				try {
+					id = args[1];
+				} catch (Exception e) {
+				}
+				client.delete(id.getBytes());
+			} else {
+				System.out.println("USAGE: xxxx lookup id or xxxx store id value");
               System.exit(0);
           }
       } catch (Exception e) {

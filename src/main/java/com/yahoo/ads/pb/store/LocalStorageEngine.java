@@ -200,8 +200,8 @@ public class LocalStorageEngine {
 	 * @param key
 	 * @return
 	 */
-	public boolean delete(byte[] key) {
-		int dbIndex = getDbIndex(key);
+	public boolean delete(byte[] key, long partition) {
+		int dbIndex = (int)partition;
 		if(stores[dbIndex] != null)
 			return stores[dbIndex].delete(key);
 		else
