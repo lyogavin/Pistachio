@@ -55,6 +55,7 @@ import org.apache.helix.HelixManagerFactory;
 import org.apache.helix.HelixManager;
 import org.apache.helix.InstanceType;
 import org.apache.helix.controller.GenericHelixController;
+import org.apache.helix.model.IdealState;
 
 
 
@@ -75,6 +76,7 @@ import com.google.common.base.Joiner;
 import com.yahoo.ads.pb.customization.StoreCallbackRegistry;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
+import org.apache.helix.manager.zk.ZKHelixAdmin;
 
 
 // Generated code
@@ -409,6 +411,7 @@ public class PistachiosServer {
 	  return null;
   }
 	public boolean init() {
+
 		boolean initialized = false;
 
 		logger.info("Initializing profile server...........");
@@ -416,9 +419,12 @@ public class PistachiosServer {
 		try {
 			// open profile store
 			Configuration conf = ConfigurationManager.getConfiguration();
+        ZKHelixAdmin admin = new ZKHelixAdmin(conf.getString(ZOOKEEPER_SERVER));
+        IdealState idealState = admin.getResourceIdealState("PistachiosCluster", "PistachiosResource");
+        long totalParition = (long)idealState.getNumPartitions();
 			profileStore = new LocalStorageEngine(
 			        conf.getString(PROFILE_BASE_DIR),
-			        0, 8,
+			        (int)totalParition, 8,
 			        conf.getInt("StorageEngine.KC.RecordsPerPartition"),
 			        conf.getLong("StorageEngine.KC.MemoryPerPartition"));
             ProcessorRegistry.getInstance().init();

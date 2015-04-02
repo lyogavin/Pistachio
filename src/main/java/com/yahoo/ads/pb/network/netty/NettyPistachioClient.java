@@ -194,7 +194,7 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
         logger.info("close called");
     }
 
-	public byte[] lookup(byte[] id)  throws MasterNotFoundException, Exception {
+	public byte[] lookup(byte[] id)  throws MasterNotFoundException, ConnectionBrokenException, Exception {
         long partition = partitioner.getPartition(id, helixPartitionSpectator.getTotalPartition("PistachiosResource"));
         if (isLocalCall(partition)) {
             return PistachiosServer.handler.lookup(id, partition);
@@ -217,7 +217,7 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
         return res.getData().toByteArray();
     }
 
-	public boolean store(byte[] id, byte[] value, boolean callback) throws MasterNotFoundException, ConnectionBrokenException {
+	public boolean store(byte[] id, byte[] value, boolean callback) throws MasterNotFoundException, ConnectionBrokenException, Exception {
         long partition = partitioner.getPartition(id, helixPartitionSpectator.getTotalPartition("PistachiosResource"));
         if (isLocalCall(partition)) {
             return PistachiosServer.handler.store(id, partition, value, callback);
@@ -243,7 +243,7 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
         return res.getSucceeded();
     }
 
-    public boolean processBatch(byte[] id, List<byte[]> events)  throws MasterNotFoundException, ConnectionBrokenException {
+    public boolean processBatch(byte[] id, List<byte[]> events)  throws MasterNotFoundException, ConnectionBrokenException, Exception {
         NettyPistachioClientHandler handler = null;
         try {
             handler = getHandler(id);
@@ -273,7 +273,7 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
     }
     
     @Override
-    public Map<byte[], byte[]> multiLookup(List<byte[]> ids) throws Exception {
+    public Map<byte[], byte[]> multiLookup(List<byte[]> ids) throws MasterNotFoundException, ConnectionBrokenException, Exception {
     	Map<byte[], Future<byte[]>> res = multiLookupAsync(ids);
     	Map<byte[], byte[]> ret = new HashMap<>(res.size());
     	
@@ -302,7 +302,7 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
   	};
     
     @Override
-    public Map<byte[], Future<byte[]>> multiLookupAsync(List<byte[]> ids) {
+    public Map<byte[], Future<byte[]>> multiLookupAsync(List<byte[]> ids) throws MasterNotFoundException, ConnectionBrokenException, Exception {
         Map<Long, List<byte[]>> partition2ids = new HashMap<>();
     	for (byte[] id : ids) {
 	        long partition = partitioner.getPartition(id, helixPartitionSpectator.getTotalPartition("PistachiosResource"));
@@ -364,7 +364,7 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
     }
     
     @Override
-	public Future<Boolean> storeAsync(byte[] id, byte[] value) {
+	public Future<Boolean> storeAsync(byte[] id, byte[] value)  throws MasterNotFoundException, ConnectionBrokenException, Exception{
         long partition = partitioner.getPartition(id, helixPartitionSpectator.getTotalPartition("PistachiosResource"));
         if (isLocalCall(partition)) {
             return createBooleanValueFuture(PistachiosServer.handler.store(id, partition, value, false));
@@ -401,7 +401,7 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
     	};
 
     @Override
-    public Map<byte[], Future<Boolean>> multiProcessAsync(Map<byte[], byte[]> events){
+    public Map<byte[], Future<Boolean>> multiProcessAsync(Map<byte[], byte[]> events) throws MasterNotFoundException, ConnectionBrokenException, Exception{
     	Map<Long, Request.Builder> partition2reqs = new HashMap<>();
     	for (Map.Entry<byte[], byte[]> entry: events.entrySet()) {
     		byte[] id = entry.getKey();
