@@ -55,9 +55,6 @@ import com.yahoo.ads.pb.network.netty.NettyPistachioClient;
  * Main Pistachio Client Class
  * <ul>
  * <li>To use the Client, new an instance and call the functions
- * <li>TBA: Thread Safty
- * <li>TBA: Connection Reuse
- *     (see <a href="#setXORMode">setXORMode</a>)
  * </ul>
  * <p>
  * 
