@@ -334,6 +334,8 @@ public class PistachiosServer {
   
   @Override
       public boolean delete(byte[] id, long partitionId) {
+	  
+	  logger.info("enter delete 111");
   		deleteRequests.mark();
   		final Timer.Context context = storeTimer.time();
   logger.info("enter delete");

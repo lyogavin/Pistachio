@@ -190,6 +190,7 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
     public boolean delete(byte[] id) throws MasterNotFoundException, ConnectionBrokenException{
 		long partition = partitioner.getPartition(id, helixPartitionSpectator.getTotalPartition("PistachiosResource"));
         if (isLocalCall(partition)) {
+        	logger.info("local call");
            return PistachiosServer.handler.delete(id, partition);
         }
         NettyPistachioClientHandler handler = null;
