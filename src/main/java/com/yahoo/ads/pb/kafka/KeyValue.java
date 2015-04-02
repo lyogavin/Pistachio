@@ -28,6 +28,6 @@ public class KeyValue {
 
 		KeyValue that = (KeyValue)obj;
 
-		return Arrays.equals(key,that.key) && (seqId == that.seqId) && Arrays.equals(value, that.value) && (callback == that.callback);
+		return Arrays.equals(key,that.key) && (seqId == that.seqId) && Arrays.equals(value, that.value) && (callback == that.callback) && (op == that.op);
 	}
 }
