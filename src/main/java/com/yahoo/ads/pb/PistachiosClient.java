@@ -419,6 +419,7 @@ public class PistachiosClient {
               list.add(value.getBytes());
               client.processBatch(id.getBytes(), list);
 			} else if (args.length == 2 && args[0].equals("delete")) {
+				System.out.println("you are deleting "+ id);
 				try {
 					id = args[1];
 				} catch (Exception e) {
