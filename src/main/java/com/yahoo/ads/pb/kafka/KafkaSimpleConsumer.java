@@ -323,6 +323,11 @@ public class KafkaSimpleConsumer {
 		Broker previousLeader = leaderBroker;
 		while (true) {
 			ensureConsumer(previousLeader);
+
+            if (offset == Long.MAX_VALUE) {
+                offset = getOffset(false);
+                logger.info("offset max long, fetch from latest in kafka {}", offset);
+            }
 			
 			FetchRequest request = new FetchRequestBuilder()
 					.clientId(clientId)

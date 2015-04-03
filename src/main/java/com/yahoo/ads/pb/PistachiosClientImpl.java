@@ -12,11 +12,20 @@
 
 package com.yahoo.ads.pb;
 import java.util.List;
+import java.util.Map;
+
+import java.util.concurrent.Future;
 import com.yahoo.ads.pb.exception.*;
 
 public interface PistachiosClientImpl {
-	public byte[] lookup(long id) throws MasterNotFoundException, Exception;
-	public boolean store(long id, byte[] value) throws MasterNotFoundException, ConnectionBrokenException;
-    public boolean processBatch(long id, List<byte[]> events) throws MasterNotFoundException, ConnectionBrokenException;
+	public byte[] lookup(byte[] id) throws MasterNotFoundException, ConnectionBrokenException, Exception;
+	public boolean store(byte[] id, byte[] value, boolean callback) throws MasterNotFoundException, ConnectionBrokenException, Exception;
+    public boolean processBatch(byte[] id, List<byte[]> events) throws MasterNotFoundException, ConnectionBrokenException, Exception;
     public void close();
+    
+	public Map<byte[], byte[]> multiLookup(List<byte[]> ids) throws MasterNotFoundException, ConnectionBrokenException, Exception;
+	
+	public Map<byte[], Future<byte[]>> multiLookupAsync(List<byte[]> ids) throws MasterNotFoundException, ConnectionBrokenException, Exception;
+	public Map<byte[], Future<Boolean>> multiProcessAsync(Map<byte[], byte[]> events) throws MasterNotFoundException, ConnectionBrokenException, Exception;
+	public Future<Boolean> storeAsync(byte[] id, byte[] value) throws MasterNotFoundException, ConnectionBrokenException, Exception;
 }

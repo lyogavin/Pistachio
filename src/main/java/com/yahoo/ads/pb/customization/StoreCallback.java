@@ -9,24 +9,12 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-package com.yahoo.ads.pb.kafka;
 
-import java.util.Arrays;
+package com.yahoo.ads.pb.customization;
+import java.util.List;
 
+public interface StoreCallback {
 
-public class KeyValue {
-
-	public byte[] key;
-	public long seqId;
-	public byte[] value;
-    public boolean callback;
-
-	public boolean equals(Object obj) {
-		if (this == obj) return true;
-		if (! (obj instanceof KeyValue)) return false;
-
-		KeyValue that = (KeyValue)obj;
-
-		return Arrays.equals(key,that.key) && (seqId == that.seqId) && Arrays.equals(value, that.value) && (callback == that.callback);
-	}
+    public boolean needCallback();
+    public byte[] onStore(byte[] key, byte[] currentValue, byte[] toStore);
 }

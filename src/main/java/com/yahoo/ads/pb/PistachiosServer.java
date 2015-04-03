@@ -19,24 +19,28 @@ import org.apache.thrift.transport.TSSLTransportFactory;
 import org.apache.thrift.transport.TServerSocket;
 import org.apache.thrift.transport.TServerTransport;
 import org.apache.thrift.transport.TSSLTransportFactory.TSSLTransportParameters;
+
 import java.nio.ByteBuffer;
+
 import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;
 import kafka.producer.ProducerConfig;
 
 import com.yahoo.ads.pb.store.StorePartition;
+import com.ibm.icu.util.ByteArrayWrapper;
+
 import java.util.concurrent.TimeUnit;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+
 import com.yahoo.ads.pb.store.TKStoreFactory;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.Timer;
 import com.codahale.metrics.JmxReporter;
 
-
 import java.net.InetAddress;
-import com.yahoo.ads.pb.store.TLongKyotoCabinetStore;
+import com.yahoo.ads.pb.store.LocalStorageEngine;
 import com.yahoo.ads.pb.kafka.KeyValue;
 import com.yahoo.ads.pb.helix.PartitionHandler;
 import com.yahoo.ads.pb.helix.PartitionHandlerFactory;
@@ -46,25 +50,37 @@ import com.yahoo.ads.pb.helix.BootstrapPartitionHandler;
 import com.yahoo.ads.pb.helix.HelixPartitionManager;
 import com.yahoo.ads.pb.helix.HelixPartitionSpectator;
 import com.yahoo.ads.pb.network.netty.NettyPistachioServer;
+
 import org.apache.helix.HelixManagerFactory;
 import org.apache.helix.HelixManager;
 import org.apache.helix.InstanceType;
 import org.apache.helix.controller.GenericHelixController;
+import org.apache.helix.model.IdealState;
+import org.apache.helix.manager.zk.ZKHelixAdmin;
+
 
 
 //import com.yahoo.ads.pb.platform.perf.IncrementCounter;
 //import com.yahoo.ads.pb.platform.perf.InflightCounter;
 import com.yahoo.ads.pb.util.ConfigurationManager;
 import com.yahoo.ads.pb.util.NativeUtils;
+import com.yahoo.ads.pb.store.ValueOffset;
+import com.yahoo.ads.pb.customization.CustomizationRegistry;
+import com.yahoo.ads.pb.customization.ProcessorRegistry;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.configuration.Configuration;
+
 import com.google.common.base.Joiner.MapJoiner;
 import com.google.common.base.Joiner;
-
+import com.yahoo.ads.pb.customization.StoreCallbackRegistry;
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Input;
 
 
 // Generated code
+
 
 import java.util.HashMap;
 import java.util.Properties;
@@ -78,7 +94,25 @@ public class PistachiosServer {
 		} catch (Exception e) {	 
 			e.printStackTrace(); // This is probably not the best way to handle exception :-)	 
 		}	 
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+                @Override
+                public void run() {
+                    if (instance != null) 
+                        instance.shutdown();
+                }
+            });
 	}
+
+    void shutdown() {
+
+        manager.stop();
+        BootstrapOnlineOfflineStateModel.awaitAllResetThreads();
+
+        // close profile store
+        logger.info("closing physical stores");
+        profileStore.close();
+        profileStore = null;
+    }
 
 
 	private static Logger logger = LoggerFactory.getLogger(PistachiosServer.class);
@@ -100,22 +134,25 @@ public class PistachiosServer {
 	private HelixPartitionManager<BootstrapOnlineOfflineStateModel> manager; // for partition management
 	private static HelixPartitionSpectator helixPartitionSpectator;
 
-	private TLongKyotoCabinetStore profileStore;
+	private LocalStorageEngine profileStore;
 
-	private static Producer<String, byte[]> kafkaProducer = null;
+	private static ConcurrentHashMap<Long, Producer<String, byte[]>> kafkaProducers = new ConcurrentHashMap<>();
 
     private static boolean doNothing = ConfigurationManager.getConfiguration().getBoolean("Pistachio.DoNothing", false);
+    
+    private static final String KAFKA_TOPIC_PREFIX = ConfigurationManager.getConfiguration().getString("Profile.Kafka.TopicPrefix");
 
     public static boolean servingAsServer() {
         return (handler != null);
     }
 
-	public static Producer getKafkaProducerInstance() {
+	public static Producer getKafkaProducerInstance(long partitionId) {
+		Producer<String, byte[]> kafkaProducer = kafkaProducers.get(partitionId);
 		try {
 			if (kafkaProducer == null) {
 				synchronized (logger) {
 					if (kafkaProducer == null) {
-						logger.debug("first time using kafka producer, creating it");
+						logger.info("first time using kafka producer, creating it {}", partitionId);
 						try {
 							Properties props = new Properties();
 							props.put("metadata.broker.list",
@@ -126,12 +163,15 @@ public class PistachiosServer {
 							props.put("request.required.acks", ConfigurationManager.getConfiguration().getString("request.required.acks", "1"));
 							props.put("queue.buffering.max.ms", ConfigurationManager.getConfiguration().getString("queue.buffering.max.ms", "3100"));
 							props.put("queue.buffering.max.messages", ConfigurationManager.getConfiguration().getString("queue.buffering.max.messages", "10000"));
+							props.put("batch.num.messages", ConfigurationManager.getConfiguration().getString("batch.num.messages", "8000"));
+							props.put("send.buffer.bytes", ConfigurationManager.getConfiguration().getString("send.buffer.bytes", "4194304"));
 							props.put("producer.type", ConfigurationManager.getConfiguration().getString("producer.type", "async"));
 							props.put("auto.create.topics.enable", "true");
 
 							ProducerConfig kafkaConf = new ProducerConfig(props);
 
 							kafkaProducer = new Producer<String, byte[]>(kafkaConf);
+							kafkaProducers.put(partitionId, kafkaProducer);
 						} catch (Throwable t) {
 							logger.error("Exception in creating Producer:", t);
 						}
@@ -150,9 +190,11 @@ public class PistachiosServer {
 
   //public static class PistachiosHandler implements Pistachios.Iface{
   public static class DefaultPistachiosHandler implements PistachiosHandler{
+    Kryo kryo = new Kryo();
+
 	String storage;
 
-    public byte[] lookup(long id, long partitionId) throws Exception
+    public byte[] lookup(byte[] id, long partitionId) throws Exception
 	{
 		lookupRequests.mark();
 		final Timer.Context context = lookupTimer.time();
@@ -167,21 +209,25 @@ public class PistachiosServer {
                 logger.info("error getting storePartition for partition id {}, dump map: {}.", partitionId, Joiner.on(',').withKeyValueSeparator("=").join(PistachiosServer.storePartitionMap));
                 throw new Exception("dont find the store partition obj");
             }
-			KeyValue toRetrun = storePartition.getWriteCache().get(id);
+			KeyValue toRetrun = storePartition.getFromWriteCache(id);
 			if (toRetrun != null) {
                 logger.debug("null from cache");
 				return toRetrun.value;
             }
 
-            byte[] toRet = PistachiosServer.getInstance().getProfileStore().get(id, (int)partitionId);
+            byte[] toRet = PistachiosServer.getInstance().getLocalStorageEngine().get(id, (int)partitionId);
 			if (null != toRet) {
-                logger.debug("got from store engine: {}", toRet);
-                return toRet;
+                Input input = new Input(toRet);
+
+                ValueOffset valueOffset = kryo.readObject(input, ValueOffset.class);
+                input.close();
+                logger.debug("got from store engine: {} parsed as {}", toRet, valueOffset);
+                return valueOffset.value;
             }
-            logger.info("dont find value from store");
+            logger.info("dont find value from store {}", id);
             return null;
 		} catch (Exception e) {
-			logger.info("Exception lookup {}", id, e);
+			logger.info("Exception lookup {}", DefaultDataInterpreter.getDataInterpreter().interpretId(id), e);
 			lookupFailureRequests.mark();
             throw e;
 		} finally {
@@ -189,7 +235,7 @@ public class PistachiosServer {
 		}
 	}
 
-    public boolean processBatch(long id, long partitionId, List<byte[]> events) {
+    public boolean processBatch(byte[] id, long partitionId, List<byte[]> events) {
         if (doNothing)
             return true;
         if (ProcessorRegistry.getInstance().getProcessor() != null) {
@@ -197,7 +243,7 @@ public class PistachiosServer {
         }
         return true;
     }
-    public boolean store(long id, long partitionId, byte[] value)
+    public boolean store(byte[] id, long partitionId, byte[] value, boolean callback)
 	{
 		storeRequests.mark();
 		final Timer.Context context = storeTimer.time();
@@ -216,28 +262,56 @@ public class PistachiosServer {
 				return false;
 			}
 
-			String partitionTopic = ConfigurationManager.getConfiguration().getString("Profile.Kafka.TopicPrefix") + partitionId;
+			String partitionTopic = KAFKA_TOPIC_PREFIX + partitionId;
 			KeyValue kv = new KeyValue();
 			kv.key = id;
 			kv.seqId = nextSeqId;
 			kv.value = value;
-			KeyedMessage<String, KeyValue> message = new KeyedMessage<String, KeyValue>(partitionTopic, kv);
-			getKafkaProducerInstance().send(message);
+            kv.callback = callback;
 
-			logger.debug("sent msg {} {} {}, partition current seqid {}", kv.key, kv.value, kv.seqId, PistachiosServer.storePartitionMap.get(partitionId).getSeqId());
+            long lockKey = (id.hashCode() * 7 + 11) % 1024;
+            lockKey = lockKey >= 0 ? lockKey : lockKey + 1024;
 
-			PistachiosServer.storePartitionMap.get(partitionId).getWriteCache().put(id, kv);
+            if (kv.callback && StoreCallbackRegistry.getInstance().getStoreCallback().needCallback()) {
+                synchronized(storePartition.getKeyLock((int)lockKey)) {
+
+                    logger.debug("sent msg {} {} {}, partition current seqid {}", 
+                        kv.key, kv.value, kv.seqId, 
+                        storePartition.getSeqId());
+
+                    byte[] currentValue = (storePartition.getFromWriteCache(id) != null) ? storePartition.getFromWriteCache(id).value : null;
+                    kv.value = StoreCallbackRegistry.getInstance().getStoreCallback().onStore(id, currentValue, value);
+
+                    if (kv.value != null) {
+                        PistachiosServer.storePartitionMap.get(partitionId).getWriteCache().putIfAbsent(new ByteArrayWrapper(id, id.length), kv);
+                    }
+                    KeyedMessage<String, KeyValue> message = new KeyedMessage<String, KeyValue>(partitionTopic, kv);
+                    getKafkaProducerInstance(partitionId).send(message);
+                }
+            } else {
+
+                    logger.debug("sent msg {} {} {}, partition current seqid {}", 
+                        kv.key, kv.value, kv.seqId, PistachiosServer.storePartitionMap.get(partitionId).getSeqId());
+
+                    PistachiosServer.storePartitionMap.get(partitionId).getWriteCache().put(new ByteArrayWrapper(id, id.length), kv);
+
+                    KeyedMessage<String, KeyValue> message = new KeyedMessage<String, KeyValue>(partitionTopic, kv);
+                    getKafkaProducerInstance(partitionId).send(message);
+            }
 
 				logger.debug("waiting for change to catch up {} {} within gap 20000000", PistachiosServer.storePartitionMap.get(partitionId).getSeqId() , kv.seqId);
 			while(kv.seqId - PistachiosServer.storePartitionMap.get(partitionId).getSeqId() > 20000000) {
 				logger.debug("waiting for change to catch up {} {} within gap 20000000", PistachiosServer.storePartitionMap.get(partitionId).getSeqId() , kv.seqId);
 				Thread.sleep(30);
 			}
+
 			return true;
 
-			//PistachiosServer.getInstance().getProfileStore().store(id, value.array());
+			//PistachiosServer.getInstance().getLocalStorageEngine().store(id, value.array());
 		} catch (Exception e) {
-			logger.info("error storing {} {}", id, value, e);
+			logger.info("error storing {} {}", 
+                DefaultDataInterpreter.getDataInterpreter().interpretId(id), 
+                DefaultDataInterpreter.getDataInterpreter().interpretData(value), e);
 			storeFailureRequests.mark();
 			return false;
 		} finally {
@@ -248,7 +322,7 @@ public class PistachiosServer {
 
   public static PistachiosHandler handler = null;
 
-  public static Pistachios.Processor processor;
+  // public static Pistachios.Processor processor;
 
   private static PistachiosServer instance;
 
@@ -301,6 +375,7 @@ public class PistachiosServer {
     }
   }
 
+	/*
   public static void simple(Pistachios.Processor processor) {
     try {
       TServerTransport serverTransport = new TServerSocket(9090);
@@ -322,12 +397,13 @@ public class PistachiosServer {
       e.printStackTrace();
     }
   }
+	*/
 
-  public TLongKyotoCabinetStore getProfileStore() {
+  public LocalStorageEngine getLocalStorageEngine() {
 	  return profileStore;
   }
 
-  byte[] getUserProfileLocally(long userId) {
+  byte[] getUserProfileLocally(byte[] userId) {
 	  if (profileStore != null) {
 		  return profileStore.get(userId, 0);
 	  }
@@ -335,6 +411,7 @@ public class PistachiosServer {
 	  return null;
   }
 	public boolean init() {
+
 		boolean initialized = false;
 
 		logger.info("Initializing profile server...........");
@@ -342,110 +419,31 @@ public class PistachiosServer {
 		try {
 			// open profile store
 			Configuration conf = ConfigurationManager.getConfiguration();
-			profileStore = new TLongKyotoCabinetStore(
+        ZKHelixAdmin admin = new ZKHelixAdmin(conf.getString(ZOOKEEPER_SERVER));
+        IdealState idealState = admin.getResourceIdealState("PistachiosCluster", "PistachiosResource");
+        long totalParition = (long)idealState.getNumPartitions();
+			profileStore = new LocalStorageEngine(
 			        conf.getString(PROFILE_BASE_DIR),
-			        0, 8,
+			        (int)totalParition, 8,
 			        conf.getInt("StorageEngine.KC.RecordsPerPartition"),
 			        conf.getLong("StorageEngine.KC.MemoryPerPartition"));
             ProcessorRegistry.getInstance().init();
-			//profileStore.open();
-			/*
-			/*
-			hostname = InetAddress.getLocalHost().getHostName();
-			if(conf.getBoolean("Profile.Redesign.Firstload", false)){
-				String fileName = "profileMapping.json";
-				String refDir = "/home/y/libexec/server/refdata/";
-				String fullName = refDir + File.separator + fileName;
-				FileReader fr = new FileReader(fullName);
-				JSONParser parser = new JSONParser();
-				ContainerFactory containerFactory = new ContainerFactory() {
-					public List creatArrayContainer() {
-						return new LinkedList();
-					}
-
-					public Map createObjectContainer() {
-						return new LinkedHashMap();
-					}
-
-				};
-				
-				Map<String,List<String>> partition2Server = (Map<String,List<String>>) parser.parse(fr,containerFactory);
-				Set<String> keys = partition2Server.keySet();
-				Set<Integer> partitions = new TreeSet<Integer>();
-				for(String key:keys){
-					if(partition2Server.get(key).contains(hostname)){
-						partitions.add(Integer.parseInt(key));
-					}
-				}
-				String profilePath = "/home/y/libexec/server/profile/store_";
-				String profileFilePrefix = "db_";
-				String profileFileSurfix = ".kch";
-				String profileWalFileSurfix = ".wal";
-				int index = 0;
-				for(int partition: partitions){
-					File partitionDir = new File(profilePath+index);
-					if(partitionDir.isDirectory()){
-						logger.info("rename from {} to {}",profilePath+index,profilePath+partition);
-						partitionDir.renameTo( new File(profilePath+partition));
-					}
-					File storeFile = new File(profilePath+partition+File.separator+profileFilePrefix+index+profileFileSurfix);
-					if(storeFile.isFile()){
-						logger.info("rename from {} to {}",profilePath+partition+File.separator+profileFilePrefix+index+profileFileSurfix, profilePath+partition+File.separator+profileFilePrefix+partition+profileFileSurfix);
-						storeFile.renameTo(new File(profilePath+partition+File.separator+profileFilePrefix+partition+profileFileSurfix));
-					}
-					File storeFileWal =  new File(profilePath+partition+File.separator+profileFilePrefix+index+profileFileSurfix+profileWalFileSurfix);
-					if(storeFileWal.isFile()){
-						logger.info("rename from {} to {}",profilePath+partition+File.separator+profileFilePrefix+index+profileFileSurfix+profileWalFileSurfix,profilePath+partition+File.separator+profileFilePrefix+partition+profileFileSurfix+profileWalFileSurfix);
-						storeFileWal.renameTo(new File(profilePath+partition+File.separator+profileFilePrefix+partition+profileFileSurfix+profileWalFileSurfix));
-					}
-					
-					index++;
-				}
-				
-			}
-			*/
-			/*
-			ModuleManager
-				.registerMBean(
-						ProfileServer.getInstance(),
-						new ObjectName(
-							"com.yahoo.ads.pb.platform.profile:name=ProfileServer"));
-				*/
-
-			// initialize performance counter
-			/*
-			lookupCounter = new InflightCounter(counterGroupName, "Lookup");
-			lookupCounter.register();
-			noDataCounter = new IncrementCounter(counterGroupName, "LookupNoData");
-			noDataCounter.register();
-			*/
-
-//			storeCounter = new InflightCounter(counterGroupName, "Store");
-//			storeCounter.register();
-//			failedStoreCounter = new IncrementCounter(counterGroupName,
-//			        "FailedStore");
-//			failedStoreCounter.register();
-
-//			boolean enableStorePartition = conf.getBoolean(
-//			        Constant.PROFILE_STORING_PARTITION_ENABLE, false);
-//			if (enableStorePartition) {
-				
-		logger.info("creating helix partition sepctator {} {} {}", conf.getString(ZOOKEEPER_SERVER, "EMPTY"),
-			"PistachiosCluster", conf.getString(PROFILE_HELIX_INSTANCE_ID, "EMPTY"));
-				helixPartitionSpectator = new HelixPartitionSpectator(
-				        conf.getString(ZOOKEEPER_SERVER), // zkAddr
-				        "PistachiosCluster",
-				        InetAddress.getLocalHost().getHostName() //conf.getString(PROFILE_HELIX_INSTANCE_ID) // instanceName
-				);
-				// Partition Manager for line spending
-				manager = new HelixPartitionManager<>(
-				        conf.getString(ZOOKEEPER_SERVER), // zkAddr
-				        "PistachiosCluster",
-				        InetAddress.getLocalHost().getHostName() //conf.getString(PROFILE_HELIX_INSTANCE_ID) // instanceName
-				);
-				//manager.start("BootstrapOnlineOffline", new BootstrapOnlineOfflineStateModelFactory(new StorePartitionHandlerFactory()));
-				manager.start("MasterSlave", new BootstrapOnlineOfflineStateModelFactory(new StorePartitionHandlerFactory()));
-//			}
+            logger.info("creating helix partition sepctator {} {} {}", conf.getString(ZOOKEEPER_SERVER, "EMPTY"),
+                    "PistachiosCluster", conf.getString(PROFILE_HELIX_INSTANCE_ID, "EMPTY"));
+            helixPartitionSpectator = new HelixPartitionSpectator(
+                    conf.getString(ZOOKEEPER_SERVER), // zkAddr
+                    "PistachiosCluster",
+                    InetAddress.getLocalHost().getHostName() //conf.getString(PROFILE_HELIX_INSTANCE_ID) // instanceName
+                    );
+            // Partition Manager for line spending
+            manager = new HelixPartitionManager<>(
+                    conf.getString(ZOOKEEPER_SERVER), // zkAddr
+                    "PistachiosCluster",
+                    InetAddress.getLocalHost().getHostName() //conf.getString(PROFILE_HELIX_INSTANCE_ID) // instanceName
+                    );
+            //manager.start("BootstrapOnlineOffline", new BootstrapOnlineOfflineStateModelFactory(new StorePartitionHandlerFactory()));
+            manager.start("MasterSlave", new BootstrapOnlineOfflineStateModelFactory(new StorePartitionHandlerFactory()));
+            //			}
 
 			initialized = true;
 		} catch (Exception e) {

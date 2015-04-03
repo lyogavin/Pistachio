@@ -23,6 +23,9 @@ import org.slf4j.LoggerFactory;
 
 import com.yahoo.ads.pb.helix.BootstrapPartitionHandler;
 import com.yahoo.ads.pb.helix.PartitionHandlerFactory;
+import java.util.ArrayList;
+
+import com.yahoo.ads.pb.PistachiosServer;
 
 @StateModelInfo(initialState = "OFFLINE", states = {
 	    "MASTER", "SLAVE", "ERROR", "DROPPED"
@@ -38,6 +41,8 @@ public class BootstrapOnlineOfflineStateModel extends StateModel{
 	private final AtomicReference<BootstrapPartitionHandler> handler = new AtomicReference<BootstrapPartitionHandler>();
 	private final PartitionHandlerFactory handlerFactory;
 	private final int partitionId;
+    private static final ArrayList<Thread> resetThreadList = new ArrayList<Thread>(256);
+
 
 	public BootstrapOnlineOfflineStateModel(int partitionId, PartitionHandlerFactory handlerFactory) {
 		this.partitionId = partitionId;
@@ -115,7 +120,10 @@ public class BootstrapOnlineOfflineStateModel extends StateModel{
 	@Transition(to = "DROPPED", from = "OFFLINE")
 	public void onBecomeDroppedFromOffline(Message message, NotificationContext context) {
 		logger.info("becomes DROPPED from OFFLINE for {}", partitionId);	
-		stop();
+		//stop();
+
+        //TODO: avoid calling static func
+        PistachiosServer.getInstance().getLocalStorageEngine().close(partitionId);
 	}
 	
 	@Transition(to = "OFFLINE", from = "ERROR")
@@ -123,9 +131,37 @@ public class BootstrapOnlineOfflineStateModel extends StateModel{
 		logger.info("becomes OFFLINE from ERROR for {}", partitionId);				
 	}
 		
+    class ResetThread extends Thread {
+        BootstrapOnlineOfflineStateModel model;
+        ResetThread(int partitionId0, BootstrapOnlineOfflineStateModel model0) {
+            super("Reset Thread "+ partitionId0);
+            model = model0;
+        }
+        public void run() {
+            model.stop();
+        }
+    }
+
 	@Override
 	public void reset() {
-		logger.info("reset called");
-		stop();
+        logger.info("reset called");
+        //stop();
+        logger.info("new thread {} created", resetThreadList.size());
+        Thread t = new ResetThread(partitionId,this);
+        resetThreadList.add(t);
+        t.start();
 	}
+
+    static public void awaitAllResetThreads() {
+        logger.info("awaiting reset threads to finish");
+        for (int i =0;i<resetThreadList.size();i++) {
+            try {
+                logger.info("waiting for thread {}", i);
+                resetThreadList.get(i).join(1000000000L);
+            } catch (Exception e) {
+                logger.info("error ",e);
+            }
+        }
+        logger.info("awaiting reset threads to finish, done.");
+    }
 }

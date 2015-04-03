@@ -14,5 +14,5 @@ package com.yahoo.ads.pb;
 import java.util.List;
 
 public interface EventProcessor {
-    public void processBatch(long id, long partitionId, List<byte[]> events);
+    public void processBatch(byte[] id, long partitionId, List<byte[]> events);
 }

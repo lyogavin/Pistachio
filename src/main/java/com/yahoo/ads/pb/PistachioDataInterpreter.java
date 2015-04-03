@@ -9,24 +9,12 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-package com.yahoo.ads.pb.kafka;
+package com.yahoo.ads.pb;
 
-import java.util.Arrays;
+import java.util.List;
+import com.yahoo.ads.pb.exception.*;
 
-
-public class KeyValue {
-
-	public byte[] key;
-	public long seqId;
-	public byte[] value;
-    public boolean callback;
-
-	public boolean equals(Object obj) {
-		if (this == obj) return true;
-		if (! (obj instanceof KeyValue)) return false;
-
-		KeyValue that = (KeyValue)obj;
-
-		return Arrays.equals(key,that.key) && (seqId == that.seqId) && Arrays.equals(value, that.value) && (callback == that.callback);
-	}
+public interface PistachioDataInterpreter{
+    public String interpretId(byte[] id);
+    public String interpretData(byte[] data);
 }

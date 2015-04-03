@@ -29,7 +29,6 @@ import com.yahoo.ads.pb.store.TKStoreFactory;
 
 
 import org.apache.helix.model.StateModelDefinition;
-import com.yahoo.ads.pb.store.TLongKyotoCabinetStore;
 import com.yahoo.ads.pb.kafka.KeyValue;
 import com.yahoo.ads.pb.helix.PartitionHandler;
 import com.yahoo.ads.pb.helix.PartitionHandlerFactory;
@@ -45,6 +44,7 @@ import org.apache.helix.controller.GenericHelixController;
 import org.apache.helix.HelixAdmin;
 import org.apache.helix.manager.zk.ZKHelixAdmin;
 import org.apache.helix.HelixException;
+import org.apache.helix.model.ClusterConstraints.ConstraintType;
 import kafka.utils.ZKStringSerializer$;
 
 
@@ -64,6 +64,9 @@ import org.I0Itec.zkclient.ZkClient;
 import org.apache.helix.model.InstanceConfig;
 import 	org.apache.helix.HelixDefinedState;
 import org.apache.helix.model.IdealState;
+import org.apache.helix.model.ConstraintItem;
+import org.apache.helix.model.ClusterConstraints.ConstraintAttribute;
+
 
 
 
@@ -104,6 +107,28 @@ public class PistachiosFormatter{
 	  }
   }
 
+  private static void setConstraints(ZKHelixAdmin admin, int numPartitions) {
+
+        logger.info("pause cluster");
+        admin.enableCluster("PistachiosCluster", false);
+        // setting partition constraints
+		logger.info("setting per partition state transition constraints to 1");
+		try {
+            for (int constraintId = 0; constraintId < numPartitions; constraintId++) {
+                java.util.HashMap<ConstraintAttribute, String>  attributes = new java.util.HashMap<ConstraintAttribute, String>();
+                attributes.put(ConstraintAttribute.RESOURCE, "PistachiosResource");
+                attributes.put(ConstraintAttribute.PARTITION, "PistachiosResource_"+constraintId);
+                logger.info("setting per partition for {} state transition constraints to 1", "PistachiosResource_"+constraintId);
+                admin.setConstraint("PistachiosCluster", ConstraintType.STATE_CONSTRAINT, "PistachiosPartitionTransitionConstraint" + constraintId,
+                   new ConstraintItem(attributes,"1"));
+            }
+
+		} catch(Exception e) {
+			logger.info("setting state transition constraints error, roll back and exit", e);
+		}
+        logger.info("resume cluster");
+        admin.enableCluster("PistachiosCluster", true);
+  }
   private static void format(ZKHelixAdmin admin, ZkClient zkClient, String[] hostList, int numPartitions, int numReplicas, String kafkaTopicPrefix, String kafkaZKPath) {
     try {
 		for (int i =0; i<numPartitions; i++) {
@@ -221,6 +246,23 @@ public class PistachiosFormatter{
 			cleanup(admin, zkClient, hostList, numPartitions, numReplicas, kafkaTopicPrefix, kafkaZKPath);
 		}
 
+        // setting partition constraints
+		logger.info("setting per partition state transition constraints to 1");
+		try {
+            for (int constraintId = 0; constraintId < numPartitions; constraintId++) {
+                java.util.HashMap<ConstraintAttribute, String>  attributes = new java.util.HashMap<ConstraintAttribute, String>();
+                attributes.put(ConstraintAttribute.RESOURCE, "PistachiosResource");
+                attributes.put(ConstraintAttribute.PARTITION, "PistachiosResource_"+constraintId);
+                logger.info("setting per partition for {} state transition constraints to 1", "PistachiosResource_"+constraintId);
+                admin.setConstraint("PistachiosCluster", ConstraintType.STATE_CONSTRAINT, "PistachiosPartitionTransitionConstraint" + constraintId,
+                   new ConstraintItem(attributes,"1"));
+            }
+
+		} catch(Exception e) {
+			logger.info("setting state transition constraints error, roll back and exit", e);
+			cleanup(admin, zkClient, hostList, numPartitions, numReplicas, kafkaTopicPrefix, kafkaZKPath);
+		}
+
 		logger.info("adding topic to zk path: {}", kafkaZKPath);
 		//ZkClient zkClient = new ZkClient(args[1]+ (kafkaZKPath != null ? "/" + kafkaZKPath : ""), 30000, 30000, ZKStringSerializer$.MODULE$);
 
@@ -252,6 +294,7 @@ public class PistachiosFormatter{
 	  String usage = "Usage: \tformat_cluster.sh info \n";
 	  usage += "\tformat_cluster.sh format [comma seperated cluster] [num partition] [num replica] (kafka zk path, optional) \n";
 	  usage += "\tformat_cluster.sh cleanup [comma seperated cluster] [num partition] [num replica] (kafka zk path, optional) \n";
+	  //usage += "\tformat_cluster.sh set_constraints [comma seperated cluster] [num partition] \n";
 	  usage += "\tkafkaTopicPrefix, ZK server conn string should also be set from config. \n";
 
 	  if (args.length > 0 && "info".equals(args[0])) {
@@ -272,12 +315,16 @@ public class PistachiosFormatter{
 	  String kafkaTopicPrefix = null;
 
 	  boolean cleanup = false;
+      boolean setConstraints = false;
 
 	  try {
 		  numPartitions = Integer.parseInt(args[2]);
 		  numReplicas = Integer.parseInt(args[3]);
 		  if ("cleanup".equals(args[0])) {
 			  cleanup = true;
+		  }
+		  if ("set_constraints".equals(args[0])) {
+			  setConstraints = true;
 		  }
 		  hostList = args[1].split(",");
 		  if (args.length >=5)
@@ -304,7 +351,10 @@ public class PistachiosFormatter{
 
 		ZkClient zkClient = new ZkClient(zookeeperConnStr + (kafkaZKPath != null ? "/" + kafkaZKPath : ""), 30000, 30000, ZKStringSerializer$.MODULE$);
 
-		if (cleanup) {
+        if (setConstraints) {
+            setConstraints(admin, numPartitions);
+
+		} else if (cleanup) {
 			cleanup(admin, zkClient, hostList, numPartitions, numReplicas, kafkaTopicPrefix, kafkaZKPath);
 		} else {
 			format(admin, zkClient, hostList, numPartitions, numReplicas, kafkaTopicPrefix, kafkaZKPath);

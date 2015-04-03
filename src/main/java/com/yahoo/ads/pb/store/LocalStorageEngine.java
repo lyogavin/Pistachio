@@ -12,6 +12,7 @@
 package com.yahoo.ads.pb.store;
 
 import com.yahoo.ads.pb.util.Convert;
+import com.ibm.icu.util.ByteArrayWrapper;
 
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,11 +27,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.File;
 
+import com.yahoo.ads.pb.DefaultDataInterpreter;
 import com.google.common.base.Preconditions;
+import org.rocksdb.*;
+import com.google.common.primitives.Longs;
+import com.yahoo.ads.pb.util.ConfigurationManager;
 //import com.yahoo.ads.pb.platform.profile.ProfileUtil;
 
-public class TLongKyotoCabinetStore {
-	private static Logger logger = LoggerFactory.getLogger(TLongKyotoCabinetStore.class);
+public class LocalStorageEngine {
+	private static Logger logger = LoggerFactory.getLogger(LocalStorageEngine.class);
+	public static final String storeEngineConf = ConfigurationManager.getConfiguration().getString("LocalStoreEngine", "KC");
 
 	private static final int writeBufferSize = 5000;
 	
@@ -40,9 +46,9 @@ public class TLongKyotoCabinetStore {
 	private final int totalRecords;
 	private final long mappedMemorySize;
 	private final boolean isReadOnly;
-	private final Store[] stores;
+	private StoreEngine[] stores;
 
-	public TLongKyotoCabinetStore(
+	public LocalStorageEngine(
 			String baseDir,
 			int numStores,
 			int recordSizeAlignment,
@@ -52,7 +58,7 @@ public class TLongKyotoCabinetStore {
 		this(baseDir, numStores, recordSizeAlignment, totalRecords, mappedMemorySize, false);
 	}
 	
-	public TLongKyotoCabinetStore(
+	public LocalStorageEngine(
 			String baseDir,
 			int numStores,
 			int recordSizeAlignment,
@@ -65,23 +71,26 @@ public class TLongKyotoCabinetStore {
 		this.totalRecords = totalRecords;
 		this.mappedMemorySize = mappedMemorySize;
 		this.isReadOnly = isReadOnly;
+        this.numStores = numStores;
+        /*
 		if (numStores == 0) {
 			this.numStores = 0;
-			stores = new Store[256];
+			stores = new StoreEngine[256];
 		} else {
 			this.numStores = numStores;
-			stores = new Store[numStores];
+			stores = new KCStoreEngine[numStores];
 			for (int i = 0; i < numStores; i++) {
-				stores[i] = new Store(i);
+				stores[i] = new StoreEngine(i);
 			}
 		}
+        */
 	}
 
 	/**
 	 * Open the data base
 	 */
 	public void open() throws Exception {
-		for (Store store : stores) {
+		for (StoreEngine store : stores) {
 			store.open();
 		}
 	}
@@ -90,7 +99,14 @@ public class TLongKyotoCabinetStore {
 	 * Open the data base
 	 */
 	public void open(int partitionId) throws Exception {
-		stores[partitionId] = new Store(partitionId);
+		if (storeEngineConf.equals("RocksDB")) {
+			stores[partitionId] = new RocksDBStoreEngine();
+		} else if (storeEngineConf.equals("InMem")) {
+			stores[partitionId] = new InMemStoreEngine();
+		} else {
+			stores[partitionId] = new KCStoreEngine();
+		}
+		stores[partitionId].init(partitionId);
 		stores[partitionId].open();
 	}
 
@@ -98,11 +114,21 @@ public class TLongKyotoCabinetStore {
 	 * Close all database.
 	 */
 	public void close() {
-		for (Store store : stores) {
+		for (StoreEngine store : stores) {
 			if(store != null)
 				store.close();
 		}
 	}
+    /**
+     * Close all database.
+     */
+    public void close(int partitionId) {
+            if(stores[partitionId] != null){
+                stores[partitionId].close();
+                stores[partitionId] = null;
+            }
+                
+    }
 	
 	/**
 	 * Get database index based on input key.
@@ -110,13 +136,8 @@ public class TLongKyotoCabinetStore {
 	 * @param key
 	 * @return
 	 */
-	private int getDbIndex(long key) {
-		if(numStores == 0){
-			return (int) (key % 256 >= 0 ? key % 256 : 256+key % 256);
-		}else{
-			return (int) (key / 1000L % numStores);
-		}
-		
+	protected int getDbIndex(byte[] key) {
+			return (int) (key.hashCode() % numStores);
 	}
 
 	/**
@@ -138,7 +159,7 @@ public class TLongKyotoCabinetStore {
 	 * @param key
 	 * @param value
 	 */
-	public void store(long key, long partition, byte[] value) throws Exception {
+	public void store(byte[] key, long partition, byte[] value) throws Exception {
 		int dbIndex = (int)partition;
         /*
 		int dbIndex = getDbIndex(key);
@@ -176,7 +197,7 @@ public class TLongKyotoCabinetStore {
 	 * @param key
 	 * @return
 	 */
-	public byte[] get(long key, int partitionId) {
+	public byte[] get(byte[] key, int partitionId) {
 		int dbIndex = partitionId;//getDbIndex(key);
 		if(stores[dbIndex] != null)
 			return stores[dbIndex].get(key);
@@ -190,7 +211,7 @@ public class TLongKyotoCabinetStore {
 	 * @param key
 	 * @return
 	 */
-	public boolean delete(long key) {
+	public boolean delete(byte[] key) {
 		int dbIndex = getDbIndex(key);
 		if(stores[dbIndex] != null)
 			return stores[dbIndex].delete(key);
@@ -206,7 +227,7 @@ public class TLongKyotoCabinetStore {
 	public long count() {
 		long count = 0;
 
-		for (Store store : stores) {
+		for (StoreEngine store : stores) {
 			if (store != null) {
 				count += store.count();
 			}
@@ -225,7 +246,7 @@ public class TLongKyotoCabinetStore {
 			return;
 		}
 
-		for (Store store : stores) {
+		for (StoreEngine store : stores) {
 			if (store != null) {
 				store.iterate(visitor);
 			}
@@ -242,7 +263,7 @@ public class TLongKyotoCabinetStore {
 			return;
 		}
 
-		for (Store store : stores) {
+		for (StoreEngine store : stores) {
 			if (store != null) {
 				store.iterateWithReadLock(visitor);
 			}
@@ -258,19 +279,254 @@ public class TLongKyotoCabinetStore {
 	 */
 	public void iteratorSingleStore(Visitor visitor, int index) {
 		
-		Store store = stores[index];
+		StoreEngine store = stores[index];
 		if (store != null) {
 			store.iterateWithReadLock(visitor);
 		}
 	}
 
-	private class Store {
-		private final int dbIndex;
-		private final DB hDb;
+	private interface StoreEngine {
+		public void init(int dbIndex);
+		public void forceFlush(boolean forceFlush);
+		public void open() throws Exception;
+		public void close();
+		public void store(byte[] key, byte[] value) throws Exception;
+		public void storeOffset(long value) throws Exception;
+		public byte[] get(byte[] key);
+		public long getOffset();
+		public boolean delete(byte[] key);
+		public long count();
+		public void iterate(Visitor visitor);
+		public void iterateWithReadLock(Visitor visitor);
+	};
 
-		private volatile ConcurrentHashMap<Long, byte[]> prevMap;
-		private volatile ConcurrentHashMap<Long, byte[]> currentMap;
-		private volatile ConcurrentHashMap<byte[], byte[]> offsetMap;
+	private class InMemStoreEngine implements StoreEngine {
+		private Logger logger = LoggerFactory.getLogger(InMemStoreEngine.class);
+		private int dbIndex;
+		private ConcurrentHashMap<ByteArrayWrapper, byte[]> db = new ConcurrentHashMap<ByteArrayWrapper, byte[]>();
+		private AtomicInteger flushCounter;
+		private final static int PER_OFFSET_FLUSH = 100;
+		private static final String offsetKey  = "offset_storage_tk";
+		private long offset  = Long.MAX_VALUE;
+        private final ThreadLocal<ByteArrayWrapper> byteArrayWrapperForGetKey =
+            new ThreadLocal<ByteArrayWrapper>() {
+                @Override protected ByteArrayWrapper initialValue() {
+                    return new ByteArrayWrapper(new byte[100], 100);
+                }
+            };
+
+
+
+		public InMemStoreEngine() {
+			logger.info("creating InMemStoreEngine");
+		}
+		public void init(int dbIndex) {
+			this.dbIndex = dbIndex;
+			flushCounter = new AtomicInteger(0);
+
+		}
+		public void forceFlush(boolean forceFlush) {
+			return;
+		}
+		public void open() throws Exception {
+			logger.info("open in mem db");
+		}
+		public void close() {
+			logger.info("close in mem db");
+		}
+		private void flushOffset() throws RocksDBException{
+			if(offset > 0){
+				db.put(new ByteArrayWrapper(offsetKey.getBytes(),offsetKey.getBytes().length), Convert.longToBytes(offset));
+			}
+		}
+		public void store(byte[] key, byte[] value) throws Exception {
+			try {
+				db.put(new ByteArrayWrapper(key, key.length), value);
+
+				if(flushCounter.addAndGet(1) % PER_OFFSET_FLUSH == 0) {
+					logger.debug("flushing offset at {}", flushCounter);
+					flushOffset();
+				}
+			} catch (Exception e) {
+				logger.debug("error store {}/{}", key, value, e);
+				throw new Exception("error store " + key + " " + value, e);
+			}
+		}
+		public void storeOffset(long value) throws Exception {
+			if(value >= 0){
+				offset = value;
+			}
+			else{
+				throw new Exception("offset can't be negative value");
+			}
+		}
+		public byte[] get(byte[] key) {
+			byte[] result = null;
+			byte[] byteKey = (key);
+			try{
+                byteArrayWrapperForGetKey.get().set(key,0,key.length);
+				result =  db.get(byteArrayWrapperForGetKey.get());
+			} catch (Exception e) {
+				logger.debug("error getting key {}", key, e);
+			}
+			return result;
+		}
+		public long getOffset() {
+			byte[] result =  null;
+			if (offset == Long.MAX_VALUE) {
+				try {
+                    byteArrayWrapperForGetKey.get().set(offsetKey.getBytes(),0,offsetKey.getBytes().length);
+					result = db.get(byteArrayWrapperForGetKey.get());
+                    if (result != null)
+                        offset = Convert.bytesToLong(result);
+					return offset;
+				} catch (Exception e) {
+					return offset;
+				}
+			}
+
+			return offset;
+		}
+		public boolean delete(byte[] key) {
+			try{
+                byteArrayWrapperForGetKey.get().set(key,0,key.length);
+                db.remove(byteArrayWrapperForGetKey.get());
+			} catch (Exception e) {
+			     return false;		    
+			} 
+		    return true;
+				
+		}
+		public long count() {
+			return 0;
+		}
+		public void iterate(Visitor visitor) {
+			logger.info("dont support iterate");
+		}
+		public void iterateWithReadLock(Visitor visitor) {
+			logger.info("dont support iterate");
+		}
+	}
+
+	private class RocksDBStoreEngine implements StoreEngine {
+		private Logger logger = LoggerFactory.getLogger(RocksDBStoreEngine.class);
+		private int dbIndex;
+		private RocksDB db;
+		private AtomicInteger flushCounter;
+		private final static int PER_OFFSET_FLUSH = 100;
+		private static final String offsetKey  = "offset_storage_tk";
+		private long offset  = -1;
+
+
+		public RocksDBStoreEngine() {
+			logger.info("creating RocksDBStoreEngine");
+		}
+		public void init(int dbIndex) {
+			this.dbIndex = dbIndex;
+			flushCounter = new AtomicInteger(0);
+		}
+		public void forceFlush(boolean forceFlush) {
+			return;
+		}
+		public void open() throws Exception {
+			RocksDB.loadLibrary();
+			Options options = new Options().setCreateIfMissing(true);
+			StringBuilder fileNameBuilder = new StringBuilder();
+			fileNameBuilder.append(baseDir).append(dbIndex);
+			fileNameBuilder.append("/db_").append(dbIndex).append(".rocks");
+			try {
+				logger.info("opening rocks db file {}", fileNameBuilder.toString());
+				db = RocksDB.open(options, fileNameBuilder.toString());
+				//assert(false);
+			} catch (RocksDBException e) {
+				logger.error("error open rocks db {}", fileNameBuilder.toString(),  e);
+				throw new Exception("error open rocks db", e);
+			}
+		}
+		public void close() {
+			logger.info("closing db");
+			if (db != null)
+				db.close();
+
+		}
+		private void flushOffset() throws RocksDBException{
+			if(offset > 0){
+				db.put(offsetKey.getBytes(), Convert.longToBytes(offset));
+			}
+		}
+		public void store(byte[] key, byte[] value) throws Exception {
+			try {
+				db.put(key, value);
+
+
+				if(flushCounter.addAndGet(1) % PER_OFFSET_FLUSH == 0) {
+					logger.debug("flushing offset at {}", flushCounter);
+					flushOffset();
+				}
+			} catch (Exception e) {
+				logger.debug("error store {}/{}", key, value, e);
+				throw new Exception("error store " + key + " " + value, e);
+			}
+		}
+		public void storeOffset(long value) throws Exception {
+			if(value >= 0){
+				offset = value;
+			}
+			else{
+				throw new Exception("offset can't be negative value");
+			}
+		}
+		public byte[] get(byte[] key) {
+			byte[] result = null;
+			byte[] byteKey = (key);
+			try{
+				result =  db.get(byteKey);
+			} catch (RocksDBException e) {
+				logger.debug("error getting key {}", key, e);
+			}
+			return result;
+		}
+		public long getOffset() {
+			byte[] result =  null;
+			if (offset == -1) {
+				try {
+					result = db.get(offsetKey.getBytes());
+					offset = Convert.bytesToLong(result);
+					return offset;
+				} catch (Exception e) {
+					return 0;
+				}
+			}
+
+			return offset;
+		}
+		public boolean delete(byte[] key) {
+			try{
+				db.remove((key));
+			} catch (RocksDBException e) {
+			     return false;		    
+			} 
+		    return true;
+				
+		}
+		public long count() {
+			return 0;
+		}
+		public void iterate(Visitor visitor) {
+			logger.info("dont support iterate");
+		}
+		public void iterateWithReadLock(Visitor visitor) {
+			logger.info("dont support iterate");
+		}
+	}
+
+	private class KCStoreEngine implements StoreEngine{
+		private int dbIndex;
+		private DB hDb;
+
+		private volatile ConcurrentHashMap<ByteArrayWrapper, byte[]> prevMap;
+		private volatile ConcurrentHashMap<ByteArrayWrapper, byte[]> currentMap;
+		private volatile ConcurrentHashMap<ByteArrayWrapper, byte[]> offsetMap;
 		private volatile boolean isClosing;
 		private volatile boolean forceFlush;
 		private Thread profileWriter;
@@ -282,14 +538,23 @@ public class TLongKyotoCabinetStore {
 		private java.util.Random rand = new java.util.Random();
 		private static final int maxQueuingCount = 200000;
 		private volatile int queuingSize = 0;
+        private final ThreadLocal<ByteArrayWrapper> byteArrayWrapperForGetKey =
+            new ThreadLocal<ByteArrayWrapper>() {
+                @Override protected ByteArrayWrapper initialValue() {
+                    return new ByteArrayWrapper(new byte[100], 100);
+                }
+            };
 
-		public Store(int dbIndex) {
+		public KCStoreEngine() {
+        }
+
+		public void init(int dbIndex) {
 			this.dbIndex = dbIndex;
 
 			// use TLINEAR
 			hDb = new DB(2);
-			currentMap = new ConcurrentHashMap<Long, byte[]>(2 * writeBufferSize);
-			offsetMap = new ConcurrentHashMap<byte[], byte[]>(); 
+			currentMap = new ConcurrentHashMap<ByteArrayWrapper, byte[]>(2 * writeBufferSize);
+			offsetMap = new ConcurrentHashMap<ByteArrayWrapper, byte[]>(); 
 			flushCounter = new AtomicInteger(0);
 			forceFlush = false;
 		}
@@ -398,7 +663,7 @@ public class TLongKyotoCabinetStore {
 		 * @param key
 		 * @param value
 		 */
-		public void store(long key, byte[] value) throws Exception {
+		public void store(byte[] key, byte[] value) throws Exception {
 			if (ArrayUtils.isEmpty(value)) {
 				return;
 			}
@@ -414,7 +679,7 @@ public class TLongKyotoCabinetStore {
 				}
 			}
 
-			currentMap.put(key, value);
+			currentMap.put(new ByteArrayWrapper(key, key.length), value);
 		}
 		
 		/**
@@ -438,14 +703,15 @@ public class TLongKyotoCabinetStore {
 		 * @param key
 		 * @return
 		 */
-		public byte[] get(long key) {
-			byte[] result = currentMap.get(key);
+		public byte[] get(byte[] key) {
+            byteArrayWrapperForGetKey.get().set(key, 0, key.length);
+			byte[] result = currentMap.get(byteArrayWrapperForGetKey.get());
 			if (result == null && prevMap != null) {
 				result = prevMap.get(key);
 			}
 
 			if (result == null) {
-				result = hDb.get(Convert.longToBytes(key));
+				result = hDb.get(key);
 			}
 
 			return result;
@@ -468,13 +734,14 @@ public class TLongKyotoCabinetStore {
 		 * @param key
 		 * @return
 		 */
-		public boolean delete(long key) {
-			currentMap.remove(key);
+		public boolean delete(byte[] key) {
+            byteArrayWrapperForGetKey.get().set(key, 0, key.length);
+			currentMap.remove(byteArrayWrapperForGetKey.get());
 			if (prevMap != null) {
 				prevMap.remove(key);
 			}
 
-			return hDb.remove(Convert.longToBytes(key));
+			return hDb.remove(key);
 		}
 
 		/**
@@ -551,15 +818,15 @@ public class TLongKyotoCabinetStore {
 			if (currentMap.size() > 0 || isClosing || forceFlush) {
 				
 				prevMap = currentMap;
-				currentMap = new ConcurrentHashMap<Long, byte[]>(2 * writeBufferSize);
+				currentMap = new ConcurrentHashMap<ByteArrayWrapper, byte[]>(2 * writeBufferSize);
 
 				long st = System.currentTimeMillis();
 				hDb.begin_transaction(false);
-				for (Entry<Long, byte[]> item : prevMap.entrySet()) {
-					long key = item.getKey();
+				for (Entry<ByteArrayWrapper, byte[]> item : prevMap.entrySet()) {
+					ByteArrayWrapper key = item.getKey();
 					byte[] value = item.getValue();
-					if (!hDb.set(Convert.longToBytes(key), value)) {
-						logger.error("Failed to store for {}, Error: {}", key, hDb.error());
+					if (!hDb.set(key.bytes, value)) {
+						logger.error("Failed to store for {}, Error: {}", DefaultDataInterpreter.getDataInterpreter().interpretId(key.bytes), hDb.error());
 					}
 				}
 				if(numStores == 0 &&(flushCounter.addAndGet(1) % PER_OFFSET_FLUSH == 0 || isClosing || forceFlush))

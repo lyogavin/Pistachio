@@ -31,9 +31,10 @@ import java.util.concurrent.TimeUnit;
 //import com.yahoo.ads.pb.platform.profile.RuntimeUserProfile;
 //import com.yahoo.ads.pb.platform.profile.UserEventProtos.UserEvent;
 //import com.yahoo.ads.pb.util.Convert;
-import com.yahoo.ads.pb.store.TLongKyotoCabinetStore;
+import com.yahoo.ads.pb.store.LocalStorageEngine;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.kryo.io.ByteBufferOutput;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ArrayBlockingQueue;
 import com.yahoo.ads.pb.kafka.KeyValue;
@@ -43,6 +44,8 @@ import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Timer;
 import com.codahale.metrics.JmxReporter;
 import com.yahoo.ads.pb.util.ConfigurationManager;
+import com.yahoo.ads.pb.DefaultDataInterpreter;
+import com.yahoo.ads.pb.customization.StoreCallbackRegistry;
 
 
 public class TKStore implements Store{
@@ -64,7 +67,8 @@ public class TKStore implements Store{
 
 	//private static  final IncrementCounter failedStoreCounter = new IncrementCounter(
 	//        ProfileServerModule.getCountergroupname(), "FailedStore");
-	private TLongKyotoCabinetStore profileStore;
+	private LocalStorageEngine profileStore;
+
 	
 	static {
 		//storeCounter.register();
@@ -90,6 +94,9 @@ public class TKStore implements Store{
 
 		@Override
 		public void run() {
+            ValueOffset valueOffset = new ValueOffset();
+            Kryo kryo = new Kryo();
+            ByteBufferOutput byteBufferOutput = new ByteBufferOutput(10240);
 
 			logger.info("start receiveing {}, partitionId {}", partition, partitionId);
 			while (!this.isInterrupted()) {
@@ -105,15 +112,64 @@ public class TKStore implements Store{
                     if (eventOffset == null || eventOffset.keyValue == null) {
                         continue;
                     }
-                    logger.debug("got data {}/{}/{} from incoming queue", eventOffset.keyValue.key, eventOffset.keyValue.value, eventOffset.offset);
+                    logger.debug("got data {}/{}/{} from incoming queue", 
+                        DefaultDataInterpreter.getDataInterpreter().interpretId(eventOffset.keyValue.key), 
+                        DefaultDataInterpreter.getDataInterpreter().interpretData(eventOffset.keyValue.value),
+                        eventOffset.offset);
 
                     final Timer.Context context = tkStoreTimer.time();
 
                     try {
-                        PistachiosServer.getInstance().getProfileStore().store(eventOffset.keyValue.key, partitionId, eventOffset.keyValue.value);
-                        logger.debug("stored data {}/{}/{}/{}", eventOffset.keyValue.key, partitionId, eventOffset.keyValue.value, eventOffset.offset);
+                        valueOffset.value = eventOffset.keyValue.value;
+                        valueOffset.offset = eventOffset.offset;
+                        byteBufferOutput.clear();
+
+                        // read old value
+                        byte[] oldValueOffsetBytes = PistachiosServer.getInstance().getLocalStorageEngine().get(eventOffset.keyValue.key, partitionId);
+                        if (oldValueOffsetBytes != null) {
+                            Input input = new Input(oldValueOffsetBytes);
+
+                            ValueOffset oldValueOffset = kryo.readObject(input, ValueOffset.class);
+                            input.close();
+                            //dedup first
+                            if (oldValueOffset.offset == eventOffset.offset) {
+                                logger.debug("dup offset found in data {}/{}/{}/{}", 
+                                        DefaultDataInterpreter.getDataInterpreter().interpretId(eventOffset.keyValue.key), 
+                                        DefaultDataInterpreter.getDataInterpreter().interpretData(eventOffset.keyValue.value),
+                                        eventOffset.offset);
+                                continue;
+                            }
+                            if (eventOffset.keyValue.callback && StoreCallbackRegistry.getInstance().getStoreCallback().needCallback()) {
+                                    valueOffset.value = StoreCallbackRegistry.getInstance().getStoreCallback().onStore(eventOffset.keyValue.key,
+                                        oldValueOffset.value, eventOffset.keyValue.value);
+                            }
+                        }
+
+                        kryo.writeObject(byteBufferOutput, valueOffset);
+
+                        PistachiosServer.getInstance().getLocalStorageEngine().store(eventOffset.keyValue.key, partitionId, byteBufferOutput.toBytes());
+
+                        logger.debug("stored data {}/{}/{}/{}", 
+                            DefaultDataInterpreter.getDataInterpreter().interpretId(eventOffset.keyValue.key), 
+                            DefaultDataInterpreter.getDataInterpreter().interpretData(eventOffset.keyValue.value),
+                            eventOffset.offset);
+
+                        // remove cache
+                        StorePartition storePartition = PistachiosServer.storePartitionMap.get((long)partitionId);
+
+                        if (storePartition == null) {
+                            logger.info("error getting storePartition for partition id {}. dump store partition map {}", partitionId,
+                                PistachiosServer.storePartitionMap.toString());
+                        }
+                        else 
+                            storePartition.removeIteamFromCacheAccordingToSeqId(eventOffset.keyValue.key, eventOffset.keyValue.seqId);
+
                     } catch (Exception e) {
-                        logger.info("error storing data {}/{}/{}/{}", eventOffset.keyValue.key, partitionId, eventOffset.keyValue.value, eventOffset.offset, e);
+                        logger.info("error storing data {}/{}/{}/{}", 
+                            DefaultDataInterpreter.getDataInterpreter().interpretId(eventOffset.keyValue.key), 
+                            partitionId,
+                            DefaultDataInterpreter.getDataInterpreter().interpretData(eventOffset.keyValue.value),
+                            eventOffset.offset, e);
                         tkStoreFailures.mark();
                     } finally {
                         context.stop();
@@ -139,17 +195,23 @@ public class TKStore implements Store{
             KeyValue keyValue = kryo.readObject(input, KeyValue.class);
             input.close();
 
-            int queueNum = (int) ((keyValue.key / 10771) % threadNum);
+            int queueNum = (int) ((keyValue.key.hashCode()) % threadNum);
             queueNum  = queueNum >= 0 ? queueNum : queueNum + threadNum;
 
             try {
                 incomequeues[queueNum].put(new DataOffset(keyValue, offset));
             } catch (InterruptedException e) {
-                logger.error("interrupte exception while add to queue, key {} value {}, offset {}", keyValue.key, keyValue.value, offset, e);
+                logger.error("interrupte exception while add to queue, key {} value {}, offset {}", 
+                    DefaultDataInterpreter.getDataInterpreter().interpretId(keyValue.key), 
+                    DefaultDataInterpreter.getDataInterpreter().interpretData(keyValue.value),
+                    offset, e);
             }
 
 
-            logger.debug("queued {}:{}, seq id:{}", keyValue.key, keyValue.value, keyValue.seqId);
+            logger.debug("queued {}:{}, seq id:{}", 
+                DefaultDataInterpreter.getDataInterpreter().interpretId(keyValue.key), 
+                DefaultDataInterpreter.getDataInterpreter().interpretData(keyValue.value),
+                keyValue.seqId);
         } catch (Exception e) {
             logger.info("error ", e);
         }
@@ -264,7 +326,7 @@ public class TKStore implements Store{
 	@Override
 	public boolean open(int partitionId) {
 		this.partitionId = partitionId;
-		profileStore = PistachiosServer.getInstance().getProfileStore();
+		profileStore = PistachiosServer.getInstance().getLocalStorageEngine();
 		try {
 	       logger.debug("open store for partition {}",partitionId);
 	        profileStore.open(partitionId);
@@ -276,22 +338,35 @@ public class TKStore implements Store{
 			incomequeues = new ArrayBlockingQueue[threadNum];
 		comsumerThreads = new Thread[threadNum];
 		for (int i = 0; i < threadNum; i++) {
+			try {
+
 			if(incomequeues[i] == null)
 				incomequeues[i] = new ArrayBlockingQueue<DataOffset>(QUEUE_SIZE);
 			comsumerThreads[i] = new Consumer(i);
 			comsumerThreads[i].start();
             metrics.register(MetricRegistry.name(TKStore.class, "TKStore incoming queue" + partitionId + "/" + i, "size"),
                     new incomequeueSizeGauge(incomequeues[i]));
+			} catch (Exception e) {
+				logger.error("error setup consumers & metrics ", e);
+			}
 		}
+		try {
 		reporter.start();
+		} catch (Exception e) {
+			logger.error("error start reporter", e);
+		}
 		return true;
 	}
 
 	@Override
 	public boolean close() {
-		profileStore.close();
+        // close only when exiting or dropping
+		//profileStore.close();
 		for (Thread t : comsumerThreads) {
 			t.interrupt();
+		}
+		for (int i = 0; i < threadNum; i++) {
+			metrics.remove((MetricRegistry.name(TKStore.class, "TKStore incoming queue" + partitionId + "/" + i, "size")));
 		}
 		return true;
 	}

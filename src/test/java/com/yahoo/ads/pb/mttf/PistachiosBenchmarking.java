@@ -57,7 +57,7 @@ public class PistachiosBenchmarking implements Runnable {
                 long id = rand.nextLong();
                 byte[] bytes = new byte[rand.nextInt(recordAverageSize << 1)];
                 rand.nextBytes(bytes);
-                client.store(id, bytes);
+                client.store(com.google.common.primitives.Longs.toByteArray(id), bytes);
             } catch (Exception e) {
                 System.out.println("error testing"+ e);
                 System.exit(0);
