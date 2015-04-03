@@ -61,7 +61,7 @@ import com.yahoo.ads.pb.customization.StoreCallbackRegistry;
  * <p>
  * 
  * @author      Gavin Li
- * @version     %I%, %G%
+ * @version     0.1.0.0
  * @since       1.0
  */
 public class PistachiosClient {

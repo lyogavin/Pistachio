@@ -10,3 +10,4 @@ git checkout gh-pages
 cp -r /tmp/pistachio_apidocs/* ./apidocs/
 git commit -a -m "update apidocs"
 git push origin gh-pages
+git checkout master
