@@ -51,6 +51,9 @@ import com.yahoo.ads.pb.customization.ProcessorRegistry;
 import com.yahoo.ads.pb.exception.*;
 import com.yahoo.ads.pb.network.netty.NettyPistachioClient;
 import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.KeeperException.NodeExistsException;
 import com.yahoo.ads.pb.customization.StoreCallbackRegistry;
 
 /**
@@ -88,16 +91,21 @@ public class PistachiosClient {
 
     private PistachiosClientImpl clientImpl = new NettyPistachioClient();
 
+    static private class DummyWatcher implements Watcher {
+        public void    process(WatchedEvent event) {
+        }
+    }
+
 
 
 	static {
 		reporter.start();
         ZooKeeper zk =  null;
         try {
-            zk = new ZooKeeper(ConfigurationManager.getConfiguration().getString("Pistachio.ZooKeeper.Server"),40000,null);
+            zk = new ZooKeeper(ConfigurationManager.getConfiguration().getString("Pistachio.ZooKeeper.Server"),40000,new DummyWatcher());
             setZkRegistryData(ConfigurationManager.getConfiguration().getString("Pistachio.Processor.JarPath"),
                               ConfigurationManager.getConfiguration().getString("Pistachio.Processor.ClassName"),
-                              ProcessorRegistry.processorRegistryPath, 
+                              ProcessorRegistry.processorRegistryPath,
                               zk);
             setZkRegistryData(ConfigurationManager.getConfiguration().getString("Pistachio.StoreCallback.JarPath"),
                               ConfigurationManager.getConfiguration().getString("Pistachio.StoreCallback.ClassName"),
@@ -105,6 +113,7 @@ public class PistachiosClient {
                               zk);
 
         } catch (Exception e) {
+            logger.info("error updating zk", e);
         } finally {
             try {
             if (zk != null)
@@ -117,10 +126,27 @@ public class PistachiosClient {
     private static void setZkRegistryData(String jarPath, String className, String zkPath, ZooKeeper zk){
         try {
             if (jarPath != null && className != null) {
-                zk.create(zkPath, (jarPath + ";" + className).getBytes(), null, org.apache.zookeeper.CreateMode.PERSISTENT);
-                zk.setData(zkPath, (jarPath + ";" + className).getBytes(), -1);
+                String value = (jarPath + ";" + className);
+                logger.info("updating {} to {}", zkPath, value);
+                String currentPath = "";
+                for (String path : zkPath.split("/")) {
+                    if (path.isEmpty())
+                        continue;
+                    currentPath = currentPath + "/" + path;
+                    try {
+                        logger.info("creating {}", currentPath);
+                        zk.create(currentPath, value.getBytes(), org.apache.zookeeper.ZooDefs.Ids.OPEN_ACL_UNSAFE , org.apache.zookeeper.CreateMode.PERSISTENT);
+                    } catch (NodeExistsException e0) {
+                    } catch (Exception e) {
+                        logger.info("error creating path {}", path, e);
+                        break;
+                    }
+                }
+                zk.setData(zkPath, value.getBytes(), -1);
+                logger.info("updated {} to {}", zkPath, value);
             }
         } catch (Exception e) {
+            logger.info("error updating zk", e);
         }
     }
 	private int initialIntervalMillis = conf.getInt("Pistachio.AutoRetry.BackOff.InitialIntervalMillis", 100);
@@ -404,7 +430,7 @@ public class PistachiosClient {
               id = args[1];
               store = true;
               value = args[2];
-              client.store(id.getBytes(), value.getBytes());
+              client.store(id.getBytes(), value.getBytes(), true);
           } else if (args.length == 3 && args[0].equals("processbatch") ) {
                   id = (args[1]);
               store = true;

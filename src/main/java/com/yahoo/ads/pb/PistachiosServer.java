@@ -280,11 +280,23 @@ public class PistachiosServer {
                         storePartition.getSeqId());
 
                     byte[] currentValue = (storePartition.getFromWriteCache(id) != null) ? storePartition.getFromWriteCache(id).value : null;
+                    if (currentValue == null) {
+                        byte[] toRet = PistachiosServer.getInstance().getLocalStorageEngine().get(id, (int)partitionId);
+                        if (null != toRet) {
+                            Input input = new Input(toRet);
+
+                            ValueOffset valueOffset = kryo.readObject(input, ValueOffset.class);
+                            input.close();
+                            logger.debug("got from store engine: {} parsed as {}", toRet, valueOffset);
+                            currentValue = valueOffset.value;
+                        }
+                    }
                     kv.value = StoreCallbackRegistry.getInstance().getStoreCallback().onStore(id, currentValue, value);
 
                     if (kv.value != null) {
                         PistachiosServer.storePartitionMap.get(partitionId).getWriteCache().putIfAbsent(new ByteArrayWrapper(id, id.length), kv);
                     }
+                    kv.value = value;
                     KeyedMessage<String, KeyValue> message = new KeyedMessage<String, KeyValue>(partitionTopic, kv);
                     getKafkaProducerInstance(partitionId).send(message);
                 }

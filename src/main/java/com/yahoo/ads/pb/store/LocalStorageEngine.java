@@ -72,6 +72,7 @@ public class LocalStorageEngine {
 		this.mappedMemorySize = mappedMemorySize;
 		this.isReadOnly = isReadOnly;
         this.numStores = numStores;
+        stores = new StoreEngine[numStores];
         /*
 		if (numStores == 0) {
 			this.numStores = 0;

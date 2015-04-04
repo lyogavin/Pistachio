@@ -24,28 +24,16 @@ import org.slf4j.LoggerFactory;
 import java.net.URLClassLoader;
 import java.net.URL;
 
-public class StoreCallbackRegistry extends CustomizationRegistry<StoreCallback> {
-    static public String storeCallbackPath = "/pistachio_zk/storecallback_registry/info";
-    private static StoreCallbackRegistry instance = null;
-
-    protected String getZKPath() {
-        return storeCallbackPath;
+public class AppenderStoreCallback implements StoreCallback {
+    public boolean needCallback() {
+        return true;
     }
-
-
-    public static synchronized StoreCallbackRegistry getInstance() {
-        if (instance == null) {
-            instance = new StoreCallbackRegistry();
-
-            instance.init();
-            if (instance.processor == null)
-                instance.processor = new DefaultStoreCallback();
-        }
-        return instance;
+    public byte[] onStore(byte[] key, byte[] currentValue, byte[] toStore) {
+        if (currentValue == null)
+            return toStore;
+        byte[] newValue = new byte[currentValue.length + toStore.length];
+        System.arraycopy(currentValue, 0, newValue, 0, currentValue.length);
+        System.arraycopy(toStore, 0, newValue, currentValue.length, toStore.length);
+        return newValue;
     }
-
-    public StoreCallback getStoreCallback() {
-        return processor;
-    }
-
 }

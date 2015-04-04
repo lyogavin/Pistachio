@@ -50,7 +50,7 @@ public class CustomizationRegistry<T> implements NodeCacheListener{
             client.start();
 
             // in this example we will cache data. Notice that this is optional.
-            cache = new NodeCache(client, PATH);
+            cache = new NodeCache(client, getZKPath());
             cache.start();
 
             cache.getListenable().addListener(this);

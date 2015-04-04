@@ -344,8 +344,10 @@ public class TKStore implements Store{
 				incomequeues[i] = new ArrayBlockingQueue<DataOffset>(QUEUE_SIZE);
 			comsumerThreads[i] = new Consumer(i);
 			comsumerThreads[i].start();
-            metrics.register(MetricRegistry.name(TKStore.class, "TKStore incoming queue" + partitionId + "/" + i, "size"),
-                    new incomequeueSizeGauge(incomequeues[i]));
+            synchronized(metrics) {
+                metrics.register(MetricRegistry.name(TKStore.class, "TKStore_incoming_queue" + partitionId + "/" + i, "size"),
+                        new incomequeueSizeGauge(incomequeues[i]));
+            }
 			} catch (Exception e) {
 				logger.error("error setup consumers & metrics ", e);
 			}
@@ -366,7 +368,9 @@ public class TKStore implements Store{
 			t.interrupt();
 		}
 		for (int i = 0; i < threadNum; i++) {
-			metrics.remove((MetricRegistry.name(TKStore.class, "TKStore incoming queue" + partitionId + "/" + i, "size")));
+            synchronized(metrics) {
+                metrics.remove((MetricRegistry.name(TKStore.class, "TKStore_incoming_queue" + partitionId + "/" + i, "size")));
+            }
 		}
 		return true;
 	}
