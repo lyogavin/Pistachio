@@ -84,6 +84,7 @@ import com.esotericsoftware.kryo.io.Input;
 
 import java.util.HashMap;
 import java.util.Properties;
+import java.util.Arrays;
 
 
 public class PistachiosServer {
@@ -221,7 +222,7 @@ public class PistachiosServer {
 
                 ValueOffset valueOffset = kryo.readObject(input, ValueOffset.class);
                 input.close();
-                logger.debug("got from store engine: {} parsed as {}", toRet, valueOffset);
+                logger.debug("got from store engine: {} parsed as {}-{}", toRet, valueOffset.value, valueOffset.offset);
                 return valueOffset.value;
             }
             logger.info("dont find value from store {}", id);
@@ -269,7 +270,7 @@ public class PistachiosServer {
 			kv.value = value;
             kv.callback = callback;
 
-            long lockKey = (id.hashCode() * 7 + 11) % 1024;
+            long lockKey = (Arrays.hashCode(id) * 7 + 11) % 1024;
             lockKey = lockKey >= 0 ? lockKey : lockKey + 1024;
 
             if (kv.callback && StoreCallbackRegistry.getInstance().getStoreCallback().needCallback()) {

@@ -46,6 +46,7 @@ import com.codahale.metrics.JmxReporter;
 import com.yahoo.ads.pb.util.ConfigurationManager;
 import com.yahoo.ads.pb.DefaultDataInterpreter;
 import com.yahoo.ads.pb.customization.StoreCallbackRegistry;
+import java.util.Arrays;
 
 
 public class TKStore implements Store{
@@ -61,9 +62,9 @@ public class TKStore implements Store{
 	final static MetricRegistry metrics = new MetricRegistry();
 	final static JmxReporter reporter = JmxReporter.forRegistry(metrics).inDomain("pistachio.metrics.TKStore").build();
 	private int threadNum = ConfigurationManager.getConfiguration().getInt("Pistachio.Store.ThreadsPerPartition", 4);
-	private final static Meter tkStoreFailures = metrics.meter(MetricRegistry.name(TKStore.class, "TKStoreFailureRequests"));
+	private static  final Meter tkStoreFailures = metrics.meter(MetricRegistry.name(TKStore.class, "TKStoreFailureRequests"));
 
-	private final static Timer tkStoreTimer = metrics.timer(MetricRegistry.name(TKStore.class, "TKStoreStoreTimer"));
+	private static final Timer tkStoreTimer = metrics.timer(MetricRegistry.name(TKStore.class, "TKStoreStoreTimer"));
 
 	//private static  final IncrementCounter failedStoreCounter = new IncrementCounter(
 	//        ProfileServerModule.getCountergroupname(), "FailedStore");
@@ -73,6 +74,11 @@ public class TKStore implements Store{
 	static {
 		//storeCounter.register();
 		////failedStoreCounter.register();
+		try {
+		reporter.start();
+		} catch (Exception e) {
+			logger.error("error start reporter", e);
+		}
 	}
 
 	class DataOffset {
@@ -195,7 +201,7 @@ public class TKStore implements Store{
             KeyValue keyValue = kryo.readObject(input, KeyValue.class);
             input.close();
 
-            int queueNum = (int) ((keyValue.key.hashCode()) % threadNum);
+            int queueNum = (int) ((Arrays.hashCode(keyValue.key)) % threadNum);
             queueNum  = queueNum >= 0 ? queueNum : queueNum + threadNum;
 
             try {
@@ -351,11 +357,6 @@ public class TKStore implements Store{
 			} catch (Exception e) {
 				logger.error("error setup consumers & metrics ", e);
 			}
-		}
-		try {
-		reporter.start();
-		} catch (Exception e) {
-			logger.error("error start reporter", e);
 		}
 		return true;
 	}

@@ -6,7 +6,7 @@
     <artifactId>pistachios</artifactId>
     <packaging>jar</packaging>
     <version>0.1.0.0</version>
-    <name>Pistachios</name>
+    <name>pistachio</name>
     <description>Pistachios</description>
     <url></url>
 	<properties>
@@ -150,7 +150,7 @@
 
     <build>
 		<sourceDirectory>./src</sourceDirectory>
-        <finalName>Pistachios</finalName>
+        <finalName>pistachio</finalName>
 		<plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
