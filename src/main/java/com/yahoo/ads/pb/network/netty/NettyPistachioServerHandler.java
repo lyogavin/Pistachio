@@ -81,8 +81,7 @@ public class NettyPistachioServerHandler extends SimpleChannelInboundHandler<Req
 	              byte[] returnData = handler.getNext(request.getPartition(), request.getVersionid());
 	              logger.debug("return data {} for partition {}", returnData, request.getPartition());
 	              if(returnData == null){
-	              	builder.setData(null);
-	              	 builder.setSucceeded(true);
+	              	 builder.setSucceeded(false);
 	              }else{
 		              builder.setData(ByteString.copyFrom(returnData));
 		              builder.setSucceeded(true);

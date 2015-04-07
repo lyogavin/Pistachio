@@ -52,13 +52,11 @@ public class PistachiosTkIterator implements Iterator{
 	@Override
     public Object next() {
 			byte[] key =  cursor.get_key(false);
-			logger.info("inside next key: {}", new String(key));
 			if(key == null){
 				return null;
 			}
 			
 			byte[] value = cursor.get_value(true);
-			logger.info("inside next value: {}", new String(value));
 			KeyValue keyValue = new KeyValue();
 			keyValue.key = key;
 			keyValue.value = value;
