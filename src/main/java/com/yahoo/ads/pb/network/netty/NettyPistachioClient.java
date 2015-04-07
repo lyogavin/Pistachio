@@ -544,12 +544,14 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
             }
             Request.Builder builder = Request.newBuilder();
             Response res = handler.sendRequest(builder.setVersionid(id).setType(RequestType.GETNEXT).setPartition(partition));
+            logger.info("get response success" +  res.getSucceeded());
             if (!res.getSucceeded())
                 throw new Exception();
             Input input = new Input(res.getData().toByteArray());
 
   					KeyValue keyValue = kryo.readObject(input, KeyValue.class);
   					lastKey = new String(keyValue.key);
+  					logger.info("last key "+lastKey);
             return keyValue;
     	}
 
