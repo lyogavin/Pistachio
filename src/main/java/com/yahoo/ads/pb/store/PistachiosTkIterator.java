@@ -52,7 +52,6 @@ public class PistachiosTkIterator implements Iterator{
 
 	@Override
     public Object next() {
-		if(cursor.step()){
 			byte[] key =  cursor.get_key(false);
 			byte[] value = cursor.get_value(false);
 			KeyValue keyValue = new KeyValue();
@@ -60,9 +59,8 @@ public class PistachiosTkIterator implements Iterator{
 			keyValue.value = value;
 			threadByteBuffer.get().clear();
 			kryo.writeObject(threadByteBuffer.get(), keyValue);
+			cursor.step();
 			return threadByteBuffer.get().toBytes();
-		}
-	    return null;
     }
 
 	@Override
