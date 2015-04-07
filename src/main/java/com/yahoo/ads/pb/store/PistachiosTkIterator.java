@@ -4,14 +4,18 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.WeakHashMap;
 
+import org.slf4j.LoggerFactory;
+
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.ByteBufferOutput;
 import com.esotericsoftware.kryo.io.Input;
+import com.esotericsoftware.minlog.Log.Logger;
 import com.yahoo.ads.pb.kafka.KeyValue;
 
 import kyotocabinet.Cursor;
 
 public class PistachiosTkIterator implements Iterator{
+	private static org.slf4j.Logger logger = LoggerFactory.getLogger(PistachiosTkIterator.class);
 	public volatile static Map<Long,PistachiosTkIterator> iteratorMap = new WeakHashMap<Long,PistachiosTkIterator>();
 	private Cursor cursor;
 	private Kryo kryo = new Kryo();
@@ -42,24 +46,24 @@ public class PistachiosTkIterator implements Iterator{
 	
 	@Override
     public boolean hasNext() {
-		if(cursor.step()){
-			cursor.step_back();
 			return true;
-		}else{
-			return false;
-		}
     }
 
 	@Override
     public Object next() {
 			byte[] key =  cursor.get_key(false);
-			byte[] value = cursor.get_value(false);
+			logger.info("inside next key: {}", new String(key));
+			if(key == null){
+				return null;
+			}
+			
+			byte[] value = cursor.get_value(true);
+			logger.info("inside next value: {}", new String(value));
 			KeyValue keyValue = new KeyValue();
 			keyValue.key = key;
 			keyValue.value = value;
 			threadByteBuffer.get().clear();
 			kryo.writeObject(threadByteBuffer.get(), keyValue);
-			cursor.step();
 			return threadByteBuffer.get().toBytes();
     }
 

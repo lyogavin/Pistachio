@@ -390,10 +390,7 @@ public class PistachiosServer {
 
 		@Override
 		public byte[] getNext( long partitionId, long versionId) {
-			if(PistachiosServer.getInstance().getLocalStorageEngine().iterator((int)partitionId, versionId).hasNext()){
 				return (byte[]) PistachiosServer.getInstance().getLocalStorageEngine().iterator((int)partitionId, versionId).next();
-			}
-			return null;
 		}
 
   }
