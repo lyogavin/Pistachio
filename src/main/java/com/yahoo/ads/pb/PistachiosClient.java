@@ -435,17 +435,28 @@ public class PistachiosClient {
 				String partition = args[1];
 				PistachioIterator iterator = client.iterator(Long.parseLong(partition));
 				KeyValue keyValue = iterator.getNext();
-				while(keyValue!=null){
-					System.out.println("key :"+new String(keyValue.key));
-					System.out.println("value :"+new String(keyValue.value));
+				while (keyValue != null) {
+					System.out.println("key :" + new String(keyValue.key));
+					System.out.println("value :" + new String(keyValue.value));
 					keyValue = iterator.getNext();
 				}
-				System.out.println("you are iterate partition "+ id);
-				}else {
+				System.out.println("you are iterate partition " + id);
+			} else if (args.length == 3 && args[0].equals("jump")) {
+				String partition = args[1];
+				PistachioIterator iterator = client.iterator(Long.parseLong(partition));
+				iterator.jump(args[2].getBytes());
+				KeyValue keyValue = iterator.getNext();
+				while (keyValue != null) {
+					System.out.println("key :" + new String(keyValue.key));
+					System.out.println("value :" + new String(keyValue.value));
+					keyValue = iterator.getNext();
+				}
+				System.out.println("you are iterate partition " + id);
+			} else {
 				System.out.println("USAGE: xxxx lookup id or xxxx store id value");
-              System.exit(0);
-          }
-      } catch (Exception e) {
+				System.exit(0);
+			}
+		} catch (Exception e) {
           System.out.println("error: "+ e);
       } finally {
           client.close();
