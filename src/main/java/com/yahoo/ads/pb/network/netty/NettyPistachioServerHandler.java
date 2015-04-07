@@ -79,8 +79,13 @@ public class NettyPistachioServerHandler extends SimpleChannelInboundHandler<Req
               logger.debug("calling get next");
               try{
 	              byte[] returnData = handler.getNext(request.getPartition(), request.getVersionid());
-	              builder.setData(ByteString.copyFrom(returnData));
-	              builder.setSucceeded(true);
+	              if(returnData == null){
+	              	builder.setData(null);
+	              	 builder.setSucceeded(true);
+	              }else{
+		              builder.setData(ByteString.copyFrom(returnData));
+		              builder.setSucceeded(true);
+	              }
               }catch(Exception e){
               	logger.info("error get next", e);
                 builder.setSucceeded(false);
