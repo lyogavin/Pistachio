@@ -785,6 +785,7 @@ public class LocalStorageEngine {
 				}
 			}
 			pit.jump(key);
+			pit.next();
 		}
 		
 		/**
