@@ -436,8 +436,8 @@ public class PistachiosClient {
 				PistachioIterator iterator = client.iterator(Long.parseLong(partition));
 				KeyValue keyValue = iterator.getNext();
 				while(keyValue!=null){
-					System.out.println("key :"+keyValue.key);
-					System.out.println("value :"+keyValue.value);
+					System.out.println("key :"+new String(keyValue.key));
+					System.out.println("value :"+new String(keyValue.value));
 					keyValue = iterator.getNext();
 				}
 				System.out.println("you are iterate partition "+ id);
