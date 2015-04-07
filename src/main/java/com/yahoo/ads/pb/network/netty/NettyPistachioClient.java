@@ -525,7 +525,7 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
     	public KeyValue getNext()  throws MasterNotFoundException, Exception{
     		long partition = partitionId;
             if (isLocalCall(partition)) {
-                return PistachiosServer.handler.getNext(partition, id);
+                return kryo.readObject(new Input(PistachiosServer.handler.getNext(partition, id)), KeyValue.class);
             }
             NettyPistachioClientHandler handler = null;
             try {

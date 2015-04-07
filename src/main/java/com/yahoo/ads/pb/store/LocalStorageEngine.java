@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 
 import com.yahoo.ads.pb.DefaultDataInterpreter;
+import com.esotericsoftware.kryo.Kryo;
 import com.google.common.base.Preconditions;
 
 import org.rocksdb.*;
@@ -539,7 +540,6 @@ public class LocalStorageEngine {
 		private final static int PER_OFFSET_FLUSH = 100;
 		private long offset  = -1;
 		private static final String offsetKey  = "offset_storage_tk";
-
 		private java.util.Random rand = new java.util.Random();
 		private static final int maxQueuingCount = 200000;
 		private volatile int queuingSize = 0;

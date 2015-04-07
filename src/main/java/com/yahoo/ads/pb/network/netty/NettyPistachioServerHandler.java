@@ -75,6 +75,29 @@ public class NettyPistachioServerHandler extends SimpleChannelInboundHandler<Req
                                     }));
                 builder.setSucceeded(result);
                 break;
+            case GETNEXT:
+              logger.debug("calling get next");
+              try{
+	              byte[] returnData = handler.getNext(request.getPartition(), request.getVersionid());
+	              builder.setData(ByteString.copyFrom(returnData));
+              }catch(Exception e){
+              	logger.info("error get next", e);
+                builder.setSucceeded(false);
+              }
+              break;
+            case JUMP:
+              logger.debug("calling jump");
+              result = handler.processBatch(
+                  request.getId().toByteArray(), 
+                  request.getPartition(), 
+                  Lists.transform(request.getEventsList(), 
+                                  new Function<ByteString, byte[]>() {
+                                      public byte[] apply(ByteString from) {
+                                          return from.toByteArray();
+                                      }
+                                  }));
+              builder.setSucceeded(result);
+              break;
             case MULTI_LOOKUP:
             	logger.debug("calling multi lookup");
 				for (Request req : request.getRequestsList()) {

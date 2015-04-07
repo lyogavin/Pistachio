@@ -389,9 +389,9 @@ public class PistachiosServer {
 		}
 
 		@Override
-		public KeyValue getNext( long partitionId, long versionId) {
+		public byte[] getNext( long partitionId, long versionId) {
 			if(PistachiosServer.getInstance().getLocalStorageEngine().iterator((int)partitionId, versionId).hasNext()){
-				return (KeyValue) PistachiosServer.getInstance().getLocalStorageEngine().iterator((int)partitionId, versionId).next();
+				return (byte[]) PistachiosServer.getInstance().getLocalStorageEngine().iterator((int)partitionId, versionId).next();
 			}
 			return null;
 		}

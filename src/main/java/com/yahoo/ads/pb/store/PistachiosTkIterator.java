@@ -4,6 +4,9 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.WeakHashMap;
 
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.ByteBufferOutput;
+import com.esotericsoftware.kryo.io.Input;
 import com.yahoo.ads.pb.kafka.KeyValue;
 
 import kyotocabinet.Cursor;
@@ -11,7 +14,13 @@ import kyotocabinet.Cursor;
 public class PistachiosTkIterator implements Iterator{
 	public volatile static Map<Long,PistachiosTkIterator> iteratorMap = new WeakHashMap<Long,PistachiosTkIterator>();
 	private Cursor cursor;
-	 
+	private Kryo kryo = new Kryo();
+	private static final ThreadLocal<ByteBufferOutput> threadByteBuffer =
+      new ThreadLocal<ByteBufferOutput>() {
+          @Override protected ByteBufferOutput initialValue() {
+              return new ByteBufferOutput(10240);
+          }
+      };
 	public static PistachiosTkIterator getPistachiosTkIterator(long id){
 		if(iteratorMap.get(id) == null){
 			synchronized(iteratorMap){
@@ -49,7 +58,9 @@ public class PistachiosTkIterator implements Iterator{
 			KeyValue keyValue = new KeyValue();
 			keyValue.key = key;
 			keyValue.value = value;
-			return keyValue;
+			threadByteBuffer.get().clear();
+			kryo.writeObject(threadByteBuffer.get(), keyValue);
+			return threadByteBuffer.get().toBytes();
 		}
 	    return null;
     }
