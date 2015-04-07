@@ -22,6 +22,7 @@ import org.apache.thrift.protocol.TProtocol;
 import java.nio.ByteBuffer;
 
 import com.yahoo.ads.pb.helix.HelixPartitionSpectator;
+import com.yahoo.ads.pb.kafka.KeyValue;
 import com.yahoo.ads.pb.util.ConfigurationManager;
 
 import org.apache.commons.configuration.Configuration;
@@ -432,7 +433,13 @@ public class PistachiosClient {
 				client.delete(id.getBytes());
 			} else if (args.length == 2 && args[0].equals("iterate")) {
 				String partition = args[1];
-				client.iterator(Long.parseLong(partition));
+				PistachioIterator iterator = client.iterator(Long.parseLong(partition));
+				KeyValue keyValue = iterator.getNext();
+				while(keyValue!=null){
+					System.out.println("key :"+keyValue.key);
+					System.out.println("value :"+keyValue.value);
+					keyValue = iterator.getNext();
+				}
 				System.out.println("you are iterate partition "+ id);
 				}else {
 				System.out.println("USAGE: xxxx lookup id or xxxx store id value");
