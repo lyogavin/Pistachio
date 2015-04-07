@@ -382,6 +382,20 @@ public class PistachiosServer {
   			context.stop();
   		}
   	}
+
+		@Override
+		public void jump(byte[] key, long partitionId, long versionId) {
+			PistachiosServer.getInstance().getLocalStorageEngine().jump((int)partitionId, versionId, key);
+		}
+
+		@Override
+		public KeyValue getNext( long partitionId, long versionId) {
+			if(PistachiosServer.getInstance().getLocalStorageEngine().iterator((int)partitionId, versionId).hasNext()){
+				return (KeyValue) PistachiosServer.getInstance().getLocalStorageEngine().iterator((int)partitionId, versionId).next();
+			}
+			return null;
+		}
+
   }
   public static PistachiosHandler handler = null;
 
@@ -492,7 +506,7 @@ public class PistachiosServer {
             ProcessorRegistry.getInstance().init();
             logger.info("creating helix partition sepctator {} {} {}", conf.getString(ZOOKEEPER_SERVER, "EMPTY"),
                     "PistachiosCluster", conf.getString(PROFILE_HELIX_INSTANCE_ID, "EMPTY"));
-            helixPartitionSpectator = new HelixPartitionSpectator(
+            helixPartitionSpectator = HelixPartitionSpectator.getInstance(
                     conf.getString(ZOOKEEPER_SERVER), // zkAddr
                     "PistachiosCluster",
                     InetAddress.getLocalHost().getHostName() //conf.getString(PROFILE_HELIX_INSTANCE_ID) // instanceName

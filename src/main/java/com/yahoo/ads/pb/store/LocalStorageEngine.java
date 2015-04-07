@@ -14,6 +14,7 @@ package com.yahoo.ads.pb.store;
 import com.yahoo.ads.pb.util.Convert;
 import com.ibm.icu.util.ByteArrayWrapper;
 
+import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -25,11 +26,14 @@ import kyotocabinet.Visitor;
 import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import java.io.File;
 
 import com.yahoo.ads.pb.DefaultDataInterpreter;
 import com.google.common.base.Preconditions;
+
 import org.rocksdb.*;
+
 import com.google.common.primitives.Longs;
 import com.yahoo.ads.pb.util.ConfigurationManager;
 //import com.yahoo.ads.pb.platform.profile.ProfileUtil;
@@ -230,16 +234,12 @@ public class LocalStorageEngine {
 	 * 
 	 * @param visitor
 	 */
-	public void iterate(Visitor visitor) {
-		if (visitor == null) {
-			return;
-		}
-
-		for (StoreEngine store : stores) {
-			if (store != null) {
-				store.iterate(visitor);
-			}
-		}
+	public Iterator iterator(int partitionId, long id) {
+		return stores[partitionId].iterate(id);
+	}
+	
+	public void jump(int partitionId, long id, byte[] key) {
+		stores[partitionId].jump(key, id);
 	}
 	
 	/**
@@ -268,11 +268,14 @@ public class LocalStorageEngine {
 	 */
 	public void iteratorSingleStore(Visitor visitor, int index) {
 		
+		
 		StoreEngine store = stores[index];
 		if (store != null) {
 			store.iterateWithReadLock(visitor);
 		}
 	}
+	
+	
 
 	private interface StoreEngine {
 		public void init(int dbIndex);
@@ -285,8 +288,9 @@ public class LocalStorageEngine {
 		public long getOffset();
 		public boolean delete(byte[] key);
 		public long count();
-		public void iterate(Visitor visitor);
+		public Iterator iterate(long id);
 		public void iterateWithReadLock(Visitor visitor);
+		public void jump(byte[] key,long id);
 	};
 
 	private class InMemStoreEngine implements StoreEngine {
@@ -389,12 +393,18 @@ public class LocalStorageEngine {
 		public long count() {
 			return 0;
 		}
-		public void iterate(Visitor visitor) {
+		public Iterator iterate(long id) {
 			logger.info("dont support iterate");
+			return null;
 		}
 		public void iterateWithReadLock(Visitor visitor) {
 			logger.info("dont support iterate");
 		}
+		@Override
+    public void jump(byte[] key, long id) {
+	    // TODO Auto-generated method stub
+	    
+    }
 	}
 
 	private class RocksDBStoreEngine implements StoreEngine {
@@ -501,12 +511,18 @@ public class LocalStorageEngine {
 		public long count() {
 			return 0;
 		}
-		public void iterate(Visitor visitor) {
+		public Iterator iterate(long id) {
 			logger.info("dont support iterate");
+			return null;
 		}
 		public void iterateWithReadLock(Visitor visitor) {
 			logger.info("dont support iterate");
 		}
+		@Override
+    public void jump(byte[] key, long id) {
+	    // TODO Auto-generated method stub
+	    
+    }
 	}
 
 	private class KCStoreEngine implements StoreEngine{
@@ -745,27 +761,30 @@ public class LocalStorageEngine {
 
 			return 0;
 		}
-
-		/**
-		 * Go through all the records with the visitor.
-		 * 
-		 * @param visitor
-		 */
-		public void iterate(Visitor visitor) {
-			if (visitor == null) {
-				return;
-			}
-
-			if (hDb != null) {
-				Cursor cursor = hDb.cursor();
-				cursor.jump();
-				try {
-					while (cursor.accept(visitor, true, true)) { }
-				}
-				finally {
-					cursor.disable();
+		
+		@Override
+		public Iterator iterate(long itId) {
+			PistachiosTkIterator pit = PistachiosTkIterator.getPistachiosTkIterator(itId);
+			if(!pit.isCursorSet()){
+				synchronized(pit){
+			    if(!pit.isCursorSet()){
+			    	pit.setCursor(hDb.cursor());
+			    }
 				}
 			}
+		    return pit;
+	    }
+		
+		public void jump(byte[] key, long itId){
+			PistachiosTkIterator pit = PistachiosTkIterator.getPistachiosTkIterator(itId);
+			if(!pit.isCursorSet()){
+				synchronized(pit){
+			    if(!pit.isCursorSet()){
+			    	pit.setCursor(hDb.cursor());
+			    }
+				}
+			}
+			pit.jump(key);
 		}
 		
 		/**
@@ -827,5 +846,6 @@ public class LocalStorageEngine {
 				forceFlush = false;
 			}
 		}
+
 	}
 }

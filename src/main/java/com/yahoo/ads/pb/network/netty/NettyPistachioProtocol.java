@@ -37,6 +37,14 @@ public final class NettyPistachioProtocol {
      * <code>DELETE = 6;</code>
      */
     DELETE(5, 6),
+    /**
+     * <code>GETNEXT = 7;</code>
+     */
+    GETNEXT(6, 7),
+    /**
+     * <code>JUMP = 8;</code>
+     */
+    JUMP(7, 8),
     ;
 
     /**
@@ -63,6 +71,14 @@ public final class NettyPistachioProtocol {
      * <code>DELETE = 6;</code>
      */
     public static final int DELETE_VALUE = 6;
+    /**
+     * <code>GETNEXT = 7;</code>
+     */
+    public static final int GETNEXT_VALUE = 7;
+    /**
+     * <code>JUMP = 8;</code>
+     */
+    public static final int JUMP_VALUE = 8;
 
 
     public final int getNumber() { return value; }
@@ -75,6 +91,8 @@ public final class NettyPistachioProtocol {
         case 4: return MULTI_LOOKUP;
         case 5: return MULTI_PROCESS_EVENT;
         case 6: return DELETE;
+        case 7: return GETNEXT;
+        case 8: return JUMP;
         default: return null;
       }
     }
@@ -281,6 +299,16 @@ public final class NettyPistachioProtocol {
      */
     com.yahoo.ads.pb.network.netty.NettyPistachioProtocol.RequestOrBuilder getRequestsOrBuilder(
         int index);
+
+    // optional uint64 versionid = 13;
+    /**
+     * <code>optional uint64 versionid = 13;</code>
+     */
+    boolean hasVersionid();
+    /**
+     * <code>optional uint64 versionid = 13;</code>
+     */
+    long getVersionid();
   }
   /**
    * Protobuf type {@code com.yahoo.ads.pb.network.netty.Request}
@@ -406,6 +434,11 @@ public final class NettyPistachioProtocol {
                 mutable_bitField0_ |= 0x00000800;
               }
               requests_.add(input.readMessage(com.yahoo.ads.pb.network.netty.NettyPistachioProtocol.Request.PARSER, extensionRegistry));
+              break;
+            }
+            case 104: {
+              bitField0_ |= 0x00000200;
+              versionid_ = input.readUInt64();
               break;
             }
           }
@@ -737,6 +770,22 @@ public final class NettyPistachioProtocol {
       return requests_.get(index);
     }
 
+    // optional uint64 versionid = 13;
+    public static final int VERSIONID_FIELD_NUMBER = 13;
+    private long versionid_;
+    /**
+     * <code>optional uint64 versionid = 13;</code>
+     */
+    public boolean hasVersionid() {
+      return ((bitField0_ & 0x00000200) == 0x00000200);
+    }
+    /**
+     * <code>optional uint64 versionid = 13;</code>
+     */
+    public long getVersionid() {
+      return versionid_;
+    }
+
     private void initFields() {
       type_ = com.yahoo.ads.pb.network.netty.NettyPistachioProtocol.RequestType.LOOKUP;
       id_ = com.google.protobuf.ByteString.EMPTY;
@@ -750,6 +799,7 @@ public final class NettyPistachioProtocol {
       callback_ = false;
       ids_ = java.util.Collections.emptyList();
       requests_ = java.util.Collections.emptyList();
+      versionid_ = 0L;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -798,6 +848,9 @@ public final class NettyPistachioProtocol {
       }
       for (int i = 0; i < requests_.size(); i++) {
         output.writeMessage(12, requests_.get(i));
+      }
+      if (((bitField0_ & 0x00000200) == 0x00000200)) {
+        output.writeUInt64(13, versionid_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -865,6 +918,10 @@ public final class NettyPistachioProtocol {
       for (int i = 0; i < requests_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(12, requests_.get(i));
+      }
+      if (((bitField0_ & 0x00000200) == 0x00000200)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(13, versionid_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1011,6 +1068,8 @@ public final class NettyPistachioProtocol {
         } else {
           requestsBuilder_.clear();
         }
+        versionid_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00001000);
         return this;
       }
 
@@ -1094,6 +1153,10 @@ public final class NettyPistachioProtocol {
         } else {
           result.requests_ = requestsBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00001000) == 0x00001000)) {
+          to_bitField0_ |= 0x00000200;
+        }
+        result.versionid_ = versionid_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -1186,6 +1249,9 @@ public final class NettyPistachioProtocol {
               requestsBuilder_.addAllMessages(other.requests_);
             }
           }
+        }
+        if (other.hasVersionid()) {
+          setVersionid(other.getVersionid());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -1984,6 +2050,39 @@ public final class NettyPistachioProtocol {
           requests_ = null;
         }
         return requestsBuilder_;
+      }
+
+      // optional uint64 versionid = 13;
+      private long versionid_ ;
+      /**
+       * <code>optional uint64 versionid = 13;</code>
+       */
+      public boolean hasVersionid() {
+        return ((bitField0_ & 0x00001000) == 0x00001000);
+      }
+      /**
+       * <code>optional uint64 versionid = 13;</code>
+       */
+      public long getVersionid() {
+        return versionid_;
+      }
+      /**
+       * <code>optional uint64 versionid = 13;</code>
+       */
+      public Builder setVersionid(long value) {
+        bitField0_ |= 0x00001000;
+        versionid_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint64 versionid = 13;</code>
+       */
+      public Builder clearVersionid() {
+        bitField0_ = (bitField0_ & ~0x00001000);
+        versionid_ = 0L;
+        onChanged();
+        return this;
       }
 
       // @@protoc_insertion_point(builder_scope:com.yahoo.ads.pb.network.netty.Request)
@@ -3262,7 +3361,7 @@ public final class NettyPistachioProtocol {
     java.lang.String[] descriptorData = {
       "\nEmain/java/com/yahoo/ads/pb/network/net" +
       "ty/NettyPistachioProtocol.proto\022\036com.yah" +
-      "oo.ads.pb.network.netty\"\261\002\n\007Request\0229\n\004t" +
+      "oo.ads.pb.network.netty\"\304\002\n\007Request\0229\n\004t" +
       "ype\030\001 \001(\0162+.com.yahoo.ads.pb.network.net" +
       "ty.RequestType\022\n\n\002id\030\002 \001(\014\022\022\n\nrequest_id" +
       "\030\003 \001(\r\022\021\n\tthread_id\030\004 \001(\r\022\021\n\tpartition\030\005" +
@@ -3270,14 +3369,15 @@ public final class NettyPistachioProtocol {
       "r_server_url\030\010 \001(\t\022\025\n\rprocess_class\030\t \001(" +
       "\t\022\020\n\010callback\030\n \001(\010\022\013\n\003ids\030\013 \003(\014\0229\n\010requ" +
       "ests\030\014 \003(\0132\'.com.yahoo.ads.pb.network.ne",
-      "tty.Request\"\262\001\n\010Response\022\n\n\002id\030\001 \001(\014\022\021\n\t" +
-      "succeeded\030\002 \001(\010\022\025\n\rerror_message\030\003 \001(\t\022\014" +
-      "\n\004data\030\004 \001(\014\022\022\n\nrequest_id\030\005 \001(\r\022\021\n\tthre" +
-      "ad_id\030\006 \001(\r\022;\n\tresponses\030\007 \003(\0132(.com.yah" +
-      "oo.ads.pb.network.netty.Response*n\n\013Requ" +
-      "estType\022\n\n\006LOOKUP\020\001\022\t\n\005STORE\020\002\022\021\n\rPROCES" +
-      "S_EVENT\020\003\022\020\n\014MULTI_LOOKUP\020\004\022\027\n\023MULTI_PRO" +
-      "CESS_EVENT\020\005\022\n\n\006DELETE\020\006B\002H\001"
+      "tty.Request\022\021\n\tversionid\030\r \001(\004\"\262\001\n\010Respo" +
+      "nse\022\n\n\002id\030\001 \001(\014\022\021\n\tsucceeded\030\002 \001(\010\022\025\n\rer" +
+      "ror_message\030\003 \001(\t\022\014\n\004data\030\004 \001(\014\022\022\n\nreque" +
+      "st_id\030\005 \001(\r\022\021\n\tthread_id\030\006 \001(\r\022;\n\trespon" +
+      "ses\030\007 \003(\0132(.com.yahoo.ads.pb.network.net" +
+      "ty.Response*\205\001\n\013RequestType\022\n\n\006LOOKUP\020\001\022" +
+      "\t\n\005STORE\020\002\022\021\n\rPROCESS_EVENT\020\003\022\020\n\014MULTI_L" +
+      "OOKUP\020\004\022\027\n\023MULTI_PROCESS_EVENT\020\005\022\n\n\006DELE" +
+      "TE\020\006\022\013\n\007GETNEXT\020\007\022\010\n\004JUMP\020\010B\002H\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -3289,7 +3389,7 @@ public final class NettyPistachioProtocol {
           internal_static_com_yahoo_ads_pb_network_netty_Request_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_com_yahoo_ads_pb_network_netty_Request_descriptor,
-              new java.lang.String[] { "Type", "Id", "RequestId", "ThreadId", "Partition", "Data", "Events", "JarServerUrl", "ProcessClass", "Callback", "Ids", "Requests", });
+              new java.lang.String[] { "Type", "Id", "RequestId", "ThreadId", "Partition", "Data", "Events", "JarServerUrl", "ProcessClass", "Callback", "Ids", "Requests", "Versionid", });
           internal_static_com_yahoo_ads_pb_network_netty_Response_descriptor =
             getDescriptor().getMessageTypes().get(1);
           internal_static_com_yahoo_ads_pb_network_netty_Response_fieldAccessorTable = new

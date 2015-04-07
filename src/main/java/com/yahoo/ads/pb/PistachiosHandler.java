@@ -12,11 +12,15 @@
 package com.yahoo.ads.pb;
 
 import java.util.List;
+
 import com.yahoo.ads.pb.exception.*;
+import com.yahoo.ads.pb.kafka.KeyValue;
 
 public interface PistachiosHandler {
     public byte[] lookup(byte[] id, long partitionId) throws Exception;
     public boolean store(byte[] id, long partitionId, byte[] value, boolean callback);
     public boolean processBatch(byte[] id, long partitionId, List<byte[]> events);
     public boolean delete(byte[] id, long partitionId);
+    public KeyValue getNext(long partitionId, long versionId);
+  	public void jump(byte[] key, long partitionId, long versionId);
 }
