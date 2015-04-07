@@ -387,6 +387,11 @@ public class PistachiosClient {
 		return clientImpl.delete(key);
 	}
 	
+	public PistachioIterator iterator(long partition) throws MasterNotFoundException,
+  ConnectionBrokenException {
+		return clientImpl.iterator(partition);
+	}
+	
   public static void main(String [] args) {
 	  PistachiosClient client = null;
       try {
@@ -425,7 +430,11 @@ public class PistachiosClient {
 				} catch (Exception e) {
 				}
 				client.delete(id.getBytes());
-			} else {
+			} else if (args.length == 2 && args[0].equals("iterate")) {
+				String partition = args[1];
+				client.iterator(Long.parseLong(partition));
+				System.out.println("you are iterate partition "+ id);
+				}else {
 				System.out.println("USAGE: xxxx lookup id or xxxx store id value");
               System.exit(0);
           }
