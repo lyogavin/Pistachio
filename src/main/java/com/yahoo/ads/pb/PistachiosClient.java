@@ -22,6 +22,7 @@ import org.apache.thrift.protocol.TProtocol;
 import java.nio.ByteBuffer;
 
 import com.yahoo.ads.pb.helix.HelixPartitionSpectator;
+import com.yahoo.ads.pb.kafka.KeyValue;
 import com.yahoo.ads.pb.util.ConfigurationManager;
 
 import org.apache.commons.configuration.Configuration;
@@ -407,6 +408,16 @@ public class PistachiosClient {
 		}
 	}
 
+	public boolean delete(byte[] key) throws MasterNotFoundException,
+	        ConnectionBrokenException {
+		return clientImpl.delete(key);
+	}
+	
+	public PistachioIterator iterator(long partition) throws MasterNotFoundException,
+  ConnectionBrokenException {
+		return clientImpl.iterator(partition);
+	}
+	
   public static void main(String [] args) {
 	  PistachiosClient client = null;
       try {
@@ -438,11 +449,39 @@ public class PistachiosClient {
               List list = new java.util.ArrayList();
               list.add(value.getBytes());
               client.processBatch(id.getBytes(), list);
-          } else {
-              System.out.println("USAGE: xxxx lookup id or xxxx store id value");
-              System.exit(0);
-          }
-      } catch (Exception e) {
+			} else if (args.length == 2 && args[0].equals("delete")) {
+				System.out.println("you are deleting "+ id);
+				try {
+					id = args[1];
+				} catch (Exception e) {
+				}
+				client.delete(id.getBytes());
+			} else if (args.length == 2 && args[0].equals("iterate")) {
+				String partition = args[1];
+				PistachioIterator iterator = client.iterator(Long.parseLong(partition));
+				KeyValue keyValue = iterator.getNext();
+				while (keyValue != null) {
+					System.out.println("key :" + new String(keyValue.key));
+					System.out.println("value :" + new String(keyValue.value));
+					keyValue = iterator.getNext();
+				}
+				System.out.println("you are iterate partition " + id);
+			} else if (args.length == 3 && args[0].equals("jump")) {
+				String partition = args[1];
+				PistachioIterator iterator = client.iterator(Long.parseLong(partition));
+				iterator.jump(args[2].getBytes());
+				KeyValue keyValue = iterator.getNext();
+				while (keyValue != null) {
+					System.out.println("key :" + new String(keyValue.key));
+					System.out.println("value :" + new String(keyValue.value));
+					keyValue = iterator.getNext();
+				}
+				System.out.println("you are iterate partition " + id);
+			} else {
+				System.out.println("USAGE: xxxx lookup id or xxxx store id value");
+				System.exit(0);
+			}
+		} catch (Exception e) {
           System.out.println("error: "+ e);
       } finally {
           client.close();

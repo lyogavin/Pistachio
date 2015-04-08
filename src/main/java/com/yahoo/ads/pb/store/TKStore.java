@@ -12,6 +12,7 @@
 package com.yahoo.ads.pb.store;
 
 import com.yahoo.ads.pb.PistachiosServer;
+
 import java.io.IOException;
 
 import kyotocabinet.Visitor;
@@ -21,10 +22,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 //import org.zeromq.ZMQ.Socket;
 
+
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+
 //import com.yahoo.ads.pb.exception.AdmovateException;
 import java.util.concurrent.TimeUnit;
+
 //import com.yahoo.ads.pb.platform.perf.IncrementCounter;
 //import com.yahoo.ads.pb.platform.perf.InflightCounter;
 //import com.yahoo.ads.pb.platform.profile.ProfileUtil;
@@ -35,9 +39,12 @@ import com.yahoo.ads.pb.store.LocalStorageEngine;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.ByteBufferOutput;
+
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ArrayBlockingQueue;
+
 import com.yahoo.ads.pb.kafka.KeyValue;
+import com.yahoo.ads.pb.kafka.Operator;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.Gauge;
@@ -151,14 +158,23 @@ public class TKStore implements Store{
                             }
                         }
 
+                        
+                        
                         kryo.writeObject(byteBufferOutput, valueOffset);
 
-                        PistachiosServer.getInstance().getLocalStorageEngine().store(eventOffset.keyValue.key, partitionId, byteBufferOutput.toBytes());
+                        if(eventOffset.keyValue.op == Operator.ADD){
+                    		PistachiosServer.getInstance().getLocalStorageEngine().store(eventOffset.keyValue.key, partitionId, byteBufferOutput.toBytes());
+                    		logger.debug("stored data {}/{}/{}/{}", 
+                                    DefaultDataInterpreter.getDataInterpreter().interpretId(eventOffset.keyValue.key), 
+                                    DefaultDataInterpreter.getDataInterpreter().interpretData(eventOffset.keyValue.value),
+                                    eventOffset.offset);
+                    	}else if(eventOffset.keyValue.op == Operator.DELETE){
+                    		PistachiosServer.getInstance().getLocalStorageEngine().delete(eventOffset.keyValue.key, partitionId);
+                    		logger.debug("delete data {}/{}", 
+                                    DefaultDataInterpreter.getDataInterpreter().interpretId(eventOffset.keyValue.key), 
+                                    eventOffset.offset);
+                    	}
 
-                        logger.debug("stored data {}/{}/{}/{}", 
-                            DefaultDataInterpreter.getDataInterpreter().interpretId(eventOffset.keyValue.key), 
-                            DefaultDataInterpreter.getDataInterpreter().interpretData(eventOffset.keyValue.value),
-                            eventOffset.offset);
 
                         // remove cache
                         StorePartition storePartition = PistachiosServer.storePartitionMap.get((long)partitionId);
