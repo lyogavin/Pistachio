@@ -75,6 +75,28 @@ public class NettyPistachioServerHandler extends SimpleChannelInboundHandler<Req
                                     }));
                 builder.setSucceeded(result);
                 break;
+            case GETNEXT:
+              logger.debug("calling get next");
+              try{
+	              byte[] returnData = handler.getNext(request.getPartition(), request.getVersionid());
+	              logger.debug("return data {} for partition {}", returnData, request.getPartition());
+	              if(returnData == null){
+	              	 builder.setSucceeded(false);
+	              }else{
+		              builder.setData(ByteString.copyFrom(returnData));
+		              builder.setSucceeded(true);
+	              }
+              }catch(Exception e){
+              	logger.info("error get next", e);
+                builder.setSucceeded(false);
+              }
+              break;
+            case JUMP:
+              logger.debug("calling jump");
+              handler.jump(request.getId().toByteArray(),request.getPartition(), request.getVersionid());
+              builder.setSucceeded(true);
+              
+              break;
             case MULTI_LOOKUP:
             	logger.debug("calling multi lookup");
 				for (Request req : request.getRequestsList()) {
@@ -109,6 +131,11 @@ public class NettyPistachioServerHandler extends SimpleChannelInboundHandler<Req
         						);
             		}
             	}
+            case DELETE:
+            	logger.debug("calling delete");
+                result = handler.delete(request.getId().toByteArray(), request.getPartition());
+                builder.setSucceeded(result);
+                break;
             default:
                 logger.debug("default branch");
                 break;

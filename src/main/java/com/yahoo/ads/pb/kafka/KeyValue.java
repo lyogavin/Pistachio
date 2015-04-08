@@ -20,6 +20,7 @@ public class KeyValue {
 	public long seqId;
 	public byte[] value;
     public boolean callback;
+    public Operator op = Operator.ADD;
 
 	public boolean equals(Object obj) {
 		if (this == obj) return true;
@@ -27,6 +28,6 @@ public class KeyValue {
 
 		KeyValue that = (KeyValue)obj;
 
-		return Arrays.equals(key,that.key) && (seqId == that.seqId) && Arrays.equals(value, that.value) && (callback == that.callback);
+		return Arrays.equals(key,that.key) && (seqId == that.seqId) && Arrays.equals(value, that.value) && (callback == that.callback) && (op == that.op);
 	}
 }

@@ -28,4 +28,6 @@ public interface PistachiosClientImpl {
 	public Map<byte[], Future<byte[]>> multiLookupAsync(List<byte[]> ids) throws MasterNotFoundException, ConnectionBrokenException, Exception;
 	public Map<byte[], Future<Boolean>> multiProcessAsync(Map<byte[], byte[]> events) throws MasterNotFoundException, ConnectionBrokenException, Exception;
 	public Future<Boolean> storeAsync(byte[] id, byte[] value) throws MasterNotFoundException, ConnectionBrokenException, Exception;
+	public boolean delete(byte[] id) throws MasterNotFoundException, ConnectionBrokenException;
+	public PistachioIterator iterator(long partitionId);
 }

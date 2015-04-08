@@ -42,13 +42,13 @@ public class HelixPartitionSpectator {
 	private final Random rand = new Random();
 	private static String[] readExclusionList = ConfigurationManager.getConfiguration().getStringArray("Profile.ReadExclusionList");
 	private final ConcurrentHashMap<String, String> host2ip = new ConcurrentHashMap<>(); // cache hostname -> ip mapping
-
+	private static HelixPartitionSpectator helixPartitionSpectator;
     private Long totalParition = -1L;
-
+    private static Object mutex = new Object();
     private String zkAddress;
     private String helixClusterName;
 
-	public HelixPartitionSpectator(String zkAddr, String clusterName, String instanceName) {
+	private HelixPartitionSpectator(String zkAddr, String clusterName, String instanceName) {
 		logger.info("init HelixPartitionSpectator with zkAddr @{}, clusterName {}, instanceName {}",
 				zkAddr, clusterName, instanceName);
 		manager = HelixManagerFactory.getZKHelixManager(clusterName, instanceName, 
@@ -69,6 +69,19 @@ public class HelixPartitionSpectator {
 			throw new RuntimeException("init HelixPartitionSpectator failure");
 		}
 	}
+	
+	public static HelixPartitionSpectator getInstance(String zkAddr, String clusterName, String instanceName){
+		if(helixPartitionSpectator == null){
+			synchronized(mutex){
+				if(helixPartitionSpectator == null){
+					helixPartitionSpectator = new HelixPartitionSpectator(zkAddr,clusterName,instanceName);
+				}
+			}
+		}
+		return helixPartitionSpectator;
+	}
+	
+	
 	
 	public void close() {
 		if (manager != null) {

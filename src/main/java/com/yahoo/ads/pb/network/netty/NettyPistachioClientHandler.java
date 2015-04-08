@@ -47,8 +47,16 @@ public class NettyPistachioClientHandler extends SimpleChannelInboundHandler<Res
     // Stateful properties
     private volatile Channel channel;
     private final ArrayList<LinkedBlockingQueue<Response>> answerQueues = new ArrayList<LinkedBlockingQueue<Response>>(20);
-    
-    // map requestId -> Future, 
+    private String ip;
+    public void setIp(String ip) {
+			this.ip = ip;
+		}
+
+		public String getIp() {
+			return ip;
+		}
+
+		// map requestId -> Future, 
     private final Cache<Integer, SettableFuture<Response>> req2futures = CacheBuilder.newBuilder()
     		.expireAfterWrite(100, TimeUnit.SECONDS)
     		.removalListener(new RemovalListener<Integer, SettableFuture<Response>>() {

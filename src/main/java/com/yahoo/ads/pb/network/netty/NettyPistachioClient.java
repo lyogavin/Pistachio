@@ -23,17 +23,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.yahoo.ads.pb.kafka.KeyValue;
 import com.yahoo.ads.pb.network.netty.NettyPistachioProtocol.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Input;
 import com.google.common.base.Function;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -51,6 +55,7 @@ import java.net.InetAddress;
 
 import com.yahoo.ads.pb.Partitioner;
 import com.yahoo.ads.pb.exception.*;
+import com.yahoo.ads.pb.PistachioIterator;
 import com.yahoo.ads.pb.PistachiosServer;
 import com.yahoo.ads.pb.DefaultPartitioner;
 import com.yahoo.ads.pb.DefaultDataInterpreter;
@@ -86,7 +91,7 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
             synchronized(this) {
                 if (helixPartitionSpectator == null) {
                     try {
-                        helixPartitionSpectator = new HelixPartitionSpectator(
+                        helixPartitionSpectator = HelixPartitionSpectator.getInstance(
                                 conf.getString(ZOOKEEPER_SERVER), // zkAddr
                                 "PistachiosCluster",
                                 InetAddress.getLocalHost().getHostName() //conf.getString(PROFILE_HELIX_INSTANCE_ID) // instanceName
@@ -173,6 +178,7 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
 
                         // Get the handler instance to initiate the request.
                         handler = ch.pipeline().get(NettyPistachioClientHandler.class);
+                        handler.setIp(ip);
                         hostChannelMap.put(ip, ch);
 
                     } catch (Throwable e) {
@@ -185,7 +191,34 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
         handler = hostChannelMap.get(ip).pipeline().get(NettyPistachioClientHandler.class);
         return handler;
     }
+    
+    @Override
+    public boolean delete(byte[] id) throws MasterNotFoundException, ConnectionBrokenException{
+    	long partition = partitioner.getPartition(id, helixPartitionSpectator.getTotalPartition("PistachiosResource"));
+        if (isLocalCall(partition)) {
+           return PistachiosServer.handler.delete(id, partition);
+        }
+        NettyPistachioClientHandler handler = null;
+        try {
+            handler = getHandler(id);
+        } catch (Exception e) {
+            logger.info("error getting handler", e);
+            return false;
+        }
+        if (handler == null) {
+            logger.debug("fail to look up {} because of empty handler", id);
+            return false;
+        }
+        Request.Builder builder = Request.newBuilder();
+        Response res = handler.sendRequest(builder.setId(ByteString.copyFrom(id)).setType(RequestType.DELETE).setPartition(partition));
 
+        if (res == null) {
+            logger.debug("fail");
+            return false;
+        }
+        return res.getSucceeded();
+    }
+    
     public void close() {
         for (Channel channel: channelList) {
             channel.close();
@@ -474,7 +507,78 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
             }
         }
     }
+    public class NettyPistachioIterator implements PistachioIterator {
+    	protected long id;
+    	protected int partitionId;
+    	private Kryo kryo = new Kryo();
+    	private String lastKey = null;
+    	private String lastIp = null;
+    	public String getLastKey() {
+				return lastKey;
+			}
+			public NettyPistachioIterator(int partitionId){
+    		 Random rand = new Random();
+    		 id = rand.nextLong();
+    		 this.partitionId = partitionId;
+    	}
+    	@Override
+    	public KeyValue getNext()  throws MasterNotFoundException, Exception{
+    		long partition = partitionId;
+            if (isLocalCall(partition)) {
+                return kryo.readObject(new Input(PistachiosServer.handler.getNext(partition, id)), KeyValue.class);
+            }
+            NettyPistachioClientHandler handler = null;
+            try {
+                handler = getHandlerForPartition(partition);
+            } catch (Exception e) {
+                logger.info("error getting handler", e);
+                throw e;
+            }
+            if (handler == null) {
+                logger.debug("fail to get next on verison {}, partition {} because of empty handler",id, partition);
+                throw new Exception("error getting handler");
+            }
+            if(lastIp != null && !handler.getIp().equals(lastIp) && lastKey != null){
+            	jump(lastKey.getBytes());
+            	lastIp = handler.getIp();
+            }
+            Request.Builder builder = Request.newBuilder();
+            Response res = handler.sendRequest(builder.setVersionid(id).setType(RequestType.GETNEXT).setPartition(partition));
+            logger.info("get response success" +  res.getSucceeded());
+            if (!res.getSucceeded())
+                throw new Exception();
+            Input input = new Input(res.getData().toByteArray());
 
+  					KeyValue keyValue = kryo.readObject(input, KeyValue.class);
+  					lastKey = new String(keyValue.key);
+  					logger.info("last key "+lastKey);
+            return keyValue;
+    	}
+
+    	@Override
+    	public void jump(byte[] key)  throws MasterNotFoundException, Exception{
+    		long partition = partitionId;
+        if (isLocalCall(partition)) {
+            PistachiosServer.handler.jump(key, partition, id);
+        }
+        NettyPistachioClientHandler handler = null;
+        try {
+            handler = getHandlerForPartition(partition);
+        } catch (Exception e) {
+            logger.info("error getting handler", e);
+            throw e;
+        }
+        if (handler == null) {
+            logger.debug("fail to jump to {} on verison {}, partition {} because of empty handler",DefaultDataInterpreter.getDataInterpreter().interpretId(key), id, partition);
+            throw new Exception("error getting handler");
+        }
+        Request.Builder builder = Request.newBuilder();
+        Response res = handler.sendRequest(builder.setVersionid(id).setId(ByteString.copyFrom(key)).setType(RequestType.JUMP).setPartition(partition));
+        if (!res.getSucceeded())
+            throw new Exception();
+        lastKey = new String(key);
+    	}
+    }
     public static void main(String[] args) throws Exception {
         // Configure SSL.
         final SslContext sslCtx;
@@ -519,5 +623,10 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
         } finally {
             group.shutdownGracefully();
         }
+    }
+
+		@Override
+    public PistachioIterator iterator(long partitionId) {
+	    return new NettyPistachioIterator((int)partitionId);
     }
 }

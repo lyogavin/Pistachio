@@ -27,6 +27,9 @@ enum RequestType {
 	PROCESS_EVENT = 3;
 	MULTI_LOOKUP = 4;
 	MULTI_PROCESS_EVENT = 5;
+	DELETE = 6;
+	GETNEXT = 7;
+	JUMP = 8;
 }
 
 message Request {
@@ -42,6 +45,7 @@ message Request {
   optional bool callback = 10;
   repeated bytes ids = 11;
   repeated Request requests = 12;
+  optional uint64 versionid = 13;
 }
 
 message Response {
