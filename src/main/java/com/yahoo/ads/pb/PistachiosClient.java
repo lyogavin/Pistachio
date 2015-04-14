@@ -48,13 +48,16 @@ import com.google.api.client.util.ExponentialBackOff;
 import com.google.api.client.util.BackOff;
 import com.yahoo.ads.pb.PistachiosClientImpl;
 import com.yahoo.ads.pb.PistachiosServer;
+import com.yahoo.ads.pb.customization.LookupCallbackRegistry;
 import com.yahoo.ads.pb.customization.ProcessorRegistry;
 import com.yahoo.ads.pb.exception.*;
 import com.yahoo.ads.pb.network.netty.NettyPistachioClient;
+
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
+
 import com.yahoo.ads.pb.customization.StoreCallbackRegistry;
 
 /**
@@ -112,7 +115,10 @@ public class PistachiosClient {
                               ConfigurationManager.getConfiguration().getString("Pistachio.StoreCallback.ClassName"),
                               StoreCallbackRegistry.storeCallbackPath, 
                               zk);
-
+            setZkRegistryData(ConfigurationManager.getConfiguration().getString("Pistachio.LookupCallback.JarPath"),
+                    ConfigurationManager.getConfiguration().getString("Pistachio.LookupCallback.ClassName"),
+                    LookupCallbackRegistry.lookupCallbackPath, 
+                    zk);
         } catch (Exception e) {
             logger.info("error updating zk", e);
         } finally {
@@ -200,12 +206,13 @@ public class PistachiosClient {
      * To lookup the value of an id. Given the id return the value as a byte array.
      *
      * @param id        id to look up as byte[].
+     * @param callback  whether need callback or not
      * @return          <code>byte array</code> return in byte array, null if key not found
      * @exception       MasterNotFoundException when fail because no master found
      * @exception       ConnectionBrokenException when fail because connection is broken in the middle
      * @exception       Exception other errors indicating failure
      */
-	public byte[] lookup(byte[] id) throws MasterNotFoundException, ConnectionBrokenException, Exception{
+	public byte[] lookup(byte[] id, boolean callback) throws MasterNotFoundException, ConnectionBrokenException, Exception{
 
 		final Timer.Context context = lookupTimer.time();
         RetryWaiter retryWaiter = new RetryWaiter(lookupFailureRequests);
@@ -213,7 +220,7 @@ public class PistachiosClient {
 		try {
 			while (true) {
                 try {
-                    return clientImpl.lookup(id);
+                    return clientImpl.lookup(id, callback);
                 } catch (Exception e) {
                     retryWaiter.waitBeforeRetry(e);
                 }
@@ -230,19 +237,20 @@ public class PistachiosClient {
      * To lookup a list of ids. Given the id list return the values.
      *
      * @param ids       id to look up as list of byte[].
+     * @param callback  whether need callback or not
      * @return          <code>Map<byte[], byte[]></code> return in a map of values for each corresponding ids
      * @exception       MasterNotFoundException when fail because no master found
      * @exception       ConnectionBrokenException when fail because connection is broken in the middle
      * @exception       Exception other errors indicating failure
      */
-	public Map<byte[], byte[]> multiLookUp(List<byte[]> ids) throws MasterNotFoundException, ConnectionBrokenException, Exception {
+	public Map<byte[], byte[]> multiLookUp(List<byte[]> ids, boolean callback) throws MasterNotFoundException, ConnectionBrokenException, Exception {
 		final Timer.Context context = multiLookupTimer.time();
         RetryWaiter retryWaiter = new RetryWaiter(multiLookupFailureRequests);
 
 		try {
 			while (true) {
                 try {
-                    return clientImpl.multiLookup(ids);
+                    return clientImpl.multiLookup(ids, callback);
                 }catch (Exception e) {
                     retryWaiter.waitBeforeRetry(e);
                 }
@@ -257,19 +265,20 @@ public class PistachiosClient {
      * To lookup a list of ids asynchronously. Given the id list return the futures to get the values.
      *
      * @param ids       id to look up as list of byte[].
+     * @param callback  whether need callback or not
      * @return          <code>Map<byte[], Future<byte[]>></code> return in a map of futre of value for each corresponding ids
      * @exception       MasterNotFoundException when fail because no master found
      * @exception       ConnectionBrokenException when fail because connection is broken in the middle
      * @exception       Exception other errors indicating failure
      */
-	public Map<byte[], Future<byte[]>> multiLookUpAsync(List<byte[]> ids) throws MasterNotFoundException, ConnectionBrokenException, Exception {
+	public Map<byte[], Future<byte[]>> multiLookUpAsync(List<byte[]> ids, boolean callback) throws MasterNotFoundException, ConnectionBrokenException, Exception {
 		final Timer.Context context = multiLookupAsyncTimer.time();
         RetryWaiter retryWaiter = new RetryWaiter(multiLookupAsyncFailureRequests);
 
 		try {
 			while (true) {
                 try {
-                    return clientImpl.multiLookupAsync(ids);
+                    return clientImpl.multiLookupAsync(ids, callback);
                 }catch (Exception e) {
                     retryWaiter.waitBeforeRetry(e);
                 }
@@ -436,7 +445,7 @@ public class PistachiosClient {
           String value="" ;
           if (args.length ==2 && args[0].equals("lookup") ) {
               id = args[1];
-              System.out.println("client.lookup(" + id + ")" + new String(client.lookup(id.getBytes())));
+              System.out.println("client.lookup(" + id + ")" + new String(client.lookup(id.getBytes(), true)));
           } else if (args.length == 3 && args[0].equals("store") ) {
               id = args[1];
               store = true;

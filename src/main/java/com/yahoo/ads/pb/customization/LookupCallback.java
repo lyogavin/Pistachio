@@ -9,18 +9,10 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-package com.yahoo.ads.pb;
+package com.yahoo.ads.pb.customization;
 
-import java.util.List;
+public interface LookupCallback {
 
-import com.yahoo.ads.pb.exception.*;
-import com.yahoo.ads.pb.kafka.KeyValue;
-
-public interface PistachiosHandler {
-    public byte[] lookup(byte[] id, long partitionId, boolean callback) throws Exception;
-    public boolean store(byte[] id, long partitionId, byte[] value, boolean callback);
-    public boolean processBatch(byte[] id, long partitionId, List<byte[]> events);
-    public boolean delete(byte[] id, long partitionId);
-    public byte[] getNext(long partitionId, long versionId);
-  	public void jump(byte[] key, long partitionId, long versionId);
+    public boolean needCallback();
+    public byte[] onLookup(byte[] key, byte[] currentValue);
 }

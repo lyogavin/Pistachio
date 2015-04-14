@@ -63,12 +63,16 @@ import org.apache.helix.manager.zk.ZKHelixAdmin;
 
 
 
+
+
 //import com.yahoo.ads.pb.platform.perf.IncrementCounter;
 //import com.yahoo.ads.pb.platform.perf.InflightCounter;
 import com.yahoo.ads.pb.util.ConfigurationManager;
 import com.yahoo.ads.pb.util.NativeUtils;
 import com.yahoo.ads.pb.store.ValueOffset;
 import com.yahoo.ads.pb.customization.CustomizationRegistry;
+import com.yahoo.ads.pb.customization.LookupCallback;
+import com.yahoo.ads.pb.customization.LookupCallbackRegistry;
 import com.yahoo.ads.pb.customization.ProcessorRegistry;
 
 import org.slf4j.Logger;
@@ -83,6 +87,8 @@ import com.esotericsoftware.kryo.io.Input;
 
 
 // Generated code
+
+
 
 
 
@@ -203,7 +209,7 @@ public class PistachiosServer {
 
 	String storage;
 
-    public byte[] lookup(byte[] id, long partitionId) throws Exception
+    public byte[] lookup(byte[] id, long partitionId, boolean callback) throws Exception
 	{
 		lookupRequests.mark();
 		final Timer.Context context = lookupTimer.time();
@@ -225,6 +231,13 @@ public class PistachiosServer {
 				}
 				else if (toRetrun != null) {
 					logger.debug("null from cache");
+					
+					if (callback) {
+						LookupCallback lookupCallback = LookupCallbackRegistry.getInstance().getLookupCallback();
+						if (lookupCallback.needCallback()) {
+							return lookupCallback.onLookup(toRetrun.key, toRetrun.value);
+						}
+					}
 					return toRetrun.value;
 				}
 			
@@ -236,6 +249,12 @@ public class PistachiosServer {
                 ValueOffset valueOffset = kryo.readObject(input, ValueOffset.class);
                 input.close();
                 logger.debug("got from store engine: {} parsed as {}-{}", toRet, valueOffset.value, valueOffset.offset);
+				if (callback) {
+					LookupCallback lookupCallback = LookupCallbackRegistry.getInstance().getLookupCallback();
+					if (lookupCallback.needCallback()) {
+						return lookupCallback.onLookup(toRetrun.key, valueOffset.value);
+					}
+				}
                 return valueOffset.value;
             }
             logger.info("dont find value from store {}", id);
