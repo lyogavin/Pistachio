@@ -206,7 +206,21 @@ public class PistachiosClient {
      * To lookup the value of an id. Given the id return the value as a byte array.
      *
      * @param id        id to look up as byte[].
-     * @param callback  whether need callback or not
+     * @return          <code>byte array</code> return in byte array, null if key not found
+     * @exception       MasterNotFoundException when fail because no master found
+     * @exception       ConnectionBrokenException when fail because connection is broken in the middle
+     * @exception       Exception other errors indicating failure
+     */
+	public byte[] lookup(byte[] id) throws MasterNotFoundException, ConnectionBrokenException, Exception{
+		return lookup(id, false);
+	}
+	
+    /** 
+     * To lookup the value of an id. Given the id return the value as a byte array. One can also register callback  
+     * on the server side upon lookup, see {@link com.yahoo.ads.pb.customization.LookupCallback}
+     *
+     * @param id        id to look up as byte[].
+     * @param callback  whether need callback on server side or not
      * @return          <code>byte array</code> return in byte array, null if key not found
      * @exception       MasterNotFoundException when fail because no master found
      * @exception       ConnectionBrokenException when fail because connection is broken in the middle
@@ -232,12 +246,26 @@ public class PistachiosClient {
 		}
 
 	}
-	
+
     /** 
-     * To lookup a list of ids. Given the id list return the values.
+     * To lookup a list of ids. Given the id list return the values. 
      *
      * @param ids       id to look up as list of byte[].
-     * @param callback  whether need callback or not
+     * @return          <code>Map<byte[], byte[]></code> return in a map of values for each corresponding ids
+     * @exception       MasterNotFoundException when fail because no master found
+     * @exception       ConnectionBrokenException when fail because connection is broken in the middle
+     * @exception       Exception other errors indicating failure
+     */
+	public Map<byte[], byte[]> multiLookUp(List<byte[]> ids) throws MasterNotFoundException, ConnectionBrokenException, Exception {
+		return multiLookUp(ids, false);
+	}
+	
+    /** 
+     * To lookup a list of ids. Given the id list return the values. One can also register callback  
+     * on the server side upon lookup, see {@link com.yahoo.ads.pb.customization.LookupCallback}
+     *
+     * @param ids       id to look up as list of byte[].
+     * @param callback  whether need callback on server side or not
      * @return          <code>Map<byte[], byte[]></code> return in a map of values for each corresponding ids
      * @exception       MasterNotFoundException when fail because no master found
      * @exception       ConnectionBrokenException when fail because connection is broken in the middle
@@ -260,12 +288,26 @@ public class PistachiosClient {
 			context.stop();
 		}		
 	}
-	
+
     /** 
      * To lookup a list of ids asynchronously. Given the id list return the futures to get the values.
      *
      * @param ids       id to look up as list of byte[].
-     * @param callback  whether need callback or not
+     * @return          <code>Map<byte[], Future<byte[]>></code> return in a map of futre of value for each corresponding ids
+     * @exception       MasterNotFoundException when fail because no master found
+     * @exception       ConnectionBrokenException when fail because connection is broken in the middle
+     * @exception       Exception other errors indicating failure
+     */
+	public Map<byte[], Future<byte[]>> multiLookUpAsync(List<byte[]> ids) throws MasterNotFoundException, ConnectionBrokenException, Exception {
+		return multiLookUpAsync(ids, false);
+	}
+	
+    /** 
+     * To lookup a list of ids asynchronously. Given the id list return the futures to get the values. One can also register callback  
+     * on the server side upon lookup, see {@link com.yahoo.ads.pb.customization.LookupCallback}
+     *
+     * @param ids       id to look up as list of byte[].
+     * @param callback  whether need callback on the same side or not
      * @return          <code>Map<byte[], Future<byte[]>></code> return in a map of futre of value for each corresponding ids
      * @exception       MasterNotFoundException when fail because no master found
      * @exception       ConnectionBrokenException when fail because connection is broken in the middle

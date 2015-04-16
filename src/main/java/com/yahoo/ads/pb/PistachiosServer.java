@@ -234,9 +234,7 @@ public class PistachiosServer {
 					
 					if (callback) {
 						LookupCallback lookupCallback = LookupCallbackRegistry.getInstance().getLookupCallback();
-						if (lookupCallback.needCallback()) {
-							return lookupCallback.onLookup(toRetrun.key, toRetrun.value);
-						}
+						return lookupCallback.onLookup(toRetrun.key, toRetrun.value);
 					}
 					return toRetrun.value;
 				}
@@ -251,9 +249,7 @@ public class PistachiosServer {
                 logger.debug("got from store engine: {} parsed as {}-{}", toRet, valueOffset.value, valueOffset.offset);
 				if (callback) {
 					LookupCallback lookupCallback = LookupCallbackRegistry.getInstance().getLookupCallback();
-					if (lookupCallback.needCallback()) {
-						return lookupCallback.onLookup(toRetrun.key, valueOffset.value);
-					}
+					return lookupCallback.onLookup(toRetrun.key, valueOffset.value);
 				}
                 return valueOffset.value;
             }

@@ -11,8 +11,17 @@
 
 package com.yahoo.ads.pb.customization;
 
+/**
+ * Callback/Hook registered upon lookup called on server side.
+ */
 public interface LookupCallback {
 
-    public boolean needCallback();
+	/**
+	 * Given the key and currentValue of lookup, return the massaged value
+	 * 
+	 * @param key
+	 * @param currentValue
+	 * @return
+	 */
     public byte[] onLookup(byte[] key, byte[] currentValue);
 }

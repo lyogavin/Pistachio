@@ -40,11 +40,6 @@ public class LookupCallbackRegistry extends CustomizationRegistry<LookupCallback
     static class DefaultLookupCallback implements LookupCallback {
 
 		@Override
-		public boolean needCallback() {
-			return false;
-		}
-
-		@Override
 		public byte[] onLookup(byte[] key, byte[] currentValue) {
 			return currentValue;
 		}    	
