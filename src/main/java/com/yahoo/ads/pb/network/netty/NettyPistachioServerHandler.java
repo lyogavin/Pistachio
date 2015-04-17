@@ -44,7 +44,7 @@ public class NettyPistachioServerHandler extends SimpleChannelInboundHandler<Req
             case LOOKUP: 
                 logger.debug("calling lookup");
                 try {
-                    byte[] res = handler.lookup(request.getId().toByteArray(), request.getPartition());
+                    byte[] res = handler.lookup(request.getId().toByteArray(), request.getPartition(), request.getCallback());
                     builder.setSucceeded(true);
                     logger.debug("got data: {}", res);
                     if (res != null) {
@@ -99,11 +99,12 @@ public class NettyPistachioServerHandler extends SimpleChannelInboundHandler<Req
               break;
             case MULTI_LOOKUP:
             	logger.debug("calling multi lookup");
+            	boolean callback = request.getCallback();
 				for (Request req : request.getRequestsList()) {
 					long partitionId = req.getPartition();
 					for (ByteString id : req.getIdsList()) {
 						try {
-							byte[] res = handler.lookup(id.toByteArray(), partitionId);
+							byte[] res = handler.lookup(id.toByteArray(), partitionId, callback);
 							builder.addResponses(Response.newBuilder().setId(id)
 									.setSucceeded(true)
 									.setData(ByteString.copyFrom(res)).build());
