@@ -6,7 +6,7 @@
     <artifactId>pistachios</artifactId>
     <packaging>jar</packaging>
     <version>0.1.0.0</version>
-    <name>Pistachios</name>
+    <name>pistachio</name>
     <description>Pistachios</description>
     <url></url>
 	<properties>
@@ -53,11 +53,13 @@
 			<artifactId>metrics-core</artifactId>
 			<version>3.0.2</version>
 		</dependency>
+        <!--
 		<dependency>
 			<groupId>com.sun.jdmk</groupId>
 			<artifactId>jmxtools</artifactId>
 			<version>1.2.1</version>
 		</dependency>
+        -->
 		<dependency>
 			<groupId>net.sourceforge.findbugs</groupId>
 		    <artifactId>jsr305</artifactId>
@@ -148,8 +150,23 @@
 
     <build>
 		<sourceDirectory>./src</sourceDirectory>
-        <finalName>Pistachios</finalName>
+        <finalName>pistachio</finalName>
 		<plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <sourcepath>./src</sourcepath>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>javadocs</id>
+                        <goals>
+                            <goal>javadoc</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-jar-plugin</artifactId>
@@ -202,6 +219,22 @@
 				<artifactId>maven-clean-plugin</artifactId>
 				<version>${maven-clean-plugin.version}</version>
 			</plugin>
+            <plugin>
+                    <artifactId>maven-assembly-plugin</artifactId>
+                    <version>2.5.3</version>
+                    <configuration>
+                      <descriptor>src/main/assembly/assembly.xml</descriptor>
+                    </configuration>
+                    <executions>
+                      <execution>
+                        <id>create-archive</id>
+                        <phase>package</phase>
+                        <goals>
+                          <goal>single</goal>
+                        </goals>
+                      </execution>
+                    </executions>
+            </plugin>
 			<plugin>
 				<artifactId>maven-resources-plugin</artifactId>
 				<version>2.6</version>

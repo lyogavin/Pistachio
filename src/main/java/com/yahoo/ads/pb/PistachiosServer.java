@@ -63,12 +63,16 @@ import org.apache.helix.manager.zk.ZKHelixAdmin;
 
 
 
+
+
 //import com.yahoo.ads.pb.platform.perf.IncrementCounter;
 //import com.yahoo.ads.pb.platform.perf.InflightCounter;
 import com.yahoo.ads.pb.util.ConfigurationManager;
 import com.yahoo.ads.pb.util.NativeUtils;
 import com.yahoo.ads.pb.store.ValueOffset;
 import com.yahoo.ads.pb.customization.CustomizationRegistry;
+import com.yahoo.ads.pb.customization.LookupCallback;
+import com.yahoo.ads.pb.customization.LookupCallbackRegistry;
 import com.yahoo.ads.pb.customization.ProcessorRegistry;
 
 import org.slf4j.Logger;
@@ -86,8 +90,11 @@ import com.esotericsoftware.kryo.io.Input;
 
 
 
+
+
 import java.util.HashMap;
 import java.util.Properties;
+import java.util.Arrays;
 
 
 public class PistachiosServer {
@@ -202,7 +209,7 @@ public class PistachiosServer {
 
 	String storage;
 
-    public byte[] lookup(byte[] id, long partitionId) throws Exception
+    public byte[] lookup(byte[] id, long partitionId, boolean callback) throws Exception
 	{
 		lookupRequests.mark();
 		final Timer.Context context = lookupTimer.time();
@@ -224,6 +231,11 @@ public class PistachiosServer {
 				}
 				else if (toRetrun != null) {
 					logger.debug("null from cache");
+					
+					if (callback) {
+						LookupCallback lookupCallback = LookupCallbackRegistry.getInstance().getLookupCallback();
+						return lookupCallback.onLookup(toRetrun.key, toRetrun.value);
+					}
 					return toRetrun.value;
 				}
 			
@@ -234,7 +246,11 @@ public class PistachiosServer {
 
                 ValueOffset valueOffset = kryo.readObject(input, ValueOffset.class);
                 input.close();
-                logger.debug("got from store engine: {} parsed as {}", toRet, valueOffset);
+                logger.debug("got from store engine: {} parsed as {}-{}", toRet, valueOffset.value, valueOffset.offset);
+				if (callback) {
+					LookupCallback lookupCallback = LookupCallbackRegistry.getInstance().getLookupCallback();
+					return lookupCallback.onLookup(toRetrun.key, valueOffset.value);
+				}
                 return valueOffset.value;
             }
             logger.info("dont find value from store {}", id);
@@ -281,8 +297,9 @@ public class PistachiosServer {
 			kv.seqId = nextSeqId;
 			kv.value = value;
             kv.callback = callback;
+
+            long lockKey = (Arrays.hashCode(id) * 7 + 11) % 1024;
             kv.op = Operator.ADD;
-            long lockKey = (id.hashCode() * 7 + 11) % 1024;
             lockKey = lockKey >= 0 ? lockKey : lockKey + 1024;
 
             if (kv.callback && StoreCallbackRegistry.getInstance().getStoreCallback().needCallback()) {
@@ -293,11 +310,23 @@ public class PistachiosServer {
                         storePartition.getSeqId());
 
                     byte[] currentValue = (storePartition.getFromWriteCache(id) != null) ? storePartition.getFromWriteCache(id).value : null;
+                    if (currentValue == null) {
+                        byte[] toRet = PistachiosServer.getInstance().getLocalStorageEngine().get(id, (int)partitionId);
+                        if (null != toRet) {
+                            Input input = new Input(toRet);
+
+                            ValueOffset valueOffset = kryo.readObject(input, ValueOffset.class);
+                            input.close();
+                            logger.debug("got from store engine: {} parsed as {}", toRet, valueOffset);
+                            currentValue = valueOffset.value;
+                        }
+                    }
                     kv.value = StoreCallbackRegistry.getInstance().getStoreCallback().onStore(id, currentValue, value);
 
                     if (kv.value != null) {
                         PistachiosServer.storePartitionMap.get(partitionId).getWriteCache().putIfAbsent(new ByteArrayWrapper(id, id.length), kv);
                     }
+                    kv.value = value;
                     KeyedMessage<String, KeyValue> message = new KeyedMessage<String, KeyValue>(partitionTopic, kv);
                     getKafkaProducerInstance(partitionId).send(message);
                 }
@@ -354,7 +383,7 @@ public class PistachiosServer {
   			KeyValue kv = new KeyValue();
   			kv.key = id;
   			kv.op = Operator.DELETE;
-  			long lockKey = (id.hashCode() * 7 + 11) % 1024;
+long lockKey = (Arrays.hashCode(id) * 7 + 11) % 1024;
             lockKey = lockKey >= 0 ? lockKey : lockKey + 1024;
   			synchronized(storePartition.getKeyLock((int)lockKey)) {
   				if ((nextSeqId = storePartition.getNextSeqId()) == -1) {
@@ -485,6 +514,7 @@ public class PistachiosServer {
 	  return null;
   }
 	public boolean init() {
+
 		boolean initialized = false;
 
 		logger.info("Initializing profile server...........");
@@ -492,7 +522,7 @@ public class PistachiosServer {
 		try {
 			// open profile store
 			Configuration conf = ConfigurationManager.getConfiguration();
-			        ZKHelixAdmin admin = new ZKHelixAdmin(conf.getString(ZOOKEEPER_SERVER));
+        ZKHelixAdmin admin = new ZKHelixAdmin(conf.getString(ZOOKEEPER_SERVER));
         IdealState idealState = admin.getResourceIdealState("PistachiosCluster", "PistachiosResource");
         long totalParition = (long)idealState.getNumPartitions();
 			profileStore = new LocalStorageEngine(

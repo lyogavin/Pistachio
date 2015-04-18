@@ -37,11 +37,13 @@ import org.rocksdb.*;
 
 import com.google.common.primitives.Longs;
 import com.yahoo.ads.pb.util.ConfigurationManager;
+import java.util.Arrays;
 //import com.yahoo.ads.pb.platform.profile.ProfileUtil;
 
 public class LocalStorageEngine {
 	private static Logger logger = LoggerFactory.getLogger(LocalStorageEngine.class);
 	public static final String storeEngineConf = ConfigurationManager.getConfiguration().getString("LocalStoreEngine", "KC");
+	public static final Boolean ignoreHistoryWhenNoOffsetFoundInStore = ConfigurationManager.getConfiguration().getBoolean("IgnoreHistoryWhenNoOffsetFoundInStore", false);
 
 	private static final int writeBufferSize = 5000;
 	
@@ -76,10 +78,9 @@ public class LocalStorageEngine {
 		this.totalRecords = totalRecords;
 		this.mappedMemorySize = mappedMemorySize;
 		this.isReadOnly = isReadOnly;
-			this.numStores = numStores;
-			stores = new StoreEngine[numStores];
-	}
-
+        this.numStores = numStores;
+        stores = new StoreEngine[numStores];
+    }
 	/**
 	 * Open the data base
 	 */
@@ -131,7 +132,7 @@ public class LocalStorageEngine {
 	 * @return
 	 */
 	protected int getDbIndex(byte[] key) {
-			return (int) (key.hashCode() % numStores);
+			return (int) (Arrays.hashCode(key) % numStores);
 	}
 
 	/**
@@ -175,7 +176,7 @@ public class LocalStorageEngine {
 		if(stores[partitionId] != null)
 			return stores[partitionId].getOffset();
 		else
-			return 0;
+			return ignoreHistoryWhenNoOffsetFoundInStore ? Long.MAX_VALUE : 0;
 	}
 
 	public boolean isPartitionActive(int partitionId){
@@ -301,15 +302,7 @@ public class LocalStorageEngine {
 		private AtomicInteger flushCounter;
 		private final static int PER_OFFSET_FLUSH = 100;
 		private static final String offsetKey  = "offset_storage_tk";
-		private long offset  = Long.MAX_VALUE;
-        private final ThreadLocal<ByteArrayWrapper> byteArrayWrapperForGetKey =
-            new ThreadLocal<ByteArrayWrapper>() {
-                @Override protected ByteArrayWrapper initialValue() {
-                    return new ByteArrayWrapper(new byte[100], 100);
-                }
-            };
-
-
+		private long offset  = -1;
 
 		public InMemStoreEngine() {
 			logger.info("creating InMemStoreEngine");
@@ -335,7 +328,9 @@ public class LocalStorageEngine {
 		}
 		public void store(byte[] key, byte[] value) throws Exception {
 			try {
-				db.put(new ByteArrayWrapper(key, key.length), value);
+                ByteArrayWrapper baw = new ByteArrayWrapper(key, key.length);
+				db.put(baw, value);
+				logger.debug("{} stored value {} for key {}.{}", db.hashCode(), value, baw,baw.size);
 
 				if(flushCounter.addAndGet(1) % PER_OFFSET_FLUSH == 0) {
 					logger.debug("flushing offset at {}", flushCounter);
@@ -358,8 +353,8 @@ public class LocalStorageEngine {
 			byte[] result = null;
 			byte[] byteKey = (key);
 			try{
-                byteArrayWrapperForGetKey.get().set(key,0,key.length);
-				result =  db.get(byteArrayWrapperForGetKey.get());
+				result =  db.get(new ByteArrayWrapper(key, key.length));
+				logger.debug("{} got value {} for key {}", db.hashCode(), result, key);
 			} catch (Exception e) {
 				logger.debug("error getting key {}", key, e);
 			}
@@ -367,14 +362,16 @@ public class LocalStorageEngine {
 		}
 		public long getOffset() {
 			byte[] result =  null;
-			if (offset == Long.MAX_VALUE) {
+			if (offset == -1) {
 				try {
-                    byteArrayWrapperForGetKey.get().set(offsetKey.getBytes(),0,offsetKey.getBytes().length);
-					result = db.get(byteArrayWrapperForGetKey.get());
+					result = db.get(new ByteArrayWrapper(offsetKey.getBytes(), offsetKey.getBytes().length));
                     if (result != null)
                         offset = Convert.bytesToLong(result);
+                    else
+                        offset = ignoreHistoryWhenNoOffsetFoundInStore ? Long.MAX_VALUE: 0;
 					return offset;
 				} catch (Exception e) {
+                    offset = ignoreHistoryWhenNoOffsetFoundInStore ? Long.MAX_VALUE: 0;
 					return offset;
 				}
 			}
@@ -383,8 +380,7 @@ public class LocalStorageEngine {
 		}
 		public boolean delete(byte[] key) {
 			try{
-                byteArrayWrapperForGetKey.get().set(key,0,key.length);
-                db.remove(byteArrayWrapperForGetKey.get());
+                db.remove(new ByteArrayWrapper(key, key.length));
 			} catch (Exception e) {
 			     return false;		    
 			} 
@@ -483,7 +479,10 @@ public class LocalStorageEngine {
 				result =  db.get(byteKey);
 			} catch (RocksDBException e) {
 				logger.debug("error getting key {}", key, e);
-			}
+			} catch (Exception e) {
+				logger.debug("error getting key {}", key, e);
+                return null;
+            }
 			return result;
 		}
 		public long getOffset() {
@@ -494,7 +493,8 @@ public class LocalStorageEngine {
 					offset = Convert.bytesToLong(result);
 					return offset;
 				} catch (Exception e) {
-					return 0;
+                    offset = ignoreHistoryWhenNoOffsetFoundInStore ? Long.MAX_VALUE: 0;
+					return offset;
 				}
 			}
 
@@ -543,12 +543,6 @@ public class LocalStorageEngine {
 		private java.util.Random rand = new java.util.Random();
 		private static final int maxQueuingCount = 200000;
 		private volatile int queuingSize = 0;
-        private final ThreadLocal<ByteArrayWrapper> byteArrayWrapperForGetKey =
-            new ThreadLocal<ByteArrayWrapper>() {
-                @Override protected ByteArrayWrapper initialValue() {
-                    return new ByteArrayWrapper(new byte[100], 100);
-                }
-            };
 
 		public KCStoreEngine() {
         }
@@ -709,8 +703,7 @@ public class LocalStorageEngine {
 		 * @return
 		 */
 		public byte[] get(byte[] key) {
-            byteArrayWrapperForGetKey.get().set(key, 0, key.length);
-			byte[] result = currentMap.get(byteArrayWrapperForGetKey.get());
+			byte[] result = currentMap.get(new ByteArrayWrapper(key, key.length));
 			if (result == null && prevMap != null) {
 				result = prevMap.get(key);
 			}
@@ -726,7 +719,8 @@ public class LocalStorageEngine {
 			if (offset == -1) {
 				byte[] result = hDb.get(offsetKey.getBytes());
 				if(result == null){
-					return 0;
+                    offset = ignoreHistoryWhenNoOffsetFoundInStore ? Long.MAX_VALUE: 0;
+					return offset;
 				}
 				offset = Convert.bytesToLong(result);
 			}
@@ -740,8 +734,7 @@ public class LocalStorageEngine {
 		 * @return
 		 */
 		public boolean delete(byte[] key) {
-            byteArrayWrapperForGetKey.get().set(key, 0, key.length);
-			currentMap.remove(byteArrayWrapperForGetKey.get());
+			currentMap.remove(new ByteArrayWrapper(key, key.length));
 			if (prevMap != null) {
 				prevMap.remove(key);
 			}
