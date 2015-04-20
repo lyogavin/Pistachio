@@ -458,14 +458,26 @@ public class PistachiosClient {
 			context.stop();
 		}
 	}
-
+	 /** 
+   * To delete a record belong to a key.
+   *
+   * @param key        key to store as byte[].
+   * @return          <code>boolean</code> succeeded or not
+   * @exception       MasterNotFoundException when fail because no master found
+   * @exception       ConnectionBrokenException when fail because connection is broken in the middle
+   * @exception       Exception other errors indicating failure
+   */
 	public boolean delete(byte[] key) throws MasterNotFoundException,
 	        ConnectionBrokenException {
 		return clientImpl.delete(key);
 	}
-	
-	public PistachioIterator iterator(long partition) throws MasterNotFoundException,
-  ConnectionBrokenException {
+	 /** 
+   * Get iterator of a partition
+   *
+   * @param partition partition to iterate
+   * @return          <code>PistachioIterator</code> return a pistachioIterator
+   */
+	public PistachioIterator iterator(long partition){
 		return clientImpl.iterator(partition);
 	}
 	
