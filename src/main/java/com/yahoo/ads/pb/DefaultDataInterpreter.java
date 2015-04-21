@@ -12,11 +12,13 @@
 package com.yahoo.ads.pb;
 
 import java.util.List;
-import com.yahoo.ads.pb.exception.*;
+
 import com.yahoo.ads.pb.util.ConfigurationManager;
 
 public class DefaultDataInterpreter implements PistachioDataInterpreter {
     static PistachioDataInterpreter dataInterpreter = null;
+    
+    public static final String COMMA = ",";
 
     public static PistachioDataInterpreter getDataInterpreter() {
         if (dataInterpreter == null) {
@@ -33,6 +35,8 @@ public class DefaultDataInterpreter implements PistachioDataInterpreter {
         }
         return dataInterpreter;
     }
+    
+    @Override
     public String interpretId(byte[] id) {
         if (id.length == 8)
             return new Long(com.google.common.primitives.Longs.fromByteArray(id)).toString();
@@ -40,7 +44,17 @@ public class DefaultDataInterpreter implements PistachioDataInterpreter {
         return java.util.Arrays.toString(id);
     }
 
+    @Override
     public String interpretData(byte[] data) {
         return java.util.Arrays.toString(data);
     }
+    
+	@Override
+	public String interpretIds(List<byte[]> ids) {
+		StringBuilder sb = new StringBuilder();
+		for (byte[] id: ids) {
+			sb.append(interpretId(id)).append(COMMA);
+		}
+		return sb.toString();
+	}
 }

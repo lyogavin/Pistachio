@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -307,35 +306,18 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
     
     @Override
     public Map<byte[], byte[]> multiLookup(List<byte[]> ids, boolean callback) throws MasterNotFoundException, ConnectionBrokenException, Exception {
-    	Map<byte[], Future<byte[]>> res = multiLookupAsync(ids, callback);
-    	Map<byte[], byte[]> ret = new HashMap<>(res.size());
-    	
+    	Future<Map<byte[], byte[]>> res = multiLookupAsync(ids, callback);
     	long timeoutMs = System.currentTimeMillis() + 100 * 1000L;
-    	for (Map.Entry<byte[], Future<byte[]>> entry: res.entrySet()) {
-    		try {
-    			ret.put(entry.getKey(), entry.getValue().get(timeoutMs - System.currentTimeMillis(), TimeUnit.MILLISECONDS));
-    		} catch (Exception e) {
-    			logger.warn("lookup {} failure ", DefaultDataInterpreter.getDataInterpreter().interpretId(entry.getKey()), e);
-    		}
-    	}
-		
-	    return ret;
+		try {
+			return res.get(timeoutMs - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
+		} catch (Exception e) {
+			logger.warn("lookup {} failure ", DefaultDataInterpreter.getDataInterpreter().interpretIds(ids), e);
+			throw new RequestTimeoutException("lookup failure: " + e);
+		}
     }
     
-    Function<Response, Map<byte[], byte[]>> MultiLookupResponseTransformFunction =
-  		  new Function<Response, Map<byte[], byte[]>>() {
-				@Override
-				public Map<byte[], byte[]> apply(Response response) {
-					Map<byte[], byte[]> res = new HashMap<>(response.getResponsesCount());
-					for (Response re: response.getResponsesList()) {
-						res.put(re.getId().toByteArray(), re.getData().toByteArray());
-					}
-					return res;
-				}
-  	};
-    
     @Override
-    public Map<byte[], Future<byte[]>> multiLookupAsync(List<byte[]> ids, boolean callback) throws MasterNotFoundException, ConnectionBrokenException, Exception {
+    public Future<Map<byte[], byte[]>> multiLookupAsync(List<byte[]> ids, boolean callback) throws MasterNotFoundException, ConnectionBrokenException, Exception {
         Map<Long, List<byte[]>> partition2ids = new HashMap<>();
     	for (byte[] id : ids) {
 	        long partition = partitioner.getPartition(id, helixPartitionSpectator.getTotalPartition("PistachiosResource"));
@@ -370,24 +352,46 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
 			}
 			builder.addRequests(innerRequest);
     	}
-    	
-    	final Map<byte[], Future<byte[]>> futures = new ConcurrentHashMap<>(ids.size());
+    	final SettableFuture<Map<byte[], byte[]>> ret = SettableFuture.create();
+    	final Map<byte[], byte[]> respMap = new ConcurrentHashMap<>(handler2reqs.entrySet().size());
+    	final AtomicInteger latch = new AtomicInteger(handler2reqs.size());
+
     	for (final Map.Entry<NettyPistachioClientHandler, Request.Builder> entry: handler2reqs.entrySet()) {
     		NettyPistachioClientHandler handler = entry.getKey();
     		ListenableFuture<Response> future = handler.sendRequestAsync(entry.getValue());
-    		ListenableFuture<Map<byte[], byte[]>> tFuture = Futures.transform(future, MultiLookupResponseTransformFunction);
-    		for (final ByteString id: entry.getValue().getIdsList()) {
-    			futures.put(id.toByteArray(), Futures.transform(tFuture, new Function<Map<byte[], byte[]>, byte[]>() {
-					@Override
-					public byte[] apply(Map<byte[], byte[]> arg0) {
-						// TODO Auto-generated method stub
-						return arg0.get(id.toByteArray());
+    		Futures.addCallback(future, new FutureCallback<Response>() {    			
+				@Override
+				public void onFailure(Throwable e) {
+					logger.error("caught exception when multi lookup {}", entry.getValue().getPartition(), e);
+					if (latch.decrementAndGet() <= 0) {
+						logger.info("about to set map, on failure");
+						ret.set(respMap);
+					};
+				}
+
+				@Override
+				public void onSuccess(Response res) {
+					if (logger.isDebugEnabled()) {
+						logger.debug("got response {} for multi-lookup, on success", res);
 					}
-    			}));
-    		}
+					for (Response re: res.getResponsesList()) {
+						if (re.getSucceeded()) {
+							respMap.put(re.getId().toByteArray(), re.getData().toByteArray());
+						} else {
+							logger.warn("failed to get data for id {}", re.getId());
+						}
+					}
+					if (latch.decrementAndGet() <= 0) {
+						if (logger.isDebugEnabled()) {
+							logger.debug("about to set map for multi-lookup, on success");
+						}
+						ret.set(respMap);
+					}
+				}
+			});
     	}
     	
-    	return futures;
+    	return ret;
     }
     
     private ListenableFuture<Boolean> createBooleanValueFuture(boolean value) {
@@ -434,7 +438,7 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
     	};
 
     @Override
-    public Map<byte[], Future<Boolean>> multiProcessAsync(Map<byte[], byte[]> events) throws MasterNotFoundException, ConnectionBrokenException, Exception{
+    public Future<Map<byte[], Boolean>> multiProcessAsync(Map<byte[], byte[]> events) throws MasterNotFoundException, ConnectionBrokenException, Exception{
     	Map<Long, Request.Builder> partition2reqs = new HashMap<>();
     	for (Map.Entry<byte[], byte[]> entry: events.entrySet()) {
     		byte[] id = entry.getKey();
@@ -467,15 +471,39 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
 			builder.addRequests(entry.getValue());    		
     	}
     	   	
-    	Map<byte[], Future<Boolean>> ret = new HashMap<>(handler2reqs.size());
-    	for (Map.Entry<NettyPistachioClientHandler, Request.Builder> entry: handler2reqs.entrySet()) {
-			NettyPistachioClientHandler handler = entry.getKey();
+    	final SettableFuture<Map<byte[], Boolean>> ret = SettableFuture.create();
+    	final Map<byte[], Boolean> respMap = new ConcurrentHashMap<>(handler2reqs.entrySet().size());
+    	final AtomicInteger latch = new AtomicInteger(handler2reqs.size());
+
+    	for (final Map.Entry<NettyPistachioClientHandler, Request.Builder> entry: handler2reqs.entrySet()) {
+    		NettyPistachioClientHandler handler = entry.getKey();
     		ListenableFuture<Response> future = handler.sendRequestAsync(entry.getValue());
-    		for (Request req: entry.getValue().getRequestsList()) {
-	    		for (ByteString id: req.getIdsList()) {
-	    			ret.put(id.toByteArray(), Futures.transform(future, BooleanResponseTransformFunction));
-	    		}
-    		}
+    		Futures.addCallback(future, new FutureCallback<Response>() {    			
+				@Override
+				public void onFailure(Throwable e) {
+					logger.error("caught exception when multi lookup {}", entry.getValue().getPartition(), e);
+					if (latch.decrementAndGet() <= 0) {
+						logger.info("about to set map, on failure");
+						ret.set(respMap);
+					};
+				}
+
+				@Override
+				public void onSuccess(Response res) {
+					if (logger.isDebugEnabled()) {
+						logger.debug("got response {} for multi-process, on success", res);
+					}
+					for (Response re: res.getResponsesList()) {
+						respMap.put(re.getId().toByteArray(), re.getSucceeded());
+					}
+					if (latch.decrementAndGet() <= 0) {
+						if (logger.isDebugEnabled()) {
+							logger.debug("about to set map for multi-process, on success");
+						}
+						ret.set(respMap);
+					}
+				}
+			});
     	}
     	if (logger.isDebugEnabled()) {
     		logger.debug("result of multi-process {}", ret);
