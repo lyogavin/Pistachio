@@ -224,6 +224,7 @@
                     <version>2.5.3</version>
                     <configuration>
                       <descriptor>src/main/assembly/assembly.xml</descriptor>
+                      <tarLongFileMode>posix</tarLongFileMode>
                     </configuration>
                     <executions>
                       <execution>

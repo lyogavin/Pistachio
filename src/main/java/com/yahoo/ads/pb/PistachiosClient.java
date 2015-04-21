@@ -31,6 +31,7 @@ import java.net.InetAddress;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
@@ -298,7 +299,7 @@ public class PistachiosClient {
      * @exception       ConnectionBrokenException when fail because connection is broken in the middle
      * @exception       Exception other errors indicating failure
      */
-	public Map<byte[], Future<byte[]>> multiLookUpAsync(List<byte[]> ids) throws MasterNotFoundException, ConnectionBrokenException, Exception {
+	public Future<Map<byte[], byte[]>> multiLookUpAsync(List<byte[]> ids) throws MasterNotFoundException, ConnectionBrokenException, Exception {
 		return multiLookUpAsync(ids, false);
 	}
 	
@@ -313,7 +314,7 @@ public class PistachiosClient {
      * @exception       ConnectionBrokenException when fail because connection is broken in the middle
      * @exception       Exception other errors indicating failure
      */
-	public Map<byte[], Future<byte[]>> multiLookUpAsync(List<byte[]> ids, boolean callback) throws MasterNotFoundException, ConnectionBrokenException, Exception {
+	public Future<Map<byte[], byte[]>> multiLookUpAsync(List<byte[]> ids, boolean callback) throws MasterNotFoundException, ConnectionBrokenException, Exception {
 		final Timer.Context context = multiLookupAsyncTimer.time();
         RetryWaiter retryWaiter = new RetryWaiter(multiLookupAsyncFailureRequests);
 
@@ -415,7 +416,7 @@ public class PistachiosClient {
      * @exception       ConnectionBrokenException when fail because connection is broken in the middle
      * @exception       Exception other errors indicating failure
      */
-	public Map<byte[], Future<Boolean>> multiProcessAsync(Map<byte[], byte[]> events)  throws MasterNotFoundException, ConnectionBrokenException, Exception{
+	public Future<Map<byte[], Boolean>> multiProcessAsync(Map<byte[], byte[]> events)  throws MasterNotFoundException, ConnectionBrokenException, Exception{
 		final Timer.Context context = multiProcessAsyncTimer.time();
         RetryWaiter retryWaiter = new RetryWaiter(multiProcessAsyncFailureRequests);
 
@@ -497,7 +498,7 @@ public class PistachiosClient {
           String id = "";
           boolean store = false;
           String value="" ;
-          if (args.length ==2 && args[0].equals("lookup") ) {
+          if (args.length == 2 && args[0].equals("lookup") ) {
               id = args[1];
               System.out.println("client.lookup(" + id + ")" + new String(client.lookup(id.getBytes(), true)));
           } else if (args.length == 3 && args[0].equals("store") ) {
@@ -540,6 +541,32 @@ public class PistachiosClient {
 					keyValue = iterator.getNext();
 				}
 				System.out.println("you are iterate partition " + id);
+			} else if (args.length == 2 && args[0].equalsIgnoreCase("multilookup")) {
+				String[] tokens = args[1].split(",");
+				List<byte[]> ids = new ArrayList<>(tokens.length);
+				for (String token: tokens) {
+					ids.add(token.getBytes());
+				}
+				Map<byte[], byte[]> ret = client.multiLookUp(ids, true);
+				for (Map.Entry<byte[], byte[]> entry: ret.entrySet()) {
+		              System.out.println("client.lookup(" + DefaultDataInterpreter.getDataInterpreter().interpretId(entry.getKey()) + ")" 
+		            		  + DefaultDataInterpreter.getDataInterpreter().interpretData(entry.getValue()));					
+				}
+			} else if (args.length == 3 && args[0].equalsIgnoreCase("multiprocess")) {
+				String[] tokens = args[1].split(",");
+				value = args[2];
+				Map<byte[], byte[]> events = new HashMap<>(tokens.length);
+				for (String token: tokens) {
+					events.put(token.getBytes(), value.getBytes());
+				}
+	            List<byte[]> list = new ArrayList<>();
+	            list.add(value.getBytes());
+
+				Map<byte[], Boolean> ret = client.multiProcessAsync(events).get();
+				for (Map.Entry<byte[], Boolean> entry: ret.entrySet()) {
+		              System.out.println("client.lookup(" + DefaultDataInterpreter.getDataInterpreter().interpretId(entry.getKey()) + ") " 
+		            		  + (entry.getValue() ? "Succeed" : "Failure"));					
+				}            
 			} else {
 				System.out.println("USAGE: xxxx lookup id or xxxx store id value");
 				System.exit(0);

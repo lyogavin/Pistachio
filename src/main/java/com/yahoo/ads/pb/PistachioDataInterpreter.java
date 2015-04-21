@@ -12,9 +12,9 @@
 package com.yahoo.ads.pb;
 
 import java.util.List;
-import com.yahoo.ads.pb.exception.*;
 
 public interface PistachioDataInterpreter{
     public String interpretId(byte[] id);
     public String interpretData(byte[] data);
+	public String interpretIds(List<byte[]> ids);
 }
