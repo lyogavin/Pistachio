@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
 public class NettyPistachioClientInitializer extends ChannelInitializer<SocketChannel> {
 
     private final SslContext sslCtx;
-	private static Logger logger = LoggerFactory.getLogger(NettyPistachioClientInitializer.class);
+    private static Logger logger = LoggerFactory.getLogger(NettyPistachioClientInitializer.class);
 
     public NettyPistachioClientInitializer(SslContext sslCtx) {
         this.sslCtx = sslCtx;

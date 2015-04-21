@@ -17,7 +17,7 @@ package com.yahoo.ads.pb.store;
  *
  */
 public interface StorePartitionMBean {
-	public long getKafkaLatestOffset();
-	public long getCurrentConsumeOffset();
-	public long getConsumeOffsetGap();
+    public long getKafkaLatestOffset();
+    public long getCurrentConsumeOffset();
+    public long getConsumeOffsetGap();
 }

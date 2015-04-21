@@ -12,6 +12,6 @@
 package com.yahoo.ads.pb.helix;
 
 public interface PartitionHandler {
-	public void startServing();
-	public void stopServing();
+    public void startServing();
+    public void stopServing();
 }

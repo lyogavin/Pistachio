@@ -12,5 +12,5 @@
 package com.yahoo.ads.pb.store;
 
 public interface StoreFactory {
-	public Store getInstance();
+    public Store getInstance();
 }

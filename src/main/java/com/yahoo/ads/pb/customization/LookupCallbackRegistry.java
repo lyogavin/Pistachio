@@ -21,14 +21,14 @@ public class LookupCallbackRegistry extends CustomizationRegistry<LookupCallback
 
     public static LookupCallbackRegistry getInstance() {
         if (instance == null) {
-        	synchronized (lookupCallbackPath) {
-        		if (instance == null) {
-					instance = new LookupCallbackRegistry();
-					instance.init();
-					if (instance.processor == null)
-						instance.processor = new DefaultLookupCallback();
-				}
-        	}
+            synchronized (lookupCallbackPath) {
+                if (instance == null) {
+                    instance = new LookupCallbackRegistry();
+                    instance.init();
+                    if (instance.processor == null)
+                        instance.processor = new DefaultLookupCallback();
+                }
+            }
         }
         return instance;
     }
@@ -39,9 +39,9 @@ public class LookupCallbackRegistry extends CustomizationRegistry<LookupCallback
 
     static class DefaultLookupCallback implements LookupCallback {
 
-		@Override
-		public byte[] onLookup(byte[] key, byte[] currentValue) {
-			return currentValue;
-		}    	
+        @Override
+        public byte[] onLookup(byte[] key, byte[] currentValue) {
+            return currentValue;
+        }
     }
 }

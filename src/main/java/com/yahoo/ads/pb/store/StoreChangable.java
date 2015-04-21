@@ -12,5 +12,5 @@
 package com.yahoo.ads.pb.store;
 
 public interface StoreChangable {
-	public void setStoreFactory(StoreFactory sf);
+    public void setStoreFactory(StoreFactory sf);
 }

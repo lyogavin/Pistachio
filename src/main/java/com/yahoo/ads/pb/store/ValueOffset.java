@@ -13,16 +13,16 @@ package com.yahoo.ads.pb.store;
 
 public class ValueOffset {
 
-	public byte[] value;
-	public long offset;
+    public byte[] value;
+    public long offset;
 
-	public boolean equals(Object obj) {
-		if (this == obj) return true;
-		if (! (obj instanceof ValueOffset)) return false;
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (! (obj instanceof ValueOffset)) return false;
 
-		ValueOffset that = (ValueOffset)obj;
+        ValueOffset that = (ValueOffset)obj;
 
-		return (value == that.value) && (offset == that.offset);
-	}
+        return (value == that.value) && (offset == that.offset);
+    }
 }
 

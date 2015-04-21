@@ -14,14 +14,14 @@ package com.yahoo.ads.pb.store;
 //import org.zeromq.ZMQ;
 
 public interface Store {
-	public boolean add(byte[] msg, long offset);
-	public void update(byte[] msg, long offset);
-	public byte[] get(byte[] msg);
-	public boolean delete(byte[] msg, long offset);
-	public long getCurrentOffset();
-	public boolean open(int partition);
-	public boolean close();
-	public boolean commitOffset(long offset);
-	//public void transfer(ZMQ.Socket sender);
-	public void flush();
+    public boolean add(byte[] msg, long offset);
+    public void update(byte[] msg, long offset);
+    public byte[] get(byte[] msg);
+    public boolean delete(byte[] msg, long offset);
+    public long getCurrentOffset();
+    public boolean open(int partition);
+    public boolean close();
+    public boolean commitOffset(long offset);
+    //public void transfer(ZMQ.Socket sender);
+    public void flush();
 }

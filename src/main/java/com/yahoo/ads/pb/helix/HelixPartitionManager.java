@@ -21,37 +21,37 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class HelixPartitionManager<T extends StateModel> {
-	private static Logger logger = LoggerFactory.getLogger(HelixPartitionManager.class);
-	
-	private HelixManager manager = null;
-	private final String zkAddr;
-	private final String clusterName;
-	private final String instanceName;
-	
-	public HelixPartitionManager(String zkAddr, String clusterName, String instanceName) {
-		this.zkAddr = zkAddr;
-		this.clusterName = clusterName;
-		this.instanceName = instanceName;
-	}
-	
-	public void start(String stateModelName, StateModelFactory<T> stateModelFactory) {
-		try {
-			manager = HelixManagerFactory.getZKHelixManager(clusterName, instanceName, 
-					InstanceType.PARTICIPANT, zkAddr);
-			
-			StateMachineEngine stateMachine = manager.getStateMachineEngine();
-			stateMachine.registerStateModelFactory(stateModelName, stateModelFactory);
-			
-			manager.connect();
-		} catch (Exception e) {
-			logger.error("failed to connect manager", e);
-			throw new RuntimeException("failed to start HelixPartitionManager");
-		}
-	}
+    private static Logger logger = LoggerFactory.getLogger(HelixPartitionManager.class);
 
-	public void stop() {
-		if (manager != null) {
-			manager.disconnect();
-		}
-	}
+    private HelixManager manager = null;
+    private final String zkAddr;
+    private final String clusterName;
+    private final String instanceName;
+
+    public HelixPartitionManager(String zkAddr, String clusterName, String instanceName) {
+        this.zkAddr = zkAddr;
+        this.clusterName = clusterName;
+        this.instanceName = instanceName;
+    }
+
+    public void start(String stateModelName, StateModelFactory<T> stateModelFactory) {
+        try {
+            manager = HelixManagerFactory.getZKHelixManager(clusterName, instanceName,
+                    InstanceType.PARTICIPANT, zkAddr);
+
+            StateMachineEngine stateMachine = manager.getStateMachineEngine();
+            stateMachine.registerStateModelFactory(stateModelName, stateModelFactory);
+
+            manager.connect();
+        } catch (Exception e) {
+            logger.error("failed to connect manager", e);
+            throw new RuntimeException("failed to start HelixPartitionManager");
+        }
+    }
+
+    public void stop() {
+        if (manager != null) {
+            manager.disconnect();
+        }
+    }
 }

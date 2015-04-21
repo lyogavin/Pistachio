@@ -34,60 +34,60 @@ import org.apache.helix.model.IdealState;
 import com.yahoo.ads.pb.util.ConfigurationManager;
 
 public class HelixPartitionSpectator {
-	
-	private static Logger logger = LoggerFactory.getLogger(HelixPartitionSpectator.class);
-	
-	private HelixManager manager = null;
-	private RoutingTableProvider routingTableProvider = null;
-	private final Random rand = new Random();
-	private static String[] readExclusionList = ConfigurationManager.getConfiguration().getStringArray("Profile.ReadExclusionList");
-	private final ConcurrentHashMap<String, String> host2ip = new ConcurrentHashMap<>(); // cache hostname -> ip mapping
-	private static HelixPartitionSpectator helixPartitionSpectator;
+
+    private static Logger logger = LoggerFactory.getLogger(HelixPartitionSpectator.class);
+
+    private HelixManager manager = null;
+    private RoutingTableProvider routingTableProvider = null;
+    private final Random rand = new Random();
+    private static String[] readExclusionList = ConfigurationManager.getConfiguration().getStringArray("Profile.ReadExclusionList");
+    private final ConcurrentHashMap<String, String> host2ip = new ConcurrentHashMap<>(); // cache hostname -> ip mapping
+    private static HelixPartitionSpectator helixPartitionSpectator;
     private Long totalParition = -1L;
     private static Object mutex = new Object();
     private String zkAddress;
     private String helixClusterName;
 
-	private HelixPartitionSpectator(String zkAddr, String clusterName, String instanceName) {
-		logger.info("init HelixPartitionSpectator with zkAddr @{}, clusterName {}, instanceName {}",
-				zkAddr, clusterName, instanceName);
-		manager = HelixManagerFactory.getZKHelixManager(clusterName, instanceName, 
-				InstanceType.SPECTATOR, zkAddr);
+    private HelixPartitionSpectator(String zkAddr, String clusterName, String instanceName) {
+        logger.info("init HelixPartitionSpectator with zkAddr @{}, clusterName {}, instanceName {}",
+                zkAddr, clusterName, instanceName);
+        manager = HelixManagerFactory.getZKHelixManager(clusterName, instanceName,
+                InstanceType.SPECTATOR, zkAddr);
         zkAddress = zkAddr;
         helixClusterName = clusterName;
-		try {
-			manager.connect();
-			routingTableProvider = new RoutingTableProvider();
-			manager.addExternalViewChangeListener(routingTableProvider);
+        try {
+            manager.connect();
+            routingTableProvider = new RoutingTableProvider();
+            manager.addExternalViewChangeListener(routingTableProvider);
 
 
-		} catch (Exception e) {
-			logger.error("caught exception when init HelixPartitionSpectator", e);
-			if (manager != null) {
-				manager.disconnect();
-			}
-			throw new RuntimeException("init HelixPartitionSpectator failure");
-		}
-	}
-	
-	public static HelixPartitionSpectator getInstance(String zkAddr, String clusterName, String instanceName){
-		if(helixPartitionSpectator == null){
-			synchronized(mutex){
-				if(helixPartitionSpectator == null){
-					helixPartitionSpectator = new HelixPartitionSpectator(zkAddr,clusterName,instanceName);
-				}
-			}
-		}
-		return helixPartitionSpectator;
-	}
-	
-	
-	
-	public void close() {
-		if (manager != null) {
-			manager.disconnect();
-		}
-	}
+        } catch (Exception e) {
+            logger.error("caught exception when init HelixPartitionSpectator", e);
+            if (manager != null) {
+                manager.disconnect();
+            }
+            throw new RuntimeException("init HelixPartitionSpectator failure");
+        }
+    }
+
+    public static HelixPartitionSpectator getInstance(String zkAddr, String clusterName, String instanceName){
+        if(helixPartitionSpectator == null){
+            synchronized(mutex){
+                if(helixPartitionSpectator == null){
+                    helixPartitionSpectator = new HelixPartitionSpectator(zkAddr,clusterName,instanceName);
+                }
+            }
+        }
+        return helixPartitionSpectator;
+    }
+
+
+
+    public void close() {
+        if (manager != null) {
+            manager.disconnect();
+        }
+    }
 
     public long getTotalPartition(String resource) {
         if (totalParition == -1) {
@@ -102,70 +102,70 @@ public class HelixPartitionSpectator {
 
         return totalParition;
     }
-	
-	/**
-	 * Get random one instance name for given partition
-	 * @param resource
-	 * @param partition
-	 * @param state (ONLINE/OFFLINE for OnlineOffline model)
-	 * @return @Nullable
-	 */
-	public @Nullable String getOneInstanceForPartition(String resource, int partition, String state) {
-		
-		List<String> instanceNames = getAllInstance(resource, partition, state);
-		if(readExclusionList.length>0){
-			for(String instanceName:instanceNames){
-				if(!Arrays.asList(readExclusionList).contains(instanceName)){
-					return instanceName;
-				}
-				logger.debug("filter ip:"+instanceName+" partition:"+partition);
-			}
-			return null;
-		}else{
-			return (instanceNames.isEmpty()) ? null : instanceNames.get(rand.nextInt(instanceNames.size())); 
-		}
-		
-	}
-	
-	/**
-	 * Get all instance names for given partition
-	 * @param resource
-	 * @param partition
-	 * @param state (ONLINE/OFFLINE for OnlineOffline model)
-	 * @return @Nullable
-	 */
-	public List<String> getAllInstance(String resource, int partition, String state) {
-		logger.debug("inside get all instance");
-		logger.debug("resource name"+resource +" partition "+partition+ " state "+state);
-		List<InstanceConfig> instances = routingTableProvider.getInstances(resource, String.format("%s_%d", resource, partition), state);
-		List<InstanceConfig> instancesSet = routingTableProvider.getInstances(resource, String.format("%s_%d", resource, partition), "SLAVE");
 
-		for (InstanceConfig instance: instancesSet) {
-			String hostname = instance.getHostName();
-		logger.debug("all slave instance host {}", hostname);
-		}
+    /**
+     * Get random one instance name for given partition
+     * @param resource
+     * @param partition
+     * @param state (ONLINE/OFFLINE for OnlineOffline model)
+     * @return @Nullable
+     */
+    public @Nullable String getOneInstanceForPartition(String resource, int partition, String state) {
 
-		List<String> instanceNames = new ArrayList<>(instances.size());
-		for (InstanceConfig instance: instances) {
-			String hostname = instance.getHostName();
-		logger.debug("instance host {}", hostname);
-			String ip = host2ip.get(hostname);
-			if (ip == null) {
-				try {
-					InetAddress addr = InetAddress.getByName(hostname);
-					ip = addr.getHostAddress();
-					host2ip.putIfAbsent(hostname, ip);
-				} catch (UnknownHostException ex) {
-					logger.error("Cannot resolve IP for hostname returned by Helix: {}", hostname);
-					if (logger.isDebugEnabled()) {
-						logger.debug("Cannot resolve IP for hostname returned by Helix: {}", hostname, ex);
-					}
-				}
-			}
-			if (ip != null) {
-				instanceNames.add(ip);
-			}
-		}
-		return instanceNames;
-	}
+        List<String> instanceNames = getAllInstance(resource, partition, state);
+        if(readExclusionList.length>0){
+            for(String instanceName:instanceNames){
+                if(!Arrays.asList(readExclusionList).contains(instanceName)){
+                    return instanceName;
+                }
+                logger.debug("filter ip:"+instanceName+" partition:"+partition);
+            }
+            return null;
+        }else{
+            return (instanceNames.isEmpty()) ? null : instanceNames.get(rand.nextInt(instanceNames.size()));
+        }
+
+    }
+
+    /**
+     * Get all instance names for given partition
+     * @param resource
+     * @param partition
+     * @param state (ONLINE/OFFLINE for OnlineOffline model)
+     * @return @Nullable
+     */
+    public List<String> getAllInstance(String resource, int partition, String state) {
+        logger.debug("inside get all instance");
+        logger.debug("resource name"+resource +" partition "+partition+ " state "+state);
+        List<InstanceConfig> instances = routingTableProvider.getInstances(resource, String.format("%s_%d", resource, partition), state);
+        List<InstanceConfig> instancesSet = routingTableProvider.getInstances(resource, String.format("%s_%d", resource, partition), "SLAVE");
+
+        for (InstanceConfig instance: instancesSet) {
+            String hostname = instance.getHostName();
+        logger.debug("all slave instance host {}", hostname);
+        }
+
+        List<String> instanceNames = new ArrayList<>(instances.size());
+        for (InstanceConfig instance: instances) {
+            String hostname = instance.getHostName();
+        logger.debug("instance host {}", hostname);
+            String ip = host2ip.get(hostname);
+            if (ip == null) {
+                try {
+                    InetAddress addr = InetAddress.getByName(hostname);
+                    ip = addr.getHostAddress();
+                    host2ip.putIfAbsent(hostname, ip);
+                } catch (UnknownHostException ex) {
+                    logger.error("Cannot resolve IP for hostname returned by Helix: {}", hostname);
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Cannot resolve IP for hostname returned by Helix: {}", hostname, ex);
+                    }
+                }
+            }
+            if (ip != null) {
+                instanceNames.add(ip);
+            }
+        }
+        return instanceNames;
+    }
 }

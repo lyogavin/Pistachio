@@ -16,18 +16,18 @@ import java.util.Arrays;
 
 public class KeyValue {
 
-	public byte[] key;
-	public long seqId;
-	public byte[] value;
+    public byte[] key;
+    public long seqId;
+    public byte[] value;
     public boolean callback;
     public Operator op = Operator.ADD;
 
-	public boolean equals(Object obj) {
-		if (this == obj) return true;
-		if (! (obj instanceof KeyValue)) return false;
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (! (obj instanceof KeyValue)) return false;
 
-		KeyValue that = (KeyValue)obj;
+        KeyValue that = (KeyValue)obj;
 
-		return Arrays.equals(key,that.key) && (seqId == that.seqId) && Arrays.equals(value, that.value) && (callback == that.callback) && (op == that.op);
-	}
+        return Arrays.equals(key,that.key) && (seqId == that.seqId) && Arrays.equals(value, that.value) && (callback == that.callback) && (op == that.op);
+    }
 }

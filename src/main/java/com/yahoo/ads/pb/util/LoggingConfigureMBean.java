@@ -18,24 +18,24 @@ package com.yahoo.ads.pb.util;
  */
 public interface LoggingConfigureMBean {
 
-	/**
-	 * Get all loggers and their level.
-	 *
-	 * @return all available loggers
-	 */
-	public String[] getLoggers();
+    /**
+     * Get all loggers and their level.
+     *
+     * @return all available loggers
+     */
+    public String[] getLoggers();
 
-	/**
-	 * Assigns the given level to the given class.
-	 * 
-	 * @param target the FQCN of the class
-	 * @param levelString
-	 * @return
-	 */
-	public String assignLogLevel(String target, String levelString);
+    /**
+     * Assigns the given level to the given class.
+     * 
+     * @param target the FQCN of the class
+     * @param levelString
+     * @return
+     */
+    public String assignLogLevel(String target, String levelString);
 
-	/**
-	 * reloads the log4j configuration from the <code>log4j.properties</code> file in the classpath.
-	 */
-	public void resetConfiguration();
+    /**
+     * reloads the log4j configuration from the <code>log4j.properties</code> file in the classpath.
+     */
+    public void resetConfiguration();
 }

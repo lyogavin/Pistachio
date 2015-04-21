@@ -31,7 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class NettyPistachioServerInitializer extends ChannelInitializer<SocketChannel> {
-	private static Logger logger = LoggerFactory.getLogger(NettyPistachioServerInitializer.class);
+    private static Logger logger = LoggerFactory.getLogger(NettyPistachioServerInitializer.class);
 
     private final SslContext sslCtx;
     private PistachiosHandler handler;

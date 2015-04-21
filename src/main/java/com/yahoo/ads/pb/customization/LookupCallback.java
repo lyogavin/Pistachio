@@ -16,12 +16,12 @@ package com.yahoo.ads.pb.customization;
  */
 public interface LookupCallback {
 
-	/**
-	 * Given the key and currentValue of lookup, return the massaged value
-	 * 
-	 * @param key
-	 * @param currentValue
-	 * @return
-	 */
+    /**
+     * Given the key and currentValue of lookup, return the massaged value
+     * 
+     * @param key
+     * @param currentValue
+     * @return
+     */
     public byte[] onLookup(byte[] key, byte[] currentValue);
 }

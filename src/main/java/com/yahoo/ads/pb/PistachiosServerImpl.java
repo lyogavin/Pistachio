@@ -14,8 +14,8 @@ package com.yahoo.ads.pb;
 import java.util.List;
 
 interface PistachiosServerImpl {
-	public byte[] lookup(long id);
-	public boolean store(long id, byte[] value);
+    public byte[] lookup(long id);
+    public boolean store(long id, byte[] value);
     public boolean processBatch(List<byte[]> events);
 }
 

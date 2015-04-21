@@ -13,10 +13,10 @@ package com.yahoo.ads.pb.store;
 
 public class TKStoreFactory implements StoreFactory {
 
-	@Override
-	public  Store getInstance() {
-		// TODO Auto-generated method stub
-		return new TKStore();
-	}
+    @Override
+    public  Store getInstance() {
+        // TODO Auto-generated method stub
+        return new TKStore();
+    }
 
 }

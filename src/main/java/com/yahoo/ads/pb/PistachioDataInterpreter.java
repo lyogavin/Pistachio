@@ -16,5 +16,5 @@ import java.util.List;
 public interface PistachioDataInterpreter{
     public String interpretId(byte[] id);
     public String interpretData(byte[] data);
-	public String interpretIds(List<byte[]> ids);
+    public String interpretIds(List<byte[]> ids);
 }
