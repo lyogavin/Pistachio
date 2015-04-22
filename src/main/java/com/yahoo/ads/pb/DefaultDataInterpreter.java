@@ -17,7 +17,7 @@ import com.yahoo.ads.pb.util.ConfigurationManager;
 
 public class DefaultDataInterpreter implements PistachioDataInterpreter {
     static PistachioDataInterpreter dataInterpreter = null;
-    
+
     public static final String COMMA = ",";
 
     public static PistachioDataInterpreter getDataInterpreter() {
@@ -35,7 +35,7 @@ public class DefaultDataInterpreter implements PistachioDataInterpreter {
         }
         return dataInterpreter;
     }
-    
+
     @Override
     public String interpretId(byte[] id) {
         if (id.length == 8)
@@ -48,13 +48,13 @@ public class DefaultDataInterpreter implements PistachioDataInterpreter {
     public String interpretData(byte[] data) {
         return java.util.Arrays.toString(data);
     }
-    
-	@Override
-	public String interpretIds(List<byte[]> ids) {
-		StringBuilder sb = new StringBuilder();
-		for (byte[] id: ids) {
-			sb.append(interpretId(id)).append(COMMA);
-		}
-		return sb.toString();
-	}
+
+    @Override
+    public String interpretIds(List<byte[]> ids) {
+        StringBuilder sb = new StringBuilder();
+        for (byte[] id: ids) {
+            sb.append(interpretId(id)).append(COMMA);
+        }
+        return sb.toString();
+    }
 }

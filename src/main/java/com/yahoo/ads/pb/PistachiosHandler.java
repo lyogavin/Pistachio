@@ -22,5 +22,5 @@ public interface PistachiosHandler {
     public boolean processBatch(byte[] id, long partitionId, List<byte[]> events);
     public boolean delete(byte[] id, long partitionId);
     public byte[] getNext(long partitionId, long versionId);
-  	public void jump(byte[] key, long partitionId, long versionId);
+    public void jump(byte[] key, long partitionId, long versionId);
 }

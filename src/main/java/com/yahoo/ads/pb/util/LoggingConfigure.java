@@ -26,66 +26,66 @@ import org.apache.log4j.spi.LoggerRepository;
 
 public class LoggingConfigure implements LoggingConfigureMBean {
 
-	@SuppressWarnings("unchecked")
-	@Override
-	public String[] getLoggers() {
-		LoggerRepository r = LogManager.getLoggerRepository();
+    @SuppressWarnings("unchecked")
+    @Override
+    public String[] getLoggers() {
+        LoggerRepository r = LogManager.getLoggerRepository();
 
-		Enumeration<Logger> loggerList = r.getCurrentLoggers();
+        Enumeration<Logger> loggerList = r.getCurrentLoggers();
 
-		Logger logger = null;
-		List<String> resultList = new ArrayList<String>();
-		while (loggerList.hasMoreElements()) {
-			logger = (Logger) loggerList.nextElement();
-			if (logger.getName().startsWith("com.yahoo.ads.pb")) {
-				// find level
-				Level level = logger.getLevel();
-				while (level == null) {
-					Logger parent = (Logger)logger.getParent();
-					if (parent != null) {
-						level = parent.getLevel();
-					}
-					else {
-						break;
-					}
-				}
-				if (level == null) {
-					level = LogManager.getRootLogger().getLevel();
-				}
-				
-				resultList.add(logger.getName() + "\t" + level);
-			}
-		}
-		Collections.sort(resultList);
-		
-		return (String[]) resultList.toArray(new String[] {});
-	}
+        Logger logger = null;
+        List<String> resultList = new ArrayList<String>();
+        while (loggerList.hasMoreElements()) {
+            logger = (Logger) loggerList.nextElement();
+            if (logger.getName().startsWith("com.yahoo.ads.pb")) {
+                // find level
+                Level level = logger.getLevel();
+                while (level == null) {
+                    Logger parent = (Logger)logger.getParent();
+                    if (parent != null) {
+                        level = parent.getLevel();
+                    }
+                    else {
+                        break;
+                    }
+                }
+                if (level == null) {
+                    level = LogManager.getRootLogger().getLevel();
+                }
 
-	@Override
-	public String assignLogLevel(String target, String levelString) {
-		if (StringUtils.isNotBlank(levelString)) {
-			Level level = Level.toLevel(levelString.trim().toUpperCase());
-			if (level != null) {
-				Logger logger = LogManager.getLogger(target.trim());
-				if (logger != null) {
-					logger.setLevel(level);
-					return logger.getName() + "\t" + logger.getLevel();
-				}
-	
-				return "Cannot find logger for " + target;
-			}
-		}
-		
-		return "Cannot find level " + levelString;
-	}
+                resultList.add(logger.getName() + "\t" + level);
+            }
+        }
+        Collections.sort(resultList);
 
-	@Override
-	public void resetConfiguration() {
-		ClassLoader cl = getClass().getClassLoader();
-		LogManager.resetConfiguration();
-		URL log4jprops = cl.getResource("log4j.properties");
-		if (log4jprops != null) {
-			PropertyConfigurator.configure(log4jprops);
-		}
-	}
+        return (String[]) resultList.toArray(new String[] {});
+    }
+
+    @Override
+    public String assignLogLevel(String target, String levelString) {
+        if (StringUtils.isNotBlank(levelString)) {
+            Level level = Level.toLevel(levelString.trim().toUpperCase());
+            if (level != null) {
+                Logger logger = LogManager.getLogger(target.trim());
+                if (logger != null) {
+                    logger.setLevel(level);
+                    return logger.getName() + "\t" + logger.getLevel();
+                }
+
+                return "Cannot find logger for " + target;
+            }
+        }
+
+        return "Cannot find level " + levelString;
+    }
+
+    @Override
+    public void resetConfiguration() {
+        ClassLoader cl = getClass().getClassLoader();
+        LogManager.resetConfiguration();
+        URL log4jprops = cl.getResource("log4j.properties");
+        if (log4jprops != null) {
+            PropertyConfigurator.configure(log4jprops);
+        }
+    }
 }

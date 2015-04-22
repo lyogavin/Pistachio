@@ -29,7 +29,7 @@ import com.yahoo.ads.pb.util.ConfigurationManager;
  * get the local times of the specified cities.
  */
 public final class NettyPistachioServer {
-	private static Logger logger = LoggerFactory.getLogger(NettyPistachioServer.class);
+    private static Logger logger = LoggerFactory.getLogger(NettyPistachioServer.class);
 
     static final boolean SSL = System.getProperty("ssl") != null;
     //static final int PORT = Integer.parseInt(System.getProperty("port", "8463"));

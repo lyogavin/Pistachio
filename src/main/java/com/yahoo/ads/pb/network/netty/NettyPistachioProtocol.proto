@@ -22,14 +22,14 @@ option optimize_for = SPEED;
 
 
 enum RequestType {
-	LOOKUP = 1;
-	STORE = 2;
-	PROCESS_EVENT = 3;
-	MULTI_LOOKUP = 4;
-	MULTI_PROCESS_EVENT = 5;
-	DELETE = 6;
-	GETNEXT = 7;
-	JUMP = 8;
+    LOOKUP = 1;
+    STORE = 2;
+    PROCESS_EVENT = 3;
+    MULTI_LOOKUP = 4;
+    MULTI_PROCESS_EVENT = 5;
+    DELETE = 6;
+    GETNEXT = 7;
+    JUMP = 8;
 }
 
 message Request {

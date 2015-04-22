@@ -26,7 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class NettyPistachioServerHandler extends SimpleChannelInboundHandler<Request> {
-	private static Logger logger = LoggerFactory.getLogger(NettyPistachioServerHandler.class);
+    private static Logger logger = LoggerFactory.getLogger(NettyPistachioServerHandler.class);
     private PistachiosHandler handler;
 
     public NettyPistachioServerHandler(PistachiosHandler handler) {
@@ -36,8 +36,8 @@ public class NettyPistachioServerHandler extends SimpleChannelInboundHandler<Req
     @Override
     public void channelRead0(ChannelHandlerContext ctx, Request request) throws Exception {
         logger.debug("got new request: {}", request);
-		Response.Builder builder = Response.newBuilder();
-		builder.setId(request.getId());
+        Response.Builder builder = Response.newBuilder();
+        builder.setId(request.getId());
         boolean result = false;
 
         switch (request.getType()) {
@@ -78,16 +78,16 @@ public class NettyPistachioServerHandler extends SimpleChannelInboundHandler<Req
             case GETNEXT:
               logger.debug("calling get next");
               try{
-	              byte[] returnData = handler.getNext(request.getPartition(), request.getVersionid());
-	              logger.debug("return data {} for partition {}", returnData, request.getPartition());
-	              if(returnData == null){
-	              	 builder.setSucceeded(false);
-	              }else{
-		              builder.setData(ByteString.copyFrom(returnData));
-		              builder.setSucceeded(true);
-	              }
+                  byte[] returnData = handler.getNext(request.getPartition(), request.getVersionid());
+                  logger.debug("return data {} for partition {}", returnData, request.getPartition());
+                  if(returnData == null){
+                       builder.setSucceeded(false);
+                  }else{
+                      builder.setData(ByteString.copyFrom(returnData));
+                      builder.setSucceeded(true);
+                  }
               }catch(Exception e){
-              	logger.info("error get next", e);
+                  logger.info("error get next", e);
                 builder.setSucceeded(false);
               }
               break;
@@ -98,42 +98,42 @@ public class NettyPistachioServerHandler extends SimpleChannelInboundHandler<Req
               
               break;
             case MULTI_LOOKUP:
-            	logger.debug("calling multi lookup");
-            	boolean callback = request.getCallback();
-				for (Request req : request.getRequestsList()) {
-					long partitionId = req.getPartition();
-					for (ByteString id : req.getIdsList()) {
-						try {
-							byte[] res = handler.lookup(id.toByteArray(), partitionId, callback);
-							builder.addResponses(Response.newBuilder().setId(id)
-									.setSucceeded(true)
-									.setData(ByteString.copyFrom(res)).build());
-						} catch (Exception e) {
-							builder.addResponses(Response.newBuilder().setId(id)
-									.setSucceeded(false).build());
-						}
-					}
-				}
-				break;
+                logger.debug("calling multi lookup");
+                boolean callback = request.getCallback();
+                for (Request req : request.getRequestsList()) {
+                    long partitionId = req.getPartition();
+                    for (ByteString id : req.getIdsList()) {
+                        try {
+                            byte[] res = handler.lookup(id.toByteArray(), partitionId, callback);
+                            builder.addResponses(Response.newBuilder().setId(id)
+                                    .setSucceeded(true)
+                                    .setData(ByteString.copyFrom(res)).build());
+                        } catch (Exception e) {
+                            builder.addResponses(Response.newBuilder().setId(id)
+                                    .setSucceeded(false).build());
+                        }
+                    }
+                }
+                break;
             case MULTI_PROCESS_EVENT:
-            	logger.debug("calling multi process");
-            	for (Request req: request.getRequestsList()) {
-            		long partitionId = req.getPartition();
-            		int n = req.getIdsCount();
-            		for (int i = 0; i < n; i++) {
-            			boolean ret = false;
-            			try {
-            				ret = handler.processBatch(req.getIds(i).toByteArray(), partitionId, Collections.singletonList(req.getEvents(i).toByteArray()));
-            			} catch (Exception e) {
-            				ret = false;
-            			}
-        				builder.addResponses(Response.newBuilder().setId(req.getIds(i))
-        						.setSucceeded(ret).build()
-        						);
-            		}
-            	}
+                logger.debug("calling multi process");
+                for (Request req: request.getRequestsList()) {
+                    long partitionId = req.getPartition();
+                    int n = req.getIdsCount();
+                    for (int i = 0; i < n; i++) {
+                        boolean ret = false;
+                        try {
+                            ret = handler.processBatch(req.getIds(i).toByteArray(), partitionId, Collections.singletonList(req.getEvents(i).toByteArray()));
+                        } catch (Exception e) {
+                            ret = false;
+                        }
+                        builder.addResponses(Response.newBuilder().setId(req.getIds(i))
+                                .setSucceeded(ret).build()
+                                );
+                    }
+                }
             case DELETE:
-            	logger.debug("calling delete");
+                logger.debug("calling delete");
                 result = handler.delete(request.getId().toByteArray(), request.getPartition());
                 builder.setSucceeded(result);
                 break;

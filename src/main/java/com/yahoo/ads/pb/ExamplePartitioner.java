@@ -6,8 +6,8 @@ import org.slf4j.LoggerFactory;
 import java.util.Arrays;
 
 public class ExamplePartitioner implements Partitioner {
-	private Configuration conf = ConfigurationManager.getConfiguration();
-	private static Logger logger = LoggerFactory.getLogger(ExamplePartitioner.class);
+    private Configuration conf = ConfigurationManager.getConfiguration();
+    private static Logger logger = LoggerFactory.getLogger(ExamplePartitioner.class);
 
     public long getPartition(byte[] id, long totalParition) {
 

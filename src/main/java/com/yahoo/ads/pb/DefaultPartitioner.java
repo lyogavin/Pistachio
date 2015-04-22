@@ -6,8 +6,8 @@ import org.slf4j.LoggerFactory;
 import java.util.Arrays;
 
 public class DefaultPartitioner implements Partitioner {
-	private Configuration conf = ConfigurationManager.getConfiguration();
-	private static Logger logger = LoggerFactory.getLogger(DefaultPartitioner.class);
+    private Configuration conf = ConfigurationManager.getConfiguration();
+    private static Logger logger = LoggerFactory.getLogger(DefaultPartitioner.class);
     Partitioner customizedPartitioner = null;
     boolean checkedCustomizedPartitioner = false;
 

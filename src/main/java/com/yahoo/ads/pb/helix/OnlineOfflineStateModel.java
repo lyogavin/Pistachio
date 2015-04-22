@@ -25,59 +25,59 @@ import com.yahoo.ads.pb.helix.PartitionHandler;
 import com.yahoo.ads.pb.helix.PartitionHandlerFactory;
 
 @StateModelInfo(initialState = "OFFLINE", states = {
-	    "ONLINE", "ERROR"
-	})
+        "ONLINE", "ERROR"
+    })
 public class OnlineOfflineStateModel extends StateModel {
-	
-	private static Logger logger = LoggerFactory.getLogger(OnlineOfflineStateModel.class);
-	
-	private final AtomicReference<PartitionHandler> handler = new AtomicReference<PartitionHandler>();
-	private final PartitionHandlerFactory handlerFactory;
-	private final int partitionId;
 
-	public OnlineOfflineStateModel(int partitionId, PartitionHandlerFactory handlerFactory) {
-		this.partitionId = partitionId;
-		this.handlerFactory = handlerFactory;
-	}
-	
-	@Transition(to = "ONLINE", from = "OFFLINE")
-	public void onBecomeOnlineFromOffline(Message message, NotificationContext context) {
-		logger.info("becomes ONLINE from OFFLINE for {}", partitionId);
-		if (handler.compareAndSet(null, handlerFactory.createParitionHandler(partitionId))) {
-			handler.get().startServing();
-		}
-	}
-	
-	private void stop() {
-		PartitionHandler originHandler = handler.get();
-		if (originHandler != null) {
-			logger.info("Stopping for partition {}", partitionId);
-			originHandler.stopServing();
-			handler.compareAndSet(originHandler, null);
-			logger.info("Stopping for partition {} done", partitionId);
-		}
-	}
-	
-	@Transition(to = "OFFLINE", from = "ONLINE")
-	public void onBecomeOfflineFromOnline(Message message, NotificationContext context) {
-		logger.info("becomes OFFLINE from ONLINE for {}", partitionId);
-		stop();
-	}
-		
-	@Transition(to = "DROPPED", from = "OFFLINE")
-	public void onBecomeDroppedFromOffline(Message message, NotificationContext context) {
-		logger.info("becomes DROPPED from OFFLINE for {}", partitionId);	
-		stop();
-	}
-	
-	@Transition(to = "OFFLINE", from = "ERROR")
-	public void onBecomeOfflineFromError(Message message, NotificationContext context) {
-		logger.info("becomes OFFLINE from ERROR for {}", partitionId);				
-	}
-	
-	@Override
-	public void reset() {
-		logger.info("reset called");
-		stop();
-	}
+    private static Logger logger = LoggerFactory.getLogger(OnlineOfflineStateModel.class);
+
+    private final AtomicReference<PartitionHandler> handler = new AtomicReference<PartitionHandler>();
+    private final PartitionHandlerFactory handlerFactory;
+    private final int partitionId;
+
+    public OnlineOfflineStateModel(int partitionId, PartitionHandlerFactory handlerFactory) {
+        this.partitionId = partitionId;
+        this.handlerFactory = handlerFactory;
+    }
+
+    @Transition(to = "ONLINE", from = "OFFLINE")
+    public void onBecomeOnlineFromOffline(Message message, NotificationContext context) {
+        logger.info("becomes ONLINE from OFFLINE for {}", partitionId);
+        if (handler.compareAndSet(null, handlerFactory.createParitionHandler(partitionId))) {
+            handler.get().startServing();
+        }
+    }
+
+    private void stop() {
+        PartitionHandler originHandler = handler.get();
+        if (originHandler != null) {
+            logger.info("Stopping for partition {}", partitionId);
+            originHandler.stopServing();
+            handler.compareAndSet(originHandler, null);
+            logger.info("Stopping for partition {} done", partitionId);
+        }
+    }
+
+    @Transition(to = "OFFLINE", from = "ONLINE")
+    public void onBecomeOfflineFromOnline(Message message, NotificationContext context) {
+        logger.info("becomes OFFLINE from ONLINE for {}", partitionId);
+        stop();
+    }
+
+    @Transition(to = "DROPPED", from = "OFFLINE")
+    public void onBecomeDroppedFromOffline(Message message, NotificationContext context) {
+        logger.info("becomes DROPPED from OFFLINE for {}", partitionId);
+        stop();
+    }
+
+    @Transition(to = "OFFLINE", from = "ERROR")
+    public void onBecomeOfflineFromError(Message message, NotificationContext context) {
+        logger.info("becomes OFFLINE from ERROR for {}", partitionId);
+    }
+
+    @Override
+    public void reset() {
+        logger.info("reset called");
+        stop();
+    }
 }

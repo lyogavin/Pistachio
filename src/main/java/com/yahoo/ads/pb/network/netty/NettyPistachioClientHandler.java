@@ -40,7 +40,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class NettyPistachioClientHandler extends SimpleChannelInboundHandler<Response> {
-	private static Logger logger = LoggerFactory.getLogger(NettyPistachioClientHandler.class);
+    private static Logger logger = LoggerFactory.getLogger(NettyPistachioClientHandler.class);
 
     private static final Pattern DELIM = Pattern.compile("/");
 
@@ -49,29 +49,29 @@ public class NettyPistachioClientHandler extends SimpleChannelInboundHandler<Res
     private final ArrayList<LinkedBlockingQueue<Response>> answerQueues = new ArrayList<LinkedBlockingQueue<Response>>(20);
     private String ip;
     public void setIp(String ip) {
-			this.ip = ip;
-		}
+            this.ip = ip;
+        }
 
-		public String getIp() {
-			return ip;
-		}
+        public String getIp() {
+            return ip;
+        }
 
-		// map requestId -> Future, 
+        // map requestId -> Future,
     private final Cache<Integer, SettableFuture<Response>> req2futures = CacheBuilder.newBuilder()
-    		.expireAfterWrite(100, TimeUnit.SECONDS)
-    		.removalListener(new RemovalListener<Integer, SettableFuture<Response>>() {
+            .expireAfterWrite(100, TimeUnit.SECONDS)
+            .removalListener(new RemovalListener<Integer, SettableFuture<Response>>() {
 
-				@Override
-				public void onRemoval(
-						RemovalNotification<Integer, SettableFuture<Response>> arg0) {
-					if (arg0.wasEvicted()) {
-						SettableFuture<Response> response = arg0.getValue();
-						logger.warn("request id {} timeout", arg0.getKey());
-						response.setException(new RequestTimeoutException("request timeout"));
-					}
-				}
-			})
-    		.build();
+                @Override
+                public void onRemoval(
+                        RemovalNotification<Integer, SettableFuture<Response>> arg0) {
+                    if (arg0.wasEvicted()) {
+                        SettableFuture<Response> response = arg0.getValue();
+                        logger.warn("request id {} timeout", arg0.getKey());
+                        response.setException(new RequestTimeoutException("request timeout"));
+                    }
+                }
+            })
+            .build();
 
     private AtomicInteger nextRequestId = new AtomicInteger();
 
@@ -95,8 +95,8 @@ public class NettyPistachioClientHandler extends SimpleChannelInboundHandler<Res
         super(false);
     }
 
-	public Response sendRequest(Request.Builder builder) throws ConnectionBrokenException {
-		//Request.Builder builder = Request.newBuilder();
+    public Response sendRequest(Request.Builder builder) throws ConnectionBrokenException {
+        //Request.Builder builder = Request.newBuilder();
         builder.setThreadId(threadAnswerQueueId.get());
         Integer requestId = nextRequestId.incrementAndGet() & 0xffff;
         builder.setRequestId(requestId);
@@ -109,7 +109,7 @@ public class NettyPistachioClientHandler extends SimpleChannelInboundHandler<Res
 
 
         boolean interrupted = false;
-		Response response;
+        Response response;
 
         for (;;) {
             try {
@@ -143,11 +143,11 @@ public class NettyPistachioClientHandler extends SimpleChannelInboundHandler<Res
             Thread.currentThread().interrupt();
         }
 
-		return response;
+        return response;
 
-	}
-	
-	public ListenableFuture<Response> sendRequestAsync(Request.Builder builder) {
+    }
+
+    public ListenableFuture<Response> sendRequestAsync(Request.Builder builder) {
         Integer requestId = nextRequestId.incrementAndGet() & 0xffff;
         builder.setRequestId(requestId);
         builder.clearThreadId();
@@ -156,12 +156,12 @@ public class NettyPistachioClientHandler extends SimpleChannelInboundHandler<Res
 
         SettableFuture<Response> future = SettableFuture.create();
         req2futures.put(requestId, future);
-        
+
         channel.writeAndFlush(request);
         logger.debug("request constructed: {} and sent.", request);
 
         return future;
-	}
+    }
 
 
     @Override
@@ -173,15 +173,15 @@ public class NettyPistachioClientHandler extends SimpleChannelInboundHandler<Res
     public void channelRead0(ChannelHandlerContext ctx, Response response) throws Exception {
         logger.debug("got response {} in channelRead0", response);
         if (response.hasThreadId()) {
-        	answerQueues.get(response.getThreadId()).add(response);
+            answerQueues.get(response.getThreadId()).add(response);
         } else {
-        	SettableFuture<Response> future = req2futures.asMap().remove(Integer.valueOf(response.getRequestId()));
-        	if (future != null) {
-        		future.set(response);
-        	} else {
-        		// TODO: may need to change once support cancel for future
-        		logger.error("response for req {} comes back, but can not find corresponding future", response.getRequestId());
-        	}
+            SettableFuture<Response> future = req2futures.asMap().remove(Integer.valueOf(response.getRequestId()));
+            if (future != null) {
+                future.set(response);
+            } else {
+                // TODO: may need to change once support cancel for future
+                logger.error("response for req {} comes back, but can not find corresponding future", response.getRequestId());
+            }
         }
     }
 

@@ -19,25 +19,25 @@ import com.yahoo.ads.pb.helix.PartitionHandlerFactory;
 
 public class BootstrapOnlineOfflineStateModelFactory extends StateModelFactory<BootstrapOnlineOfflineStateModel> {
 
-	private static Logger logger = LoggerFactory.getLogger(BootstrapOnlineOfflineStateModelFactory.class);
-	
-	private final PartitionHandlerFactory handlerFactory;
-	
-	public BootstrapOnlineOfflineStateModelFactory(PartitionHandlerFactory handlerFactory) {
-		this.handlerFactory = handlerFactory;
-	}
+    private static Logger logger = LoggerFactory.getLogger(BootstrapOnlineOfflineStateModelFactory.class);
 
-	@Override
-	public BootstrapOnlineOfflineStateModel createNewStateModel(String partition) {
-		String[] parts = partition.split("_");
-		int partitionId = -1;
-		try {
-			partitionId = Integer.parseInt(parts[parts.length - 1]);
-		} catch (NumberFormatException e) {
-			logger.error("partition {} format error", partition, e);
-		}
-		BootstrapOnlineOfflineStateModel stateModel = new BootstrapOnlineOfflineStateModel(partitionId, handlerFactory);
-		
-		return stateModel;
-	}
+    private final PartitionHandlerFactory handlerFactory;
+
+    public BootstrapOnlineOfflineStateModelFactory(PartitionHandlerFactory handlerFactory) {
+        this.handlerFactory = handlerFactory;
+    }
+
+    @Override
+    public BootstrapOnlineOfflineStateModel createNewStateModel(String partition) {
+        String[] parts = partition.split("_");
+        int partitionId = -1;
+        try {
+            partitionId = Integer.parseInt(parts[parts.length - 1]);
+        } catch (NumberFormatException e) {
+            logger.error("partition {} format error", partition, e);
+        }
+        BootstrapOnlineOfflineStateModel stateModel = new BootstrapOnlineOfflineStateModel(partitionId, handlerFactory);
+
+        return stateModel;
+    }
 }

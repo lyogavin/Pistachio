@@ -12,5 +12,5 @@
 package com.yahoo.ads.pb.helix;
 
 public interface PartitionHandlerFactory {
-	PartitionHandler createParitionHandler(int partition);
+    PartitionHandler createParitionHandler(int partition);
 }

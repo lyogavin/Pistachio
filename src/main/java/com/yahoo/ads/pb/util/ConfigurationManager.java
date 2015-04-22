@@ -22,34 +22,34 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Handle all configuration values.
- * 
+ *
  */
 public class ConfigurationManager {
-	private static Logger logger = LoggerFactory.getLogger(ConfigurationManager.class);
-	
-	public static final String CONFIG_DELIM_REG = "\\.";
-	public static final String CONFIG_DELIM = ".";
-	
-	private static final CompositeConfiguration cc = new CompositeConfiguration();
-	
-	static {		
-		try {
-			// system configuration will be the first in line
-			cc.addConfiguration(new SystemConfiguration());
-			
-            PropertiesConfiguration pc = new PropertiesConfiguration(new java.io.File(System.getProperty("configPath") + "/pistachios.properties"));
-			logger.info("setting base path to {}", System.getProperty("configPath") + "/pistachios.properties");
-			cc.addConfiguration(pc);
-		}
-		catch (ConfigurationException e) {
-			logger.error("Failed to load configuration files", e);
-		}
-	}
-   
-	private ConfigurationManager() { }
+    private static Logger logger = LoggerFactory.getLogger(ConfigurationManager.class);
 
-	public static Configuration getConfiguration() {
-		return cc;
-	}
+    public static final String CONFIG_DELIM_REG = "\\.";
+    public static final String CONFIG_DELIM = ".";
+
+    private static final CompositeConfiguration cc = new CompositeConfiguration();
+
+    static {
+        try {
+            // system configuration will be the first in line
+            cc.addConfiguration(new SystemConfiguration());
+
+            PropertiesConfiguration pc = new PropertiesConfiguration(new java.io.File(System.getProperty("configPath") + "/pistachios.properties"));
+            logger.info("setting base path to {}", System.getProperty("configPath") + "/pistachios.properties");
+            cc.addConfiguration(pc);
+        }
+        catch (ConfigurationException e) {
+            logger.error("Failed to load configuration files", e);
+        }
+    }
+
+    private ConfigurationManager() { }
+
+    public static Configuration getConfiguration() {
+        return cc;
+    }
 
 }

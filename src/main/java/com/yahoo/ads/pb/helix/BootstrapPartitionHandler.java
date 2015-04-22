@@ -12,6 +12,6 @@
 package com.yahoo.ads.pb.helix;
 
 public interface BootstrapPartitionHandler extends PartitionHandler {
-	public void selfBootstraping();
-	public void bootstrapingOthers();
+    public void selfBootstraping();
+    public void bootstrapingOthers();
 }
