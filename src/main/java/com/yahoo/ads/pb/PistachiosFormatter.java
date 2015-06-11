@@ -143,20 +143,8 @@ public class PistachiosFormatter{
   }
   private static void format(ZKHelixAdmin admin, ZkClient zkClient, String[] hostList, int numPartitions, 
                              int numReplicas, String kafkaTopicPrefix, String kafkaZKPath, String[] kafkaIds) {
+    String [] kafkaReplicaAssignmentStrList = new String[numPartitions];
     try {
-        for (int i =0; i<numPartitions; i++) {
-            try {
-                //CreateTopicCommand.createTopic(zkClient , "PistachiosPartition." + i, 1, 1, "");
-                CreateTopicCommand.createTopic(zkClient , kafkaTopicPrefix + i, 1, 1, "");
-            } catch (kafka.common.TopicExistsException tee) {
-                logger.info("topic exists, continue", tee);
-            } catch (Exception e) {
-                logger.info("creating kafka topic error, roll back", e);
-                cleanup(admin, zkClient, hostList, numPartitions, numReplicas, kafkaTopicPrefix, kafkaZKPath);
-            }
-        }
-        zkClient.close();
-
         //ZKHelixAdmin admin = new ZKHelixAdmin(args[1]);
         admin.addCluster("PistachiosCluster");
 
@@ -228,11 +216,14 @@ public class PistachiosFormatter{
             cleanup(admin, zkClient, hostList, numPartitions, numReplicas, kafkaTopicPrefix, kafkaZKPath);
         }
         logger.info("adding host");
+        HashMap<String, String> hostToKafkaIdMap = new HashMap<String, String>();
+        int j = 0;
         for (String host : hostList) {
             InstanceConfig instanceConfig = new InstanceConfig(host);
             instanceConfig.setHostName(host);
             instanceConfig.setPort("1234");
             instanceConfig.setInstanceEnabled(true);
+            hostToKafkaIdMap.put(host, kafkaIds[j]);
 
             //Add additional system specific configuration if needed. These can be accessed during the node start up.
             //instanceConfig.getRecord().setSimpleField("key", "value");
@@ -253,11 +244,38 @@ public class PistachiosFormatter{
         }
         logger.info("rebalancing");
         try {
-        admin.rebalance("PistachiosCluster", "PistachiosResource", numReplicas);
+            admin.rebalance("PistachiosCluster", "PistachiosResource", numReplicas);
+            // form kafka preference list according to helix preferrence list
+            for (int i = 0; i < numPartitions; i++) {
+                IdealState idealState = admin.getResourceIdealState("PistachiosCluster", "PistachiosResource");
+                List<String> preferenceList = idealState.getPreferenceList("PistachiosResource_" + i);
+                logger.info("preference list for {} is {}", "PistachiosResource_" + i, org.apache.commons.lang3.StringUtils.join(preferenceList, ","));
+
+                for (String preferredHost : preferenceList) {
+                    if (kafkaReplicaAssignmentStrList[i].length() > 0) 
+                        kafkaReplicaAssignmentStrList[i] += ":";
+                    kafkaReplicaAssignmentStrList[i] += hostToKafkaIdMap.get(preferredHost);
+                }
+                logger.info("kafka preference id list for {} is {}", "PistachiosResource_" + i, kafkaReplicaAssignmentStrList[i]);
+            }
         } catch(Exception e) {
             logger.info("rebalancing error, roll back and exit", e);
             cleanup(admin, zkClient, hostList, numPartitions, numReplicas, kafkaTopicPrefix, kafkaZKPath);
         }
+
+        for (int i =0; i<numPartitions; i++) {
+            try {
+                //CreateTopicCommand.createTopic(zkClient , "PistachiosPartition." + i, 1, 1, "");
+                CreateTopicCommand.createTopic(zkClient , kafkaTopicPrefix + i, 1, 1, "");
+            } catch (kafka.common.TopicExistsException tee) {
+                logger.info("topic exists, continue", tee);
+            } catch (Exception e) {
+                logger.info("creating kafka topic error, roll back", e);
+                cleanup(admin, zkClient, hostList, numPartitions, numReplicas, kafkaTopicPrefix, kafkaZKPath);
+            }
+        }
+        zkClient.close();
+
 
         // setting partition constraints
         logger.info("setting per partition state transition constraints to 1");
