@@ -32,6 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.Random;
 import java.util.Arrays;
+import com.yahoo.ads.pb.util.NativeUtils;
 
 
 public class PistachiosMTTFTest{
@@ -51,12 +52,14 @@ public class PistachiosMTTFTest{
 	  while(true) {
 		  try {
 		  long id = rand.nextLong();
-		  String value=InetAddress.getLocalHost().getHostName() + rand.nextInt() ;
+		  //String value=InetAddress.getLocalHost().getHostName() + rand.nextInt() ;
+		  String value=NativeUtils.getHostname() + rand.nextInt() ;
 		  client.store(com.google.common.primitives.Longs.toByteArray(id), value.getBytes());
 		  for (int i =0; i<30; i++) {
 			  byte[] clientValue = client.lookup(com.google.common.primitives.Longs.toByteArray(id), true);
 			  String remoteValue = new String(clientValue);
-			  if (Arrays.equals(value.getBytes(), clientValue) || !remoteValue.contains(InetAddress.getLocalHost().getHostName())) {
+			  //if (Arrays.equals(value.getBytes(), clientValue) || !remoteValue.contains(InetAddress.getLocalHost().getHostName())) {
+			  if (Arrays.equals(value.getBytes(), clientValue) || !remoteValue.contains(NativeUtils.getHostname())) {
 				  logger.debug("succeeded checking id {} value {}", id, value);
 			  } else {
 				  logger.error("failed checking id {} value {} != {}", id, value, new String(clientValue));

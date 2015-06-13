@@ -5,9 +5,12 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.BufferedReader;
 import java.io.OutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.net.InetAddress;
 
 /**
  * Simple library class for working with JNI (Java Native Interface)
@@ -23,6 +26,35 @@ public class NativeUtils {
      * Private constructor - this class will never be instanced
      */
     private NativeUtils() {
+    }
+
+    public static String getHostname() {
+        String ret = null;
+        try {
+            // Use a ProcessBuilder
+            ProcessBuilder pb = new ProcessBuilder("hostname");
+
+            Process p = pb.start();
+            InputStream is = p.getInputStream();
+            BufferedReader br = new BufferedReader(new InputStreamReader(is));
+            String line = null;
+            while ((line = br.readLine()) != null) {
+                if (ret == null)
+                    ret = line;
+            }
+            int r = p.waitFor(); // Let the process finish.
+            if (r == 0) { // No error
+                // run cmd2.
+            }
+        } catch (Exception e) {
+            try {
+            ret = InetAddress.getLocalHost().getHostName(); //conf.getString(PROFILE_HELIX_INSTANCE_ID) // instanceName
+            } catch (Exception e1) {
+                ret = "ERROR";
+            }
+        }
+
+        return ret;
     }
 
     /**
@@ -63,7 +95,9 @@ public class NativeUtils {
         }
 
         // Prepare temporary file
-        File temp = File.createTempFile(prefix, suffix);
+        logger.debug("create lib file {}", System.getProperty("java.library.path") + "/" + filename);
+        File temp = new File(System.getProperty("java.library.path") + "/" + filename);//File.createTempFile(prefix, suffix);
+        temp.createNewFile();
         temp.deleteOnExit();
 
         if (!temp.exists()) {

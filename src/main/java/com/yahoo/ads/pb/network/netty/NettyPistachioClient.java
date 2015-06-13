@@ -58,6 +58,7 @@ import com.yahoo.ads.pb.PistachioIterator;
 import com.yahoo.ads.pb.PistachiosServer;
 import com.yahoo.ads.pb.DefaultPartitioner;
 import com.yahoo.ads.pb.DefaultDataInterpreter;
+import com.yahoo.ads.pb.util.NativeUtils;
 
 /**
  * Sends a list of continent/city pairs to a {@link NettyPistachioServer} to
@@ -93,7 +94,7 @@ public final class NettyPistachioClient implements PistachiosClientImpl{
                         helixPartitionSpectator = HelixPartitionSpectator.getInstance(
                                 conf.getString(ZOOKEEPER_SERVER), // zkAddr
                                 "PistachiosCluster",
-                                InetAddress.getLocalHost().getHostName() //conf.getString(PROFILE_HELIX_INSTANCE_ID) // instanceName
+                                NativeUtils.getHostname()//InetAddress.getLocalHost().getHostName() //conf.getString(PROFILE_HELIX_INSTANCE_ID) // instanceName
                                 );
                     } catch(Exception e) {
                         logger.error("Error init HelixPartitionSpectator, are zookeeper and helix installed and configured correctly?", e);

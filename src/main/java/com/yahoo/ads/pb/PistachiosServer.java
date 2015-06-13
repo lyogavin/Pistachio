@@ -249,7 +249,7 @@ public class PistachiosServer {
                 logger.debug("got from store engine: {} parsed as {}-{}", toRet, valueOffset.value, valueOffset.offset);
                 if (callback) {
                     LookupCallback lookupCallback = LookupCallbackRegistry.getInstance().getLookupCallback();
-                    return lookupCallback.onLookup(toRetrun.key, valueOffset.value);
+                    return lookupCallback.onLookup(id, valueOffset.value);
                 }
                 return valueOffset.value;
             }
@@ -448,7 +448,7 @@ long lockKey = (Arrays.hashCode(id) * 7 + 11) % 1024;
         Configuration conf = ConfigurationManager.getConfiguration();
         logger.info("zk conn str {}", conf.getString(ZOOKEEPER_SERVER));
         helixManager = HelixManagerFactory.getZKHelixManager("PistachiosCluster",
-                InetAddress.getLocalHost().getHostName(), //conf.getString(PROFILE_HELIX_INSTANCE_ID),
+                NativeUtils.getHostname(), //InetAddress.getLocalHost().getHostName(), //conf.getString(PROFILE_HELIX_INSTANCE_ID),
                 InstanceType.CONTROLLER,
                 conf.getString(ZOOKEEPER_SERVER));
         helixManager.connect();
@@ -536,13 +536,13 @@ long lockKey = (Arrays.hashCode(id) * 7 + 11) % 1024;
             helixPartitionSpectator = HelixPartitionSpectator.getInstance(
                     conf.getString(ZOOKEEPER_SERVER), // zkAddr
                     "PistachiosCluster",
-                    InetAddress.getLocalHost().getHostName() //conf.getString(PROFILE_HELIX_INSTANCE_ID) // instanceName
+                    NativeUtils.getHostname() //InetAddress.getLocalHost().getHostName() //conf.getString(PROFILE_HELIX_INSTANCE_ID) // instanceName
                     );
             // Partition Manager for line spending
             manager = new HelixPartitionManager<>(
                     conf.getString(ZOOKEEPER_SERVER), // zkAddr
                     "PistachiosCluster",
-                    InetAddress.getLocalHost().getHostName() //conf.getString(PROFILE_HELIX_INSTANCE_ID) // instanceName
+                    NativeUtils.getHostname() //InetAddress.getLocalHost().getHostName() //conf.getString(PROFILE_HELIX_INSTANCE_ID) // instanceName
                     );
             //manager.start("BootstrapOnlineOffline", new BootstrapOnlineOfflineStateModelFactory(new StorePartitionHandlerFactory()));
             manager.start("MasterSlave", new BootstrapOnlineOfflineStateModelFactory(new StorePartitionHandlerFactory()));
