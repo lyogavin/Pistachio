@@ -21,6 +21,7 @@ import java.net.InetAddress;
  */
 public class NativeUtils {
     private static Logger logger = LoggerFactory.getLogger(NativeUtils.class);
+    private static String hostnameCache = null;
 
     /**
      * Private constructor - this class will never be instanced
@@ -29,6 +30,9 @@ public class NativeUtils {
     }
 
     public static String getHostname() {
+        if (hostnameCache != null)
+            return hostnameCache;
+
         String ret = null;
         try {
             // Use a ProcessBuilder
@@ -53,6 +57,8 @@ public class NativeUtils {
                 ret = "ERROR";
             }
         }
+
+        ret = hostnameCache;
 
         return ret;
     }

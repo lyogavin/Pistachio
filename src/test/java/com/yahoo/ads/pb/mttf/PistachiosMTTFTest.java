@@ -33,40 +33,63 @@ import org.slf4j.LoggerFactory;
 import java.util.Random;
 import java.util.Arrays;
 import com.yahoo.ads.pb.util.NativeUtils;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
-public class PistachiosMTTFTest{
+public class PistachiosMTTFTest extends Thread{
 	private static Logger logger = LoggerFactory.getLogger(PistachiosMTTFTest.class);
+    private static AtomicInteger successCounter = new AtomicInteger(0);
+    private static AtomicInteger failureCounter = new AtomicInteger(0);
+    private static int threadNumber = 10;
+	private static PistachiosClient client;
+    private static Random rand = new Random();
 
-
-  public static void main(String [] args) {
-	  PistachiosClient client;
+  public static void init() {
 	  try {
 	  client = new PistachiosClient();
 	  }catch (Exception e) {
 		  logger.info("error creating client", e);
-		  return;
+		  System.exit(0);
 	  }
-	  Random rand = new Random();
+  }
+
+
+  public static void main(String [] args) {
+      init();
+
+      for (int i =0; i<threadNumber; i++) {
+          PistachiosMTTFTest MTTFTest = new PistachiosMTTFTest();
+          MTTFTest.start();
+      }
+  }
+  public void run() {
 
 	  while(true) {
 		  try {
-		  long id = rand.nextLong();
-		  //String value=InetAddress.getLocalHost().getHostName() + rand.nextInt() ;
-		  String value=NativeUtils.getHostname() + rand.nextInt() ;
-		  client.store(com.google.common.primitives.Longs.toByteArray(id), value.getBytes());
-		  for (int i =0; i<30; i++) {
-			  byte[] clientValue = client.lookup(com.google.common.primitives.Longs.toByteArray(id), true);
-			  String remoteValue = new String(clientValue);
-			  //if (Arrays.equals(value.getBytes(), clientValue) || !remoteValue.contains(InetAddress.getLocalHost().getHostName())) {
-			  if (Arrays.equals(value.getBytes(), clientValue) || !remoteValue.contains(NativeUtils.getHostname())) {
-				  logger.debug("succeeded checking id {} value {}", id, value);
-			  } else {
-				  logger.error("failed checking id {} value {} != {}", id, value, new String(clientValue));
-				  System.exit(0);
-			  }
-			  Thread.sleep(100);
-		  }
+              long id = rand.nextLong();
+              //String value=InetAddress.getLocalHost().getHostName() + rand.nextInt() ;
+              String value=NativeUtils.getHostname() + Thread.currentThread().getId() + rand.nextInt() ;
+              client.store(com.google.common.primitives.Longs.toByteArray(id), value.getBytes());
+              for (int i =0; i<30; i++) {
+                  byte[] clientValue = client.lookup(com.google.common.primitives.Longs.toByteArray(id), true);
+                  String remoteValue = new String(clientValue);
+                  //if (Arrays.equals(value.getBytes(), clientValue) || !remoteValue.contains(InetAddress.getLocalHost().getHostName())) {
+                  if (Arrays.equals(value.getBytes(), clientValue) || 
+                      !remoteValue.contains(NativeUtils.getHostname() + Thread.currentThread().getId()  )) {
+                      logger.debug("succeeded checking id {} value {}, {}/{}", id, value, failureCounter.get(), successCounter.get());
+                  } else {
+                      logger.error("failed checking id {} value {} != {}", id, value, new String(clientValue));
+                      failureCounter.incrementAndGet();
+                      break;
+                      //System.exit(0);
+                  }
+                  Thread.sleep(100);
+              }
+              successCounter.incrementAndGet();
+
+              if (successCounter.get() % 10 == 0) {
+                  System.out.println("testing result: "+ failureCounter.get()+"/"+ successCounter.get());
+              }
 		  } catch (Exception e) {
 			  System.out.println("error testing"+ e);
 			  System.exit(0);
@@ -74,4 +97,4 @@ public class PistachiosMTTFTest{
 	  }
   }
 
-}
+ }
